@@ -73,8 +73,21 @@ void cleanup_and_exit(int sig)
     exit(0);
 }
 
-void print_motor_position()
+void print_motor_position(struct can_frame frame)
 {
+    int32_t q_pos_mtr1, q_pos_mtr2;
+    float pos_mtr1, pos_mtr2;
+
+    //q_pos_mtr1 = *(uint32_t *)frame.data;
+    //q_pos_mtr2 = *(uint32_t *)&frame.data[4];
+    // big endian:
+    q_pos_mtr1 = frame.data[3] + (frame.data[2] << 8) + (frame.data[1] << 16) + (frame.data[0] << 24);
+    q_pos_mtr2 = frame.data[7] + (frame.data[6] << 8) + (frame.data[5] << 16) + (frame.data[4] << 24);
+
+    pos_mtr1 = (double)q_pos_mtr1 / (1 << 24);
+    pos_mtr2 = (double)q_pos_mtr2 / (1 << 24);
+
+    printf("Position: mtr1 = %f, mtr2 = %f", pos_mtr1, pos_mtr2);
 }
 
 void rt_task(void)
@@ -105,25 +118,30 @@ void rt_task(void)
         if (print && (count % print) == 0) {
             printf("#%d: (%d) ", count, addr.can_ifindex);
 
-            if (frame.can_id & CAN_ERR_FLAG)
-                printf("!0x%08x!", frame.can_id & CAN_ERR_MASK);
-            else if (frame.can_id & CAN_EFF_FLAG)
-                printf("<0x%08x>", frame.can_id & CAN_EFF_MASK);
-            else
-                printf("<0x%03x>", frame.can_id & CAN_SFF_MASK);
-            printf(" [%d]", frame.can_dlc);
-            if (!(frame.can_id & CAN_RTR_FLAG))
-                for (i = 0; i < frame.can_dlc; i++) {
-                    printf(" %02x", frame.data[i]);
-                }
-            if (frame.can_id & CAN_ERR_FLAG) {
-                printf(" ERROR ");
-                if (frame.can_id & CAN_ERR_BUSOFF)
-                    printf("bus-off");
-                if (frame.can_id & CAN_ERR_CRTL)
-                    printf("controller problem");
-            } else if (frame.can_id & CAN_RTR_FLAG)
-                printf(" remote request");
+            if (frame.can_id == 0x030) {
+                // motor positions
+                print_motor_position(frame);
+            } else {
+                if (frame.can_id & CAN_ERR_FLAG)
+                    printf("!0x%08x!", frame.can_id & CAN_ERR_MASK);
+                else if (frame.can_id & CAN_EFF_FLAG)
+                    printf("<0x%08x>", frame.can_id & CAN_EFF_MASK);
+                else
+                    printf("<0x%03x>", frame.can_id & CAN_SFF_MASK);
+                printf(" [%d]", frame.can_dlc);
+                if (!(frame.can_id & CAN_RTR_FLAG))
+                    for (i = 0; i < frame.can_dlc; i++) {
+                        printf(" %02x", frame.data[i]);
+                    }
+                if (frame.can_id & CAN_ERR_FLAG) {
+                    printf(" ERROR ");
+                    if (frame.can_id & CAN_ERR_BUSOFF)
+                        printf("bus-off");
+                    if (frame.can_id & CAN_ERR_CRTL)
+                        printf("controller problem");
+                } else if (frame.can_id & CAN_RTR_FLAG)
+                    printf(" remote request");
+            }
             printf("\n");
         }
         count++;
