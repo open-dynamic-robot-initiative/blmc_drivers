@@ -86,11 +86,11 @@ void cleanup_and_exit(int sig)
         Q24_TO_FLOAT( BYTES_TO_INT32(qbytes) ) )
 
 // Arbitration IDs of the different message types
-#define BLMC_CAN_ID_COMMANDS   0x00
+#define BLMC_CAN_ID_COMMAND    0x00
 #define BLMC_CAN_ID_IqRef      0x05
 #define BLMC_CAN_ID_STATUSMSG  0x10
 #define BLMC_CAN_ID_Iq         0x20
-#define BLMC_CAN_ID_POS        0x30 // FIXME fix this on board code!
+#define BLMC_CAN_ID_POS        0x30
 #define BLMC_CAN_ID_SPEED      0x40
 #define BLMC_CAN_ID_ADC6       0x50
 
@@ -107,14 +107,16 @@ void cleanup_and_exit(int sig)
 #define BLMC_CMD_SEND_ADC6 15
 #define BLMC_CMD_SEND_ALL 20
 
+// Motor Indices
 #define BLMC_MTR1 0
 #define BLMC_MTR2 1
 
+// ADC Indices
 #define BLMC_ADC_A 0
 #define BLMC_ADC_B 1
 
-// TODO rename struct and some of the flags
-//! \brief Status message bits.
+
+//! \brief Status Message
 typedef struct _BLMC_StatusMsg_t_
 {                             // bits
    uint8_t system_enabled:1;  // 0
@@ -126,13 +128,17 @@ typedef struct _BLMC_StatusMsg_t_
 } BLMC_StatusMsg_t;
 
 
+// TODO better name (float and [2])
 typedef struct _BLMC_StampedValue_t_
 {
+    //! Timestamp of the moment, the frame was received.
+    nanosecs_abs_t timestamp;
+    //! Pair of values (e.g. for the two motors).
     float value[2];
-    uint32_t timestamp;
 } BLMC_StampedValue_t;
 
 
+//! \brief Bundles all data send by the board.
 typedef struct _BLMC_BoardData_t_
 {
     BLMC_StatusMsg_t status;
@@ -142,11 +148,13 @@ typedef struct _BLMC_BoardData_t_
     BLMC_StampedValue_t adc6;
 } BLMC_BoardData_t;
 
+// just for convenience
 typedef struct can_frame frame_t;
 
-
+//! global board data
 BLMC_BoardData_t board_data;
 
+//! \brief Initialize a stamped value to zero.
 void BLMC_initStampedValue(BLMC_StampedValue_t *sv)
 {
     sv->timestamp = 0;
@@ -154,7 +162,7 @@ void BLMC_initStampedValue(BLMC_StampedValue_t *sv)
     sv->value[1] = 0.0;
 }
 
-
+//! \brief Initialize status message (set everything to zero).
 void BLMC_initStatus(BLMC_StatusMsg_t *st)
 {
     st->system_enabled = 0;
@@ -165,6 +173,7 @@ void BLMC_initStatus(BLMC_StatusMsg_t *st)
     st->error_code     = 0;
 }
 
+//! \brief Initialize board data structure.
 void BLMC_initBoardData(BLMC_BoardData_t *bd)
 {
     BLMC_initStatus(&bd->status);
@@ -174,19 +183,35 @@ void BLMC_initBoardData(BLMC_BoardData_t *bd)
     BLMC_initStampedValue(&bd->adc6);
 }
 
-
-void BLMC_decodeCanMotorMsg(frame_t frame, BLMC_StampedValue_t *out)
+//! \brief Decode a dual value CAN frame.
+//!
+//! Decodes the data stored in the frame, assuming that the frame contains
+//! eight bytes of which the lower four represent one value and the higher four
+//! another value.  Further it is assumed that the data in the frame is decoded
+//! as Q24 value which is converted to float.
+//!
+//! \param frame The CAN frame.
+//! \param timestamp Timestamp of the moment the frame was received.
+//! \param out   The decoded data is written to `out`.  The value of the lower
+//!              bytes is stored in out->value[0], the value of the higher
+//!              bytes in out->value[1].
+void BLMC_decodeCanMotorMsg(frame_t const * const frame,
+        nanosecs_abs_t timestamp, BLMC_StampedValue_t *out)
 {
-    out->timestamp = 42;  // FIXME
-    out->value[BLMC_MTR1] = QBYTES_TO_FLOAT(frame.data);
-    out->value[BLMC_MTR2] = QBYTES_TO_FLOAT((frame.data + 4));
+    // TODO rename function (no motor, more dual msg, float, Q24)
+    out->timestamp = timestamp;  // FIXME
+    out->value[BLMC_MTR1] = QBYTES_TO_FLOAT(frame->data);
+    out->value[BLMC_MTR2] = QBYTES_TO_FLOAT((frame->data + 4));
 }
 
-void BLMC_decodeCanStatusMsg(const struct can_frame frame,
+//! \brief Decode a status message from a CAN frame.
+//! \param frame The CAN frame.
+//! \param status Data from the frame is stored here.
+void BLMC_decodeCanStatusMsg(frame_t const * const frame,
         BLMC_StatusMsg_t *status)
 {
     // We only have one byte of data
-    uint8_t data = frame.data[0];
+    uint8_t data = frame->data[0];
 
     status->system_enabled = data >> 0;
     status->motor1_enabled = data >> 1;
@@ -196,60 +221,40 @@ void BLMC_decodeCanStatusMsg(const struct can_frame frame,
     status->error_code     = data >> 5;
 }
 
-void BLMC_updateStatus(frame_t frame, BLMC_BoardData_t *bd)
+//! Update board data with status frame.
+void BLMC_updateStatus(frame_t const * const frame, BLMC_BoardData_t *bd)
 {
     BLMC_decodeCanStatusMsg(frame, &bd->status);
 }
 
-void BLMC_updateCurrent(frame_t frame, BLMC_BoardData_t *bd)
+void BLMC_updateCurrent(frame_t const * const frame, nanosecs_abs_t timestamp,
+        BLMC_BoardData_t *bd)
 {
-    BLMC_decodeCanMotorMsg(frame, &bd->current);
+    BLMC_decodeCanMotorMsg(frame, timestamp, &bd->current);
 }
 
-void BLMC_updatePosition(frame_t frame, BLMC_BoardData_t *bd)
+void BLMC_updatePosition(frame_t const * const frame, nanosecs_abs_t timestamp,
+        BLMC_BoardData_t *bd)
 {
-    BLMC_decodeCanMotorMsg(frame, &bd->position);
+    //printf("time since last position: %.3f ms\n",
+    //        (timestamp - bd->position.timestamp)/1e6);
+    BLMC_decodeCanMotorMsg(frame, timestamp, &bd->position);
 }
 
-void BLMC_updateVelocity(frame_t frame, BLMC_BoardData_t *bd)
+void BLMC_updateVelocity(frame_t const * const frame, nanosecs_abs_t timestamp,
+        BLMC_BoardData_t *bd)
 {
-    BLMC_decodeCanMotorMsg(frame, &bd->velocity);
+    BLMC_decodeCanMotorMsg(frame, timestamp, &bd->velocity);
 }
 
-void BLMC_updateAdc6(frame_t frame, BLMC_BoardData_t *bd)
+void BLMC_updateAdc6(frame_t const * const frame, nanosecs_abs_t timestamp,
+        BLMC_BoardData_t *bd)
 {
-    BLMC_decodeCanMotorMsg(frame, &bd->adc6);
-}
-
-void print_motor_position(struct can_frame frame)
-{
-    float pos_mtr1, pos_mtr2;
-
-    // big endian:
-    pos_mtr1 = QBYTES_TO_FLOAT(frame.data);
-    pos_mtr2 = QBYTES_TO_FLOAT((frame.data + 4));
-
-    printf("Position: mtr1 = %f, mtr2 = %f", pos_mtr1, pos_mtr2);
+    BLMC_decodeCanMotorMsg(frame, timestamp, &bd->adc6);
 }
 
 
-
-void print_status(struct can_frame frame)
-{
-    BLMC_StatusMsg_t status;
-    BLMC_decodeCanStatusMsg(frame, &status);
-
-    printf("Status:\n");
-    printf("\tSystem enabled: %d\n", status.system_enabled);
-    printf("\tMotor 1 enabled: %d\n", status.motor1_enabled);
-    printf("\tMotor 1 ready: %d\n", status.motor1_ready);
-    printf("\tMotor 2 enabled: %d\n", status.motor2_enabled);
-    printf("\tMotor 2 ready: %d\n", status.motor2_ready);
-    printf("\tError: %d\n", status.error_code);
-}
-
-
-void BLMC_printBoardStatus(const BLMC_BoardData_t* const bd)
+void BLMC_printBoardStatus(BLMC_BoardData_t const * const bd)
 {
     int i;
 
@@ -262,7 +267,7 @@ void BLMC_printBoardStatus(const BLMC_BoardData_t* const bd)
     printf("\tError: %d\n", bd->status.error_code);
 
     for (i = 0; i < 2; ++i) {
-        printf("Motor %d", i+1);
+        printf("Motor %d\n", i+1);
         if (bd->current.timestamp)
             printf("\tCurrent: %f\n", bd->current.value[i]);
         if (bd->position.timestamp)
@@ -278,11 +283,73 @@ void rt_task(void)
     int i, ret, count = 0;
     struct can_frame frame;
     struct sockaddr_can addr;
-    socklen_t addrlen = sizeof(addr);
+    //socklen_t addrlen = sizeof(addr);
+    struct msghdr msg;
+    struct iovec iov;
+    nanosecs_abs_t timestamp;
+
+    msg.msg_iov = &iov;
+    msg.msg_iovlen = 1;
+    msg.msg_name = (void *)&addr;
+    msg.msg_namelen = sizeof(struct sockaddr_can);
+    msg.msg_control = (void *)&timestamp;
+    msg.msg_controllen = sizeof(nanosecs_abs_t);
+
+
+    // Send a message to activate position messages
+    {
+        // define socket to which frame is sent
+        struct sockaddr_can to_addr;
+        memset(&to_addr, 0, sizeof(to_addr));
+        to_addr.can_family = AF_CAN;
+        to_addr.can_ifindex = 1;
+
+        // fill frame with data
+        frame.can_id = BLMC_CAN_ID_COMMAND;
+        frame.can_dlc = 8;
+        frame.data[0] = 0;
+        frame.data[1] = 0;
+        frame.data[2] = 0;
+        frame.data[3] = 1;
+        frame.data[4] = 0;
+        frame.data[5] = 0;
+        frame.data[6] = 0;
+        frame.data[7] = 13;
+
+        ret = rt_dev_sendto(s, (void *)&frame, sizeof(can_frame_t), 0,
+                (struct sockaddr *)&to_addr, sizeof(to_addr));
+        if (ret < 0) {
+            switch (ret) {
+                case -ETIMEDOUT:
+                    if (verbose)
+                        printf("rt_dev_send(to): timed out");
+                    break;
+                case -EBADF:
+                    if (verbose)
+                        printf("rt_dev_send(to): aborted because socket was closed");
+                    break;
+                default:
+                    fprintf(stderr, "rt_dev_send: %s\n", strerror(-ret));
+                    break;
+            }
+        }
+    }
 
     while (1) {
-        ret = rt_dev_recvfrom(s, (void *)&frame, sizeof(can_frame_t), 0,
-                              (struct sockaddr *)&addr, &addrlen);
+        // without timestamps
+        //ret = rt_dev_recvfrom(s, (void *)&frame, sizeof(can_frame_t), 0,
+        //                      (struct sockaddr *)&addr, &addrlen);
+
+        iov.iov_base = (void *)&frame;
+        iov.iov_len = sizeof(can_frame_t);
+        ret = rt_dev_recvmsg(s, &msg, 0);
+
+        if (msg.msg_controllen == 0) {
+            // No timestamp for this frame available. Make sure we dont get
+            // garbage.
+            timestamp = 0;
+        }
+
         if (ret < 0) {
             switch (ret) {
             case -ETIMEDOUT:
@@ -302,19 +369,15 @@ void rt_task(void)
             printf("#%d: (%d) ", count, addr.can_ifindex);
 
             if (frame.can_id == BLMC_CAN_ID_Iq) {
-                // current
-                BLMC_updateCurrent(frame, &board_data);
+                BLMC_updateCurrent(&frame, timestamp, &board_data);
             } else if (frame.can_id == BLMC_CAN_ID_POS) {
-                // motor positions
-                BLMC_updatePosition(frame, &board_data);
-                //print_motor_position(frame);
+                BLMC_updatePosition(&frame, timestamp, &board_data);
             } else if (frame.can_id == BLMC_CAN_ID_SPEED) {
-                BLMC_updateVelocity(frame, &board_data);
+                BLMC_updateVelocity(&frame, timestamp, &board_data);
             } else if (frame.can_id == BLMC_CAN_ID_ADC6) {
-                BLMC_updateAdc6(frame, &board_data);
+                BLMC_updateAdc6(&frame, timestamp, &board_data);
             } else if (frame.can_id == BLMC_CAN_ID_STATUSMSG) {
-                BLMC_updateStatus(frame, &board_data);
-                //print_status(frame);
+                BLMC_updateStatus(&frame, &board_data);
             } else {
                 if (frame.can_id & CAN_ERR_FLAG)
                     printf("!0x%08x!", frame.can_id & CAN_ERR_MASK);
@@ -430,6 +493,13 @@ int main(int argc, char **argv)
                       sizeof(struct sockaddr_can));
     if (ret < 0) {
         fprintf(stderr, "rt_dev_bind: %s\n", strerror(-ret));
+        goto failure;
+    }
+
+    // Enable timestamps for frames
+    ret = rt_dev_ioctl(s, RTCAN_RTIOC_TAKE_TIMESTAMP, RTCAN_TAKE_TIMESTAMPS);
+    if (ret) {
+        fprintf(stderr, "rt_dev_ioctl TAKE_TIMESTAMP: %s\n", strerror(-ret));
         goto failure;
     }
 
