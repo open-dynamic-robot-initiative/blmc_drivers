@@ -73,22 +73,205 @@ void cleanup_and_exit(int sig)
     exit(0);
 }
 
+#define BYTES_TO_INT32(bytes) (\
+        (int32_t) bytes[3] + \
+        ((int32_t)bytes[2] << 8) + \
+        ((int32_t)bytes[1] << 16) + \
+        ((int32_t)bytes[0] << 24) \
+        )
+
+#define Q24_TO_FLOAT(qval) ((float)qval / (1 << 24))
+
+#define QBYTES_TO_FLOAT(qbytes) (\
+        Q24_TO_FLOAT( BYTES_TO_INT32(qbytes) ) )
+
+// Arbitration IDs of the different message types
+#define BLMC_CAN_ID_COMMANDS   0x00
+#define BLMC_CAN_ID_IqRef      0x05
+#define BLMC_CAN_ID_STATUSMSG  0x10
+#define BLMC_CAN_ID_Iq         0x20
+#define BLMC_CAN_ID_POS        0x30 // FIXME fix this on board code!
+#define BLMC_CAN_ID_SPEED      0x40
+#define BLMC_CAN_ID_ADC6       0x50
+
+
+// COMMAND IDs
+#define BLMC_CMD_ENABLE_SYS 1
+#define BLMC_CMD_ENABLE_MTR1 2
+#define BLMC_CMD_ENABLE_MTR2 3
+#define BLMC_CMD_ENABLE_VSPRING1 4
+#define BLMC_CMD_ENABLE_VSPRING2 5
+#define BLMC_CMD_SEND_CURRENT 12
+#define BLMC_CMD_SEND_POSITION 13
+#define BLMC_CMD_SEND_VELOCITY 14
+#define BLMC_CMD_SEND_ADC6 15
+#define BLMC_CMD_SEND_ALL 20
+
+#define BLMC_MTR1 0
+#define BLMC_MTR2 1
+
+#define BLMC_ADC_A 0
+#define BLMC_ADC_B 1
+
+// TODO rename struct and some of the flags
+//! \brief Status message bits.
+typedef struct _BLMC_StatusMsg_t_
+{                             // bits
+   uint8_t system_enabled:1;  // 0
+   uint8_t motor1_enabled:1;  // 1
+   uint8_t motor1_ready:1;    // 2
+   uint8_t motor2_enabled:1;  // 3
+   uint8_t motor2_ready:1;    // 4
+   uint8_t error_code:3;      // 5-7
+} BLMC_StatusMsg_t;
+
+
+typedef struct _BLMC_StampedValue_t_
+{
+    float value[2];
+    uint32_t timestamp;
+} BLMC_StampedValue_t;
+
+
+typedef struct _BLMC_BoardData_t_
+{
+    BLMC_StatusMsg_t status;
+    BLMC_StampedValue_t current;
+    BLMC_StampedValue_t position;
+    BLMC_StampedValue_t velocity;
+    BLMC_StampedValue_t adc6;
+} BLMC_BoardData_t;
+
+typedef struct can_frame frame_t;
+
+
+BLMC_BoardData_t board_data;
+
+void BLMC_initStampedValue(BLMC_StampedValue_t *sv)
+{
+    sv->timestamp = 0;
+    sv->value[0] = 0.0;
+    sv->value[1] = 0.0;
+}
+
+
+void BLMC_initStatus(BLMC_StatusMsg_t *st)
+{
+    st->system_enabled = 0;
+    st->motor1_enabled = 0;
+    st->motor1_ready   = 0;
+    st->motor2_enabled = 0;
+    st->motor2_ready   = 0;
+    st->error_code     = 0;
+}
+
+void BLMC_initBoardData(BLMC_BoardData_t *bd)
+{
+    BLMC_initStatus(&bd->status);
+    BLMC_initStampedValue(&bd->current);
+    BLMC_initStampedValue(&bd->position);
+    BLMC_initStampedValue(&bd->velocity);
+    BLMC_initStampedValue(&bd->adc6);
+}
+
+
+void BLMC_decodeCanMotorMsg(frame_t frame, BLMC_StampedValue_t *out)
+{
+    out->timestamp = 42;  // FIXME
+    out->value[BLMC_MTR1] = QBYTES_TO_FLOAT(frame.data);
+    out->value[BLMC_MTR2] = QBYTES_TO_FLOAT((frame.data + 4));
+}
+
+void BLMC_decodeCanStatusMsg(const struct can_frame frame,
+        BLMC_StatusMsg_t *status)
+{
+    // We only have one byte of data
+    uint8_t data = frame.data[0];
+
+    status->system_enabled = data >> 0;
+    status->motor1_enabled = data >> 1;
+    status->motor1_ready   = data >> 2;
+    status->motor2_enabled = data >> 3;
+    status->motor2_ready   = data >> 4;
+    status->error_code     = data >> 5;
+}
+
+void BLMC_updateStatus(frame_t frame, BLMC_BoardData_t *bd)
+{
+    BLMC_decodeCanStatusMsg(frame, &bd->status);
+}
+
+void BLMC_updateCurrent(frame_t frame, BLMC_BoardData_t *bd)
+{
+    BLMC_decodeCanMotorMsg(frame, &bd->current);
+}
+
+void BLMC_updatePosition(frame_t frame, BLMC_BoardData_t *bd)
+{
+    BLMC_decodeCanMotorMsg(frame, &bd->position);
+}
+
+void BLMC_updateVelocity(frame_t frame, BLMC_BoardData_t *bd)
+{
+    BLMC_decodeCanMotorMsg(frame, &bd->velocity);
+}
+
+void BLMC_updateAdc6(frame_t frame, BLMC_BoardData_t *bd)
+{
+    BLMC_decodeCanMotorMsg(frame, &bd->adc6);
+}
+
 void print_motor_position(struct can_frame frame)
 {
-    int32_t q_pos_mtr1, q_pos_mtr2;
     float pos_mtr1, pos_mtr2;
 
-    //q_pos_mtr1 = *(uint32_t *)frame.data;
-    //q_pos_mtr2 = *(uint32_t *)&frame.data[4];
     // big endian:
-    q_pos_mtr1 = frame.data[3] + (frame.data[2] << 8) + (frame.data[1] << 16) + (frame.data[0] << 24);
-    q_pos_mtr2 = frame.data[7] + (frame.data[6] << 8) + (frame.data[5] << 16) + (frame.data[4] << 24);
-
-    pos_mtr1 = (double)q_pos_mtr1 / (1 << 24);
-    pos_mtr2 = (double)q_pos_mtr2 / (1 << 24);
+    pos_mtr1 = QBYTES_TO_FLOAT(frame.data);
+    pos_mtr2 = QBYTES_TO_FLOAT((frame.data + 4));
 
     printf("Position: mtr1 = %f, mtr2 = %f", pos_mtr1, pos_mtr2);
 }
+
+
+
+void print_status(struct can_frame frame)
+{
+    BLMC_StatusMsg_t status;
+    BLMC_decodeCanStatusMsg(frame, &status);
+
+    printf("Status:\n");
+    printf("\tSystem enabled: %d\n", status.system_enabled);
+    printf("\tMotor 1 enabled: %d\n", status.motor1_enabled);
+    printf("\tMotor 1 ready: %d\n", status.motor1_ready);
+    printf("\tMotor 2 enabled: %d\n", status.motor2_enabled);
+    printf("\tMotor 2 ready: %d\n", status.motor2_ready);
+    printf("\tError: %d\n", status.error_code);
+}
+
+
+void BLMC_printBoardStatus(const BLMC_BoardData_t* const bd)
+{
+    int i;
+
+    printf("System:\n");
+    printf("\tSystem enabled: %d\n", bd->status.system_enabled);
+    printf("\tMotor 1 enabled: %d\n", bd->status.motor1_enabled);
+    printf("\tMotor 1 ready: %d\n", bd->status.motor1_ready);
+    printf("\tMotor 2 enabled: %d\n", bd->status.motor2_enabled);
+    printf("\tMotor 2 ready: %d\n", bd->status.motor2_ready);
+    printf("\tError: %d\n", bd->status.error_code);
+
+    for (i = 0; i < 2; ++i) {
+        printf("Motor %d", i+1);
+        if (bd->current.timestamp)
+            printf("\tCurrent: %f\n", bd->current.value[i]);
+        if (bd->position.timestamp)
+            printf("\tPosition: %f\n", bd->position.value[i]);
+        if (bd->velocity.timestamp)
+            printf("\tVelocity: %f\n", bd->velocity.value[i]);
+    }
+}
+
 
 void rt_task(void)
 {
@@ -118,9 +301,20 @@ void rt_task(void)
         if (print && (count % print) == 0) {
             printf("#%d: (%d) ", count, addr.can_ifindex);
 
-            if (frame.can_id == 0x030) {
+            if (frame.can_id == BLMC_CAN_ID_Iq) {
+                // current
+                BLMC_updateCurrent(frame, &board_data);
+            } else if (frame.can_id == BLMC_CAN_ID_POS) {
                 // motor positions
-                print_motor_position(frame);
+                BLMC_updatePosition(frame, &board_data);
+                //print_motor_position(frame);
+            } else if (frame.can_id == BLMC_CAN_ID_SPEED) {
+                BLMC_updateVelocity(frame, &board_data);
+            } else if (frame.can_id == BLMC_CAN_ID_ADC6) {
+                BLMC_updateAdc6(frame, &board_data);
+            } else if (frame.can_id == BLMC_CAN_ID_STATUSMSG) {
+                BLMC_updateStatus(frame, &board_data);
+                //print_status(frame);
             } else {
                 if (frame.can_id & CAN_ERR_FLAG)
                     printf("!0x%08x!", frame.can_id & CAN_ERR_MASK);
@@ -142,6 +336,7 @@ void rt_task(void)
                 } else if (frame.can_id & CAN_RTR_FLAG)
                     printf(" remote request");
             }
+            BLMC_printBoardStatus(&board_data);
             printf("\n");
         }
         count++;
@@ -181,6 +376,8 @@ int main(int argc, char **argv)
     */
 
     // timeout = (nanosecs_rel_t)strtoul(optarg, NULL, 0) * 1000000;
+
+    BLMC_initBoardData(&board_data);
 
     ret = rt_dev_socket(PF_CAN, SOCK_RAW, CAN_RAW);
     if (ret < 0) {
