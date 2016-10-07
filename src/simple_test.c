@@ -28,7 +28,11 @@
 #include <native/task.h>
 //#include <native/pipe.h>
 #include <rtdm/rtcan.h>
+#include "blmc_can.h"
 
+
+// GLOBALS
+// **************************************************************************
 
 extern int optind, opterr, optopt;
 static int s = -1, verbose = 0, print = 1;
@@ -38,6 +42,13 @@ RT_TASK rt_task_desc;
 struct sockaddr_can recv_addr;
 struct can_filter recv_filter[MAX_FILTER];
 static int filter_count = 0;
+
+//! global board data
+BLMC_BoardData_t board_data;
+
+
+// FUNCTIONS
+// **************************************************************************
 
 int add_filter(u_int32_t id, u_int32_t mask)
 {
@@ -71,210 +82,6 @@ void cleanup_and_exit(int sig)
         printf("Signal %d received\n", sig);
     cleanup();
     exit(0);
-}
-
-#define BYTES_TO_INT32(bytes) (\
-        (int32_t) bytes[3] + \
-        ((int32_t)bytes[2] << 8) + \
-        ((int32_t)bytes[1] << 16) + \
-        ((int32_t)bytes[0] << 24) \
-        )
-
-#define Q24_TO_FLOAT(qval) ((float)qval / (1 << 24))
-
-#define QBYTES_TO_FLOAT(qbytes) (\
-        Q24_TO_FLOAT( BYTES_TO_INT32(qbytes) ) )
-
-// Arbitration IDs of the different message types
-#define BLMC_CAN_ID_COMMAND    0x00
-#define BLMC_CAN_ID_IqRef      0x05
-#define BLMC_CAN_ID_STATUSMSG  0x10
-#define BLMC_CAN_ID_Iq         0x20
-#define BLMC_CAN_ID_POS        0x30
-#define BLMC_CAN_ID_SPEED      0x40
-#define BLMC_CAN_ID_ADC6       0x50
-
-
-// COMMAND IDs
-#define BLMC_CMD_ENABLE_SYS 1
-#define BLMC_CMD_ENABLE_MTR1 2
-#define BLMC_CMD_ENABLE_MTR2 3
-#define BLMC_CMD_ENABLE_VSPRING1 4
-#define BLMC_CMD_ENABLE_VSPRING2 5
-#define BLMC_CMD_SEND_CURRENT 12
-#define BLMC_CMD_SEND_POSITION 13
-#define BLMC_CMD_SEND_VELOCITY 14
-#define BLMC_CMD_SEND_ADC6 15
-#define BLMC_CMD_SEND_ALL 20
-
-// Motor Indices
-#define BLMC_MTR1 0
-#define BLMC_MTR2 1
-
-// ADC Indices
-#define BLMC_ADC_A 0
-#define BLMC_ADC_B 1
-
-
-//! \brief Status Message
-typedef struct _BLMC_StatusMsg_t_
-{                             // bits
-   uint8_t system_enabled:1;  // 0
-   uint8_t motor1_enabled:1;  // 1
-   uint8_t motor1_ready:1;    // 2
-   uint8_t motor2_enabled:1;  // 3
-   uint8_t motor2_ready:1;    // 4
-   uint8_t error_code:3;      // 5-7
-} BLMC_StatusMsg_t;
-
-
-// TODO better name (float and [2])
-typedef struct _BLMC_StampedValue_t_
-{
-    //! Timestamp of the moment, the frame was received.
-    nanosecs_abs_t timestamp;
-    //! Pair of values (e.g. for the two motors).
-    float value[2];
-} BLMC_StampedValue_t;
-
-
-//! \brief Bundles all data send by the board.
-typedef struct _BLMC_BoardData_t_
-{
-    BLMC_StatusMsg_t status;
-    BLMC_StampedValue_t current;
-    BLMC_StampedValue_t position;
-    BLMC_StampedValue_t velocity;
-    BLMC_StampedValue_t adc6;
-} BLMC_BoardData_t;
-
-// just for convenience
-typedef struct can_frame frame_t;
-
-//! global board data
-BLMC_BoardData_t board_data;
-
-//! \brief Initialize a stamped value to zero.
-void BLMC_initStampedValue(BLMC_StampedValue_t *sv)
-{
-    sv->timestamp = 0;
-    sv->value[0] = 0.0;
-    sv->value[1] = 0.0;
-}
-
-//! \brief Initialize status message (set everything to zero).
-void BLMC_initStatus(BLMC_StatusMsg_t *st)
-{
-    st->system_enabled = 0;
-    st->motor1_enabled = 0;
-    st->motor1_ready   = 0;
-    st->motor2_enabled = 0;
-    st->motor2_ready   = 0;
-    st->error_code     = 0;
-}
-
-//! \brief Initialize board data structure.
-void BLMC_initBoardData(BLMC_BoardData_t *bd)
-{
-    BLMC_initStatus(&bd->status);
-    BLMC_initStampedValue(&bd->current);
-    BLMC_initStampedValue(&bd->position);
-    BLMC_initStampedValue(&bd->velocity);
-    BLMC_initStampedValue(&bd->adc6);
-}
-
-//! \brief Decode a dual value CAN frame.
-//!
-//! Decodes the data stored in the frame, assuming that the frame contains
-//! eight bytes of which the lower four represent one value and the higher four
-//! another value.  Further it is assumed that the data in the frame is decoded
-//! as Q24 value which is converted to float.
-//!
-//! \param frame The CAN frame.
-//! \param timestamp Timestamp of the moment the frame was received.
-//! \param out   The decoded data is written to `out`.  The value of the lower
-//!              bytes is stored in out->value[0], the value of the higher
-//!              bytes in out->value[1].
-void BLMC_decodeCanMotorMsg(frame_t const * const frame,
-        nanosecs_abs_t timestamp, BLMC_StampedValue_t *out)
-{
-    // TODO rename function (no motor, more dual msg, float, Q24)
-    out->timestamp = timestamp;  // FIXME
-    out->value[BLMC_MTR1] = QBYTES_TO_FLOAT(frame->data);
-    out->value[BLMC_MTR2] = QBYTES_TO_FLOAT((frame->data + 4));
-}
-
-//! \brief Decode a status message from a CAN frame.
-//! \param frame The CAN frame.
-//! \param status Data from the frame is stored here.
-void BLMC_decodeCanStatusMsg(frame_t const * const frame,
-        BLMC_StatusMsg_t *status)
-{
-    // We only have one byte of data
-    uint8_t data = frame->data[0];
-
-    status->system_enabled = data >> 0;
-    status->motor1_enabled = data >> 1;
-    status->motor1_ready   = data >> 2;
-    status->motor2_enabled = data >> 3;
-    status->motor2_ready   = data >> 4;
-    status->error_code     = data >> 5;
-}
-
-//! Update board data with status frame.
-void BLMC_updateStatus(frame_t const * const frame, BLMC_BoardData_t *bd)
-{
-    BLMC_decodeCanStatusMsg(frame, &bd->status);
-}
-
-void BLMC_updateCurrent(frame_t const * const frame, nanosecs_abs_t timestamp,
-        BLMC_BoardData_t *bd)
-{
-    BLMC_decodeCanMotorMsg(frame, timestamp, &bd->current);
-}
-
-void BLMC_updatePosition(frame_t const * const frame, nanosecs_abs_t timestamp,
-        BLMC_BoardData_t *bd)
-{
-    //printf("time since last position: %.3f ms\n",
-    //        (timestamp - bd->position.timestamp)/1e6);
-    BLMC_decodeCanMotorMsg(frame, timestamp, &bd->position);
-}
-
-void BLMC_updateVelocity(frame_t const * const frame, nanosecs_abs_t timestamp,
-        BLMC_BoardData_t *bd)
-{
-    BLMC_decodeCanMotorMsg(frame, timestamp, &bd->velocity);
-}
-
-void BLMC_updateAdc6(frame_t const * const frame, nanosecs_abs_t timestamp,
-        BLMC_BoardData_t *bd)
-{
-    BLMC_decodeCanMotorMsg(frame, timestamp, &bd->adc6);
-}
-
-
-void BLMC_printBoardStatus(BLMC_BoardData_t const * const bd)
-{
-    int i;
-
-    printf("System:\n");
-    printf("\tSystem enabled: %d\n", bd->status.system_enabled);
-    printf("\tMotor 1 enabled: %d\n", bd->status.motor1_enabled);
-    printf("\tMotor 1 ready: %d\n", bd->status.motor1_ready);
-    printf("\tMotor 2 enabled: %d\n", bd->status.motor2_enabled);
-    printf("\tMotor 2 ready: %d\n", bd->status.motor2_ready);
-    printf("\tError: %d\n", bd->status.error_code);
-
-    for (i = 0; i < 2; ++i) {
-        printf("Motor %d\n", i+1);
-        if (bd->current.timestamp)
-            printf("\tCurrent: %f\n", bd->current.value[i]);
-        if (bd->position.timestamp)
-            printf("\tPosition: %f\n", bd->position.value[i]);
-        if (bd->velocity.timestamp)
-            printf("\tVelocity: %f\n", bd->velocity.value[i]);
-    }
 }
 
 
@@ -515,3 +322,4 @@ int main(int argc, char **argv)
     cleanup();
     return -1;
 }
+
