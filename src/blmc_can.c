@@ -77,8 +77,10 @@ void BLMC_decodeCanStatusMsg(frame_t const * const frame,
     status->error_code     = data >> 5;
 }
 
-void BLMC_updateStatus(frame_t const * const frame, BLMC_BoardData_t *bd)
+void BLMC_updateStatus(frame_t const * const frame, nanosecs_abs_t timestamp,
+        BLMC_BoardData_t *bd)
 {
+    // NOTE: timestamp of status messages is currently not stored.
     BLMC_decodeCanStatusMsg(frame, &bd->status);
 }
 
@@ -189,7 +191,7 @@ int BLMC_receiveBoardMessage(BLMC_CanHandle_t handle,
         } else if (can->frame.can_id == BLMC_CAN_ID_ADC6) {
             BLMC_updateAdc6(&can->frame, can->timestamp, board_data);
         } else if (can->frame.can_id == BLMC_CAN_ID_STATUSMSG) {
-            BLMC_updateStatus(&can->frame, board_data);
+            BLMC_updateStatus(&can->frame, can->timestamp, board_data);
         }
     }
 

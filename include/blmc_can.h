@@ -168,7 +168,8 @@ void BLMC_decodeCanStatusMsg(frame_t const * const frame,
 
 
 //! Update board data with status frame.
-void BLMC_updateStatus(frame_t const * const frame, BLMC_BoardData_t *bd);
+void BLMC_updateStatus(frame_t const * const frame, nanosecs_abs_t timestamp,
+        BLMC_BoardData_t *bd);
 
 
 void BLMC_updateCurrent(frame_t const * const frame, nanosecs_abs_t timestamp,
