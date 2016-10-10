@@ -3,6 +3,8 @@
  *
  * \author Felix Widmaier <felix.widmaier@tuebingen.mpg.de>
  */
+#ifndef BLMC_CAN_H_
+#define BLMC_CAN_H_
 
 // INCLUDES
 // **************************************************************************
@@ -164,3 +166,5 @@ void BLMC_updateAdc6(frame_t const * const frame, nanosecs_abs_t timestamp,
 
 void BLMC_printBoardStatus(BLMC_BoardData_t const * const bd);
 
+
+#endif // BLMC_CAN_H_
