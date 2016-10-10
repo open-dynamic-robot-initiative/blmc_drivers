@@ -46,6 +46,9 @@ static int filter_count = 0;
 //! global board data
 BLMC_BoardData_t board_data;
 
+BLMC_CanConnection_t can_con;
+BLMC_CanHandle_t can_handle;
+
 
 // FUNCTIONS
 // **************************************************************************
@@ -212,6 +215,8 @@ void rt_task(void)
         count++;
     }
 }
+
+
 int main(int argc, char **argv)
 {
     int ret;
@@ -247,6 +252,12 @@ int main(int argc, char **argv)
 
     // timeout = (nanosecs_rel_t)strtoul(optarg, NULL, 0) * 1000000;
 
+
+    // Initialize stuff
+    // ----------------
+    //
+    can_handle = BLMC_initCanHandle(&can_con);
+    BLMC_initCan(can_handle);
     BLMC_initBoardData(&board_data);
 
     ret = rt_dev_socket(PF_CAN, SOCK_RAW, CAN_RAW);
@@ -256,6 +267,7 @@ int main(int argc, char **argv)
     }
 
     s = ret;
+    can_con.socket = s;
     if (argv[optind] == NULL) {
         if (verbose)
             printf("interface all\n");

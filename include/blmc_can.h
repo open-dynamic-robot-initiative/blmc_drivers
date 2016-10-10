@@ -66,6 +66,24 @@
 // TYPEDEFS
 // **************************************************************************
 
+// just for convenience
+typedef struct can_frame frame_t;
+
+
+typedef struct _BLMC_CanConnection_t_
+{
+    struct sockaddr_can recv_addr;
+    struct sockaddr_can send_addr;
+    struct sockaddr_can msg_addr;
+    frame_t frame;
+    struct msghdr msg;
+    struct iovec iov;
+    nanosecs_abs_t timestamp;
+    int socket;
+} BLMC_CanConnection_t;
+
+typedef BLMC_CanConnection_t *BLMC_CanHandle_t;
+
 
 //! \brief Status Message
 typedef struct _BLMC_StatusMsg_t_
@@ -99,14 +117,16 @@ typedef struct _BLMC_BoardData_t_
     BLMC_StampedValue_t adc6;
 } BLMC_BoardData_t;
 
-// just for convenience
-typedef struct can_frame frame_t;
-
 
 
 
 // FUNCTIONS
 // **************************************************************************
+
+inline BLMC_CanHandle_t BLMC_initCanHandle(BLMC_CanConnection_t *can_con);
+
+
+void BLMC_initCan(BLMC_CanHandle_t canHandle);
 
 
 //! \brief Initialize a stamped value to zero.

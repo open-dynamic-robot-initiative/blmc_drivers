@@ -1,6 +1,32 @@
 #include "blmc_can.h"
 #include <stdio.h>
+#include <string.h>  // memset
 
+
+inline BLMC_CanHandle_t BLMC_initCanHandle(BLMC_CanConnection_t *can_con)
+{
+    return (BLMC_CanHandle_t) can_con;
+}
+
+void BLMC_initCan(BLMC_CanHandle_t canHandle)
+{
+    BLMC_CanConnection_t *can = (BLMC_CanConnection_t*)canHandle;
+
+    //can->recv_addr.can_family = AF_CAN;
+    //can->recv_addr.can_ifindex = ?
+
+    can->msg.msg_iov = &can->iov;
+    can->msg.msg_iovlen = 1;
+    can->msg.msg_name = (void *)&can->msg_addr;
+    can->msg.msg_namelen = sizeof(struct sockaddr_can);
+    can->msg.msg_control = (void *)&can->timestamp;
+    can->msg.msg_controllen = sizeof(nanosecs_abs_t);
+
+    // TODO why the memset?
+    memset(&can->send_addr, 0, sizeof(can->send_addr));
+    can->send_addr.can_family = AF_CAN;
+    can->send_addr.can_ifindex = 1;  // TODO do not hard code!
+}
 
 void BLMC_initStampedValue(BLMC_StampedValue_t *sv)
 {
