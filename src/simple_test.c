@@ -21,12 +21,8 @@
 #include <stdlib.h>
 #include <signal.h>
 #include <unistd.h>
-//#include <time.h>
-//#include <errno.h>
-//#include <getopt.h>
 #include <sys/mman.h>
 #include <native/task.h>
-//#include <native/pipe.h>
 #include <rtdm/rtcan.h>
 #include "blmc_can.h"
 
@@ -35,7 +31,7 @@
 // **************************************************************************
 
 extern int optind, opterr, optopt;
-static int s = -1, verbose = 0, print = 1;
+static int verbose = 0, print = 1;
 RT_TASK rt_task_desc;
 #define BUF_SIZ 255
 #define MAX_FILTER 16
@@ -64,26 +60,12 @@ int add_filter(u_int32_t id, u_int32_t mask)
     return 0;
 }
 
-void cleanup(void)
-{
-    int ret;
-    if (verbose)
-        printf("Cleaning up...\n");
-    if (s >= 0) {
-        ret = rt_dev_close(s);
-        s = -1;
-        if (ret) {
-            fprintf(stderr, "rt_dev_close: %s\n", strerror(-ret));
-        }
-        exit(EXIT_SUCCESS);
-    }
-}
 
 void cleanup_and_exit(int sig)
 {
     if (verbose)
         printf("Signal %d received\n", sig);
-    cleanup();
+    BLMC_closeCan(can_handle);
     exit(0);
 }
 
@@ -144,7 +126,6 @@ int main(int argc, char **argv)
     int ret;
     //u_int32_t id, mask;
     u_int32_t err_mask = 0;
-    struct ifreq ifr;
     //char *ptr;
     char name[32];
 
@@ -172,88 +153,29 @@ int main(int argc, char **argv)
     }
     */
 
-    // timeout = (nanosecs_rel_t)strtoul(optarg, NULL, 0) * 1000000;
-
 
     // Initialize stuff
     // ----------------
     //
     can_handle = BLMC_initCanHandle(&can_con);
-    BLMC_setupCan(can_handle);
     BLMC_initBoardData(&board_data);
 
-    ret = rt_dev_socket(PF_CAN, SOCK_RAW, CAN_RAW);
+    ret = BLMC_setupCan(can_handle, NULL, err_mask);
     if (ret < 0) {
-        fprintf(stderr, "rt_dev_socket: %s\n", strerror(-ret));
+        printf("Could'nt setup CAN connection. Exit.");
         return -1;
     }
 
-    s = ret;
-    can_con.socket = s;
-    if (argv[optind] == NULL) {
-        if (verbose)
-            printf("interface all\n");
-        ifr.ifr_ifindex = 0;
-    } else {
-        if (verbose)
-            printf("interface %s\n", argv[optind]);
-        strncpy(ifr.ifr_name, argv[optind], IFNAMSIZ);
-        if (verbose)
-            printf("s=%d, ifr_name=%s\n", s, ifr.ifr_name);
-        ret = rt_dev_ioctl(s, SIOCGIFINDEX, &ifr);
-        if (ret < 0) {
-            fprintf(stderr, "rt_dev_ioctl GET_IFINDEX: %s\n", strerror(-ret));
-            goto failure;
-        }
-    }
-
-    if (err_mask) {
-        ret = rt_dev_setsockopt(s, SOL_CAN_RAW, CAN_RAW_ERR_FILTER,
-                                &err_mask, sizeof(err_mask));
-        if (ret < 0) {
-            fprintf(stderr, "rt_dev_setsockopt: %s\n", strerror(-ret));
-            goto failure;
-        }
-        if (verbose)
-            printf("Using err_mask=%#x\n", err_mask);
-    }
-
-    if (filter_count) {
-        ret = rt_dev_setsockopt(s, SOL_CAN_RAW, CAN_RAW_FILTER,
-                                &recv_filter, filter_count *
-                                sizeof(struct can_filter));
-        if (ret < 0) {
-            fprintf(stderr, "rt_dev_setsockopt: %s\n", strerror(-ret));
-            goto failure;
-        }
-    }
-
-    recv_addr.can_family = AF_CAN;
-    recv_addr.can_ifindex = ifr.ifr_ifindex;
-    ret = rt_dev_bind(s, (struct sockaddr *)&recv_addr,
-                      sizeof(struct sockaddr_can));
-    if (ret < 0) {
-        fprintf(stderr, "rt_dev_bind: %s\n", strerror(-ret));
-        goto failure;
-    }
-
-    // Enable timestamps for frames
-    ret = rt_dev_ioctl(s, RTCAN_RTIOC_TAKE_TIMESTAMP, RTCAN_TAKE_TIMESTAMPS);
-    if (ret) {
-        fprintf(stderr, "rt_dev_ioctl TAKE_TIMESTAMP: %s\n", strerror(-ret));
-        goto failure;
-    }
 
     snprintf(name, sizeof(name), "rtcanrecv-%d", getpid());
     ret = rt_task_shadow(&rt_task_desc, name, 0, 0);
     if (ret) {
         fprintf(stderr, "rt_task_shadow: %s\n", strerror(-ret));
-        goto failure;
+        BLMC_closeCan(can_handle);
+        return -1;
     }
-    rt_task();
-    /* never returns */
- failure:
-    cleanup();
-    return -1;
+    rt_task(); /* never returns */
+
+    return 0;
 }
 

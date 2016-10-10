@@ -141,7 +141,14 @@ inline BLMC_CanHandle_t BLMC_initCanHandle(BLMC_CanConnection_t *can_con);
 //!
 //! This has to be done before sending or receiving messages.
 //! \param handle The CAN connection handle.
-void BLMC_setupCan(BLMC_CanHandle_t canHandle);
+// TODO more params
+int BLMC_setupCan(BLMC_CanHandle_t canHandle, char* interface, uint32_t
+        err_mask);
+
+
+//! \brief Close CAN connection
+//! \returns Return value of rt_dev_close or 0 if there is no open connection.
+int BLMC_closeCan(BLMC_CanHandle_t handle);
 
 
 //! \brief Initialize a stamped value to zero.

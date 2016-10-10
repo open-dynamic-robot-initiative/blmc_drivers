@@ -8,12 +8,82 @@ inline BLMC_CanHandle_t BLMC_initCanHandle(BLMC_CanConnection_t *can_con)
     return (BLMC_CanHandle_t) can_con;
 }
 
-void BLMC_setupCan(BLMC_CanHandle_t canHandle)
+int BLMC_setupCan(BLMC_CanHandle_t canHandle, char* interface, uint32_t err_mask)
 {
     BLMC_CanConnection_t *can = (BLMC_CanConnection_t*)canHandle;
+    int ret;
+    struct ifreq ifr;
 
-    //can->recv_addr.can_family = AF_CAN;
-    //can->recv_addr.can_ifindex = ?
+
+    ret = rt_dev_socket(PF_CAN, SOCK_RAW, CAN_RAW);
+    if (ret < 0) {
+        fprintf(stderr, "rt_dev_socket: %s\n", strerror(-ret));
+        return -1;
+    }
+    can->socket = ret;
+
+
+    // Select interface
+    if (interface == NULL) {
+        ifr.ifr_ifindex = 0;
+    } else {
+        strncpy(ifr.ifr_name, interface, IFNAMSIZ);
+        ret = rt_dev_ioctl(can->socket, SIOCGIFINDEX, &ifr);
+        if (ret < 0) {
+            fprintf(stderr, "rt_dev_ioctl GET_IFINDEX: %s\n", strerror(-ret));
+            BLMC_closeCan(canHandle);
+            return -1;
+        }
+    }
+
+
+    // Set error mask
+    if (err_mask) {
+        ret = rt_dev_setsockopt(can->socket, SOL_CAN_RAW, CAN_RAW_ERR_FILTER,
+                                &err_mask, sizeof(err_mask));
+        if (ret < 0) {
+            fprintf(stderr, "rt_dev_setsockopt: %s\n", strerror(-ret));
+            BLMC_closeCan(canHandle);
+            return -1;
+        }
+    }
+
+
+    //if (filter_count) {
+    //    ret = rt_dev_setsockopt(s, SOL_CAN_RAW, CAN_RAW_FILTER,
+    //                            &recv_filter, filter_count *
+    //                            sizeof(struct can_filter));
+    //    if (ret < 0) {
+    //        fprintf(stderr, "rt_dev_setsockopt: %s\n", strerror(-ret));
+    //        goto failure;
+    //    }
+    //}
+
+
+    // Bind to socket
+    can->recv_addr.can_family = AF_CAN;
+    can->recv_addr.can_ifindex = ifr.ifr_ifindex;
+    ret = rt_dev_bind(can->socket, (struct sockaddr *)&can->recv_addr,
+                      sizeof(struct sockaddr_can));
+    if (ret < 0) {
+        fprintf(stderr, "rt_dev_bind: %s\n", strerror(-ret));
+        BLMC_closeCan(canHandle);
+        return -1;
+    }
+
+
+    // Enable timestamps for frames
+    ret = rt_dev_ioctl(can->socket,
+            RTCAN_RTIOC_TAKE_TIMESTAMP, RTCAN_TAKE_TIMESTAMPS);
+    if (ret) {
+        fprintf(stderr, "rt_dev_ioctl TAKE_TIMESTAMP: %s\n", strerror(-ret));
+        BLMC_closeCan(canHandle);
+        return -1;
+    }
+
+
+    can->recv_addr.can_family = AF_CAN;
+    can->recv_addr.can_ifindex = ifr.ifr_ifindex;
 
     can->msg.msg_iov = &can->iov;
     can->msg.msg_iovlen = 1;
@@ -26,6 +96,26 @@ void BLMC_setupCan(BLMC_CanHandle_t canHandle)
     memset(&can->send_addr, 0, sizeof(can->send_addr));
     can->send_addr.can_family = AF_CAN;
     can->send_addr.can_ifindex = 1;  // TODO do not hard code!
+
+
+    return 0;
+}
+
+int BLMC_closeCan(BLMC_CanHandle_t handle)
+{
+    BLMC_CanConnection_t *can = (BLMC_CanConnection_t*)handle;
+    int ret;
+
+    if (can->socket >= 0) {
+        ret = rt_dev_close(can->socket);
+        can->socket = -1;
+        if (ret) {
+            fprintf(stderr, "rt_dev_close: %s\n", strerror(-ret));
+        }
+        return ret;
+    } else {
+        return 0;
+    }
 }
 
 void BLMC_initStampedValue(BLMC_StampedValue_t *sv)
