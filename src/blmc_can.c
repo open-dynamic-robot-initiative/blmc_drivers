@@ -8,7 +8,7 @@ inline BLMC_CanHandle_t BLMC_initCanHandle(BLMC_CanConnection_t *can_con)
     return (BLMC_CanHandle_t) can_con;
 }
 
-void BLMC_initCan(BLMC_CanHandle_t canHandle)
+void BLMC_setupCan(BLMC_CanHandle_t canHandle)
 {
     BLMC_CanConnection_t *can = (BLMC_CanConnection_t*)canHandle;
 
@@ -58,7 +58,7 @@ void BLMC_decodeCanMotorMsg(frame_t const * const frame,
         nanosecs_abs_t timestamp, BLMC_StampedValue_t *out)
 {
     // TODO rename function (no motor, more dual msg, float, Q24)
-    out->timestamp = timestamp;  // FIXME
+    out->timestamp = timestamp;
     out->value[BLMC_MTR1] = QBYTES_TO_FLOAT(frame->data);
     out->value[BLMC_MTR2] = QBYTES_TO_FLOAT((frame->data + 4));
 }

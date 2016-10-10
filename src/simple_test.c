@@ -179,7 +179,7 @@ int main(int argc, char **argv)
     // ----------------
     //
     can_handle = BLMC_initCanHandle(&can_con);
-    BLMC_initCan(can_handle);
+    BLMC_setupCan(can_handle);
     BLMC_initBoardData(&board_data);
 
     ret = rt_dev_socket(PF_CAN, SOCK_RAW, CAN_RAW);

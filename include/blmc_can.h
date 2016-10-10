@@ -141,7 +141,7 @@ inline BLMC_CanHandle_t BLMC_initCanHandle(BLMC_CanConnection_t *can_con);
 //!
 //! This has to be done before sending or receiving messages.
 //! \param handle The CAN connection handle.
-void BLMC_initCan(BLMC_CanHandle_t canHandle);
+void BLMC_setupCan(BLMC_CanHandle_t canHandle);
 
 
 //! \brief Initialize a stamped value to zero.
