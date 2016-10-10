@@ -65,6 +65,8 @@ void cleanup_and_exit(int sig)
 {
     if (verbose)
         printf("Signal %d received\n", sig);
+    // Disable system before closing connection
+    BLMC_sendCommand(can_handle, BLMC_CMD_ENABLE_SYS, BLMC_DISABLE);
     BLMC_closeCan(can_handle);
     exit(0);
 }
@@ -74,8 +76,10 @@ void rt_task(void)
 {
     int ret, count = 0;
 
+    BLMC_sendCommand(can_handle, BLMC_CMD_ENABLE_SYS, BLMC_ENABLE);
+
     // Send a message to activate position messages
-    ret = BLMC_sendCommand(can_handle, BLMC_CMD_SEND_VELOCITY, BLMC_ENABLE);
+    ret = BLMC_sendCommand(can_handle, BLMC_CMD_SEND_CURRENT, BLMC_ENABLE);
     if (ret < 0) {
         switch (ret) {
             case -ETIMEDOUT:
@@ -92,8 +96,11 @@ void rt_task(void)
         }
     }
 
+    //BLMC_sendCommand(can_handle, BLMC_CMD_ENABLE_MTR2, BLMC_ENABLE);
+
     // Receive messages and print board status
     while (1) {
+        //BLMC_sendMotorCurrent(can_handle, 0, 0.3);
         ret = BLMC_receiveBoardMessage(can_handle, &board_data);
         if (ret < 0) {
             switch (ret) {

@@ -59,8 +59,11 @@
         ((int32_t)bytes[0] << 24) \
         )
 
-// Convertion of Q24 value to float.
+// Conversion of Q24 value to float.
 #define Q24_TO_FLOAT(qval) ((float)qval / (1 << 24))
+
+// Conversion of float to Q24
+#define FLOAT_TO_Q24(fval) ((int)(fval * (1 << 24)))
 
 // Convertion of Q24 byte array to float.
 #define QBYTES_TO_FLOAT(qbytes) (\
@@ -230,6 +233,18 @@ void BLMC_updateAdc6(frame_t const * const frame, nanosecs_abs_t timestamp,
 void BLMC_printBoardStatus(BLMC_BoardData_t const * const bd);
 
 
+//! \brief Send the frame currently stored in the handle
+//!
+//! This function assumes that the `frame` of handle is setup as desired. It is
+//! meant as a internal helper functions and not for direct use. Use
+//! BLMC_sendCommand() or BLMC_sendMotorCurrents() instead.
+//!
+//! \param handle The CAN connection handle.
+//! \returns The return value of the rt_dev_send function (< 0 in case of
+//!          error).
+int BLMC_sendCurrentFrame(BLMC_CanHandle_t handle);
+
+
 //! \brief Send a command to the board
 //!
 //! Send a command message with specified command id and value.  Please use the
@@ -244,6 +259,16 @@ void BLMC_printBoardStatus(BLMC_BoardData_t const * const bd);
 //! \returns The return value of the rt_dev_send function (< 0 in case of
 //!          error).
 int BLMC_sendCommand(BLMC_CanHandle_t handle, uint32_t cmd_id, int32_t value);
+
+
+//! \brief Send a motor current command to the board
+//! \param handle The CAN connection handle.
+//! \param current_mtr1 Reference current for motor 1
+//! \param current_mtr2 Reference current for motor 2
+//! \returns The return value of the rt_dev_send function (< 0 in case of
+//!          error).
+int BLMC_sendMotorCurrent(BLMC_CanHandle_t handle, float current_mtr1,
+        float current_mtr2);
 
 
 //! \brief Receive message and update board data

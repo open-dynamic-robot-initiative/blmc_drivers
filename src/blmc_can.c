@@ -224,9 +224,18 @@ void BLMC_printBoardStatus(BLMC_BoardData_t const * const bd)
     }
 }
 
-int BLMC_sendCommand(BLMC_CanHandle_t handle, uint32_t cmd_id, int32_t value)
+int BLMC_sendCurrentFrame(BLMC_CanHandle_t handle)
 {
     int ret;
+    BLMC_CanConnection_t *can = (BLMC_CanConnection_t*)handle;
+
+    ret = rt_dev_sendto(can->socket, (void *)&can->frame, sizeof(can_frame_t),
+            0, (struct sockaddr *)&can->send_addr, sizeof(can->send_addr));
+    return ret;
+}
+
+int BLMC_sendCommand(BLMC_CanHandle_t handle, uint32_t cmd_id, int32_t value)
+{
     BLMC_CanConnection_t *can = (BLMC_CanConnection_t*)handle;
 
     // Fill frame
@@ -248,9 +257,39 @@ int BLMC_sendCommand(BLMC_CanHandle_t handle, uint32_t cmd_id, int32_t value)
     can->frame.data[6] = (cmd_id >> 8) & 0xFF;
     can->frame.data[7] = cmd_id & 0xFF;
 
-    ret = rt_dev_sendto(can->socket, (void *)&can->frame, sizeof(can_frame_t),
-            0, (struct sockaddr *)&can->send_addr, sizeof(can->send_addr));
-    return ret;
+    return BLMC_sendCurrentFrame(handle);
+}
+
+int BLMC_sendMotorCurrent(BLMC_CanHandle_t handle, float current_mtr1,
+        float current_mtr2)
+{
+    BLMC_CanConnection_t *can = (BLMC_CanConnection_t*)handle;
+    uint32_t q_current1, q_current2;
+
+    // Convert floats to Q24 values
+    q_current1 = FLOAT_TO_Q24(current_mtr1);
+    q_current2 = FLOAT_TO_Q24(current_mtr2);
+
+    // Fill frame
+    // ----------
+
+    // header
+    can->frame.can_id = BLMC_CAN_ID_IqRef;
+    can->frame.can_dlc = 8;  // number of bytes
+
+    // Motor 1
+    can->frame.data[0] = (q_current1 >> 24) & 0xFF;
+    can->frame.data[1] = (q_current1 >> 16) & 0xFF;
+    can->frame.data[2] = (q_current1 >> 8) & 0xFF;
+    can->frame.data[3] =  q_current1 & 0xFF;
+
+    // Motor 2
+    can->frame.data[4] = (q_current2 >> 24) & 0xFF;
+    can->frame.data[5] = (q_current2 >> 16) & 0xFF;
+    can->frame.data[6] = (q_current2 >> 8) & 0xFF;
+    can->frame.data[7] =  q_current2 & 0xFF;
+
+    return BLMC_sendCurrentFrame(handle);
 }
 
 int BLMC_receiveBoardMessage(BLMC_CanHandle_t handle,
