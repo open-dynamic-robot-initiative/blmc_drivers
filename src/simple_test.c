@@ -90,22 +90,7 @@ void cleanup_and_exit(int sig)
 
 void rt_task(void)
 {
-    int i, ret, count = 0;
-    struct can_frame frame;
-    struct sockaddr_can addr;
-    //socklen_t addrlen = sizeof(addr);
-    struct msghdr msg;
-    struct iovec iov;
-    nanosecs_abs_t timestamp;
-
-
-    msg.msg_iov = &iov;
-    msg.msg_iovlen = 1;
-    msg.msg_name = (void *)&addr;
-    msg.msg_namelen = sizeof(struct sockaddr_can);
-    msg.msg_control = (void *)&timestamp;
-    msg.msg_controllen = sizeof(nanosecs_abs_t);
-
+    int ret, count = 0;
 
     // Send a message to activate position messages
     ret = BLMC_sendCommand(can_handle, BLMC_CMD_SEND_VELOCITY, BLMC_ENABLE);
@@ -125,22 +110,9 @@ void rt_task(void)
         }
     }
 
-
+    // Receive messages and print board status
     while (1) {
-        // without timestamps
-        //ret = rt_dev_recvfrom(s, (void *)&frame, sizeof(can_frame_t), 0,
-        //                      (struct sockaddr *)&addr, &addrlen);
-
-        iov.iov_base = (void *)&frame;
-        iov.iov_len = sizeof(can_frame_t);
-        ret = rt_dev_recvmsg(s, &msg, 0);
-
-        if (msg.msg_controllen == 0) {
-            // No timestamp for this frame available. Make sure we dont get
-            // garbage.
-            timestamp = 0;
-        }
-
+        ret = BLMC_receiveBoardMessage(can_handle, &board_data);
         if (ret < 0) {
             switch (ret) {
             case -ETIMEDOUT:
@@ -156,40 +128,9 @@ void rt_task(void)
             }
             break;
         }
-        if (print && (count % print) == 0) {
-            printf("#%d: (%d) ", count, addr.can_ifindex);
 
-            if (frame.can_id == BLMC_CAN_ID_Iq) {
-                BLMC_updateCurrent(&frame, timestamp, &board_data);
-            } else if (frame.can_id == BLMC_CAN_ID_POS) {
-                BLMC_updatePosition(&frame, timestamp, &board_data);
-            } else if (frame.can_id == BLMC_CAN_ID_SPEED) {
-                BLMC_updateVelocity(&frame, timestamp, &board_data);
-            } else if (frame.can_id == BLMC_CAN_ID_ADC6) {
-                BLMC_updateAdc6(&frame, timestamp, &board_data);
-            } else if (frame.can_id == BLMC_CAN_ID_STATUSMSG) {
-                BLMC_updateStatus(&frame, &board_data);
-            } else {
-                if (frame.can_id & CAN_ERR_FLAG)
-                    printf("!0x%08x!", frame.can_id & CAN_ERR_MASK);
-                else if (frame.can_id & CAN_EFF_FLAG)
-                    printf("<0x%08x>", frame.can_id & CAN_EFF_MASK);
-                else
-                    printf("<0x%03x>", frame.can_id & CAN_SFF_MASK);
-                printf(" [%d]", frame.can_dlc);
-                if (!(frame.can_id & CAN_RTR_FLAG))
-                    for (i = 0; i < frame.can_dlc; i++) {
-                        printf(" %02x", frame.data[i]);
-                    }
-                if (frame.can_id & CAN_ERR_FLAG) {
-                    printf(" ERROR ");
-                    if (frame.can_id & CAN_ERR_BUSOFF)
-                        printf("bus-off");
-                    if (frame.can_id & CAN_ERR_CRTL)
-                        printf("controller problem");
-                } else if (frame.can_id & CAN_RTR_FLAG)
-                    printf(" remote request");
-            }
+        if (print && (count % print) == 0) {
+            printf("#%d: (%d)\n", count, can_con.msg_addr.can_ifindex);
             BLMC_printBoardStatus(&board_data);
             printf("\n");
         }

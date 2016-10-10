@@ -160,3 +160,38 @@ int BLMC_sendCommand(BLMC_CanHandle_t handle, uint32_t cmd_id, int32_t value)
             0, (struct sockaddr *)&can->send_addr, sizeof(can->send_addr));
     return ret;
 }
+
+int BLMC_receiveBoardMessage(BLMC_CanHandle_t handle,
+        BLMC_BoardData_t *board_data)
+{
+    int ret;
+    BLMC_CanConnection_t *can = (BLMC_CanConnection_t*)handle;
+
+
+    can->iov.iov_base = (void *)&can->frame;
+    can->iov.iov_len = sizeof(can_frame_t);
+
+    ret = rt_dev_recvmsg(can->socket, &can->msg, 0);
+
+    if (can->msg.msg_controllen == 0) {
+        // No timestamp for this frame available. Make sure we dont get
+        // garbage.
+        can->timestamp = 0;
+    }
+
+    if (ret >= 0) {
+        if (can->frame.can_id == BLMC_CAN_ID_Iq) {
+            BLMC_updateCurrent(&can->frame, can->timestamp, board_data);
+        } else if (can->frame.can_id == BLMC_CAN_ID_POS) {
+            BLMC_updatePosition(&can->frame, can->timestamp, board_data);
+        } else if (can->frame.can_id == BLMC_CAN_ID_SPEED) {
+            BLMC_updateVelocity(&can->frame, can->timestamp, board_data);
+        } else if (can->frame.can_id == BLMC_CAN_ID_ADC6) {
+            BLMC_updateAdc6(&can->frame, can->timestamp, board_data);
+        } else if (can->frame.can_id == BLMC_CAN_ID_STATUSMSG) {
+            BLMC_updateStatus(&can->frame, board_data);
+        }
+    }
+
+    return ret;
+}

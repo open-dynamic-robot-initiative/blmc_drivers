@@ -192,4 +192,7 @@ void BLMC_printBoardStatus(BLMC_BoardData_t const * const bd);
 
 int BLMC_sendCommand(BLMC_CanHandle_t handle, uint32_t cmd_id, int32_t value);
 
+int BLMC_receiveBoardMessage(BLMC_CanHandle_t handle,
+        BLMC_BoardData_t *board_data);
+
 #endif // BLMC_CAN_H_
