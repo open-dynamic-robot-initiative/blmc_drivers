@@ -98,6 +98,7 @@ void rt_task(void)
     struct iovec iov;
     nanosecs_abs_t timestamp;
 
+
     msg.msg_iov = &iov;
     msg.msg_iovlen = 1;
     msg.msg_name = (void *)&addr;
@@ -107,43 +108,23 @@ void rt_task(void)
 
 
     // Send a message to activate position messages
-    {
-        // define socket to which frame is sent
-        struct sockaddr_can to_addr;
-        memset(&to_addr, 0, sizeof(to_addr));
-        to_addr.can_family = AF_CAN;
-        to_addr.can_ifindex = 1;
-
-        // fill frame with data
-        frame.can_id = BLMC_CAN_ID_COMMAND;
-        frame.can_dlc = 8;
-        frame.data[0] = 0;
-        frame.data[1] = 0;
-        frame.data[2] = 0;
-        frame.data[3] = 1;
-        frame.data[4] = 0;
-        frame.data[5] = 0;
-        frame.data[6] = 0;
-        frame.data[7] = 13;
-
-        ret = rt_dev_sendto(s, (void *)&frame, sizeof(can_frame_t), 0,
-                (struct sockaddr *)&to_addr, sizeof(to_addr));
-        if (ret < 0) {
-            switch (ret) {
-                case -ETIMEDOUT:
-                    if (verbose)
-                        printf("rt_dev_send(to): timed out");
-                    break;
-                case -EBADF:
-                    if (verbose)
-                        printf("rt_dev_send(to): aborted because socket was closed");
-                    break;
-                default:
-                    fprintf(stderr, "rt_dev_send: %s\n", strerror(-ret));
-                    break;
-            }
+    ret = BLMC_sendCommand(can_handle, BLMC_CMD_SEND_VELOCITY, BLMC_ENABLE);
+    if (ret < 0) {
+        switch (ret) {
+            case -ETIMEDOUT:
+                if (verbose)
+                    printf("rt_dev_send(to): timed out");
+                break;
+            case -EBADF:
+                if (verbose)
+                    printf("rt_dev_send(to): aborted because socket was closed");
+                break;
+            default:
+                fprintf(stderr, "rt_dev_send: %s\n", strerror(-ret));
+                break;
         }
     }
+
 
     while (1) {
         // without timestamps

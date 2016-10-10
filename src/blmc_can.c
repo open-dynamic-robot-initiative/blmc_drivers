@@ -132,3 +132,31 @@ void BLMC_printBoardStatus(BLMC_BoardData_t const * const bd)
     }
 }
 
+int BLMC_sendCommand(BLMC_CanHandle_t handle, uint32_t cmd_id, int32_t value)
+{
+    int ret;
+    BLMC_CanConnection_t *can = (BLMC_CanConnection_t*)handle;
+
+    // Fill frame
+    // ----------
+
+    // header
+    can->frame.can_id = BLMC_CAN_ID_COMMAND;
+    can->frame.can_dlc = 8;  // number of bytes
+
+    // value
+    can->frame.data[0] = (value >> 24) & 0xFF;
+    can->frame.data[1] = (value >> 16) & 0xFF;
+    can->frame.data[2] = (value >> 8) & 0xFF;
+    can->frame.data[3] = value & 0xFF;
+
+    // command
+    can->frame.data[4] = (cmd_id >> 24) & 0xFF;
+    can->frame.data[5] = (cmd_id >> 16) & 0xFF;
+    can->frame.data[6] = (cmd_id >> 8) & 0xFF;
+    can->frame.data[7] = cmd_id & 0xFF;
+
+    ret = rt_dev_sendto(can->socket, (void *)&can->frame, sizeof(can_frame_t),
+            0, (struct sockaddr *)&can->send_addr, sizeof(can->send_addr));
+    return ret;
+}

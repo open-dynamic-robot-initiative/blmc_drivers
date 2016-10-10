@@ -37,6 +37,9 @@
 #define BLMC_CMD_SEND_ADC6 15
 #define BLMC_CMD_SEND_ALL 20
 
+#define BLMC_ENABLE 1
+#define BLMC_DISABLE 0
+
 // Motor Indices
 #define BLMC_MTR1 0
 #define BLMC_MTR2 1
@@ -186,5 +189,7 @@ void BLMC_updateAdc6(frame_t const * const frame, nanosecs_abs_t timestamp,
 
 void BLMC_printBoardStatus(BLMC_BoardData_t const * const bd);
 
+
+int BLMC_sendCommand(BLMC_CanHandle_t handle, uint32_t cmd_id, int32_t value);
 
 #endif // BLMC_CAN_H_
