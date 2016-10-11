@@ -1,6 +1,6 @@
 #include "blmc_can.h"
-#include <stdio.h>
 #include <string.h>  // memset
+#include <rtdk.h>  // rt_printf
 
 
 inline BLMC_CanHandle_t BLMC_initCanHandle(BLMC_CanConnection_t *can_con)
@@ -17,7 +17,7 @@ int BLMC_setupCan(BLMC_CanHandle_t canHandle, char* interface, uint32_t err_mask
 
     ret = rt_dev_socket(PF_CAN, SOCK_RAW, CAN_RAW);
     if (ret < 0) {
-        fprintf(stderr, "rt_dev_socket: %s\n", strerror(-ret));
+        rt_fprintf(stderr, "rt_dev_socket: %s\n", strerror(-ret));
         return -1;
     }
     can->socket = ret;
@@ -30,7 +30,7 @@ int BLMC_setupCan(BLMC_CanHandle_t canHandle, char* interface, uint32_t err_mask
         strncpy(ifr.ifr_name, interface, IFNAMSIZ);
         ret = rt_dev_ioctl(can->socket, SIOCGIFINDEX, &ifr);
         if (ret < 0) {
-            fprintf(stderr, "rt_dev_ioctl GET_IFINDEX: %s\n", strerror(-ret));
+            rt_fprintf(stderr, "rt_dev_ioctl GET_IFINDEX: %s\n", strerror(-ret));
             BLMC_closeCan(canHandle);
             return -1;
         }
@@ -42,7 +42,7 @@ int BLMC_setupCan(BLMC_CanHandle_t canHandle, char* interface, uint32_t err_mask
         ret = rt_dev_setsockopt(can->socket, SOL_CAN_RAW, CAN_RAW_ERR_FILTER,
                                 &err_mask, sizeof(err_mask));
         if (ret < 0) {
-            fprintf(stderr, "rt_dev_setsockopt: %s\n", strerror(-ret));
+            rt_fprintf(stderr, "rt_dev_setsockopt: %s\n", strerror(-ret));
             BLMC_closeCan(canHandle);
             return -1;
         }
@@ -54,7 +54,7 @@ int BLMC_setupCan(BLMC_CanHandle_t canHandle, char* interface, uint32_t err_mask
     //                            &recv_filter, filter_count *
     //                            sizeof(struct can_filter));
     //    if (ret < 0) {
-    //        fprintf(stderr, "rt_dev_setsockopt: %s\n", strerror(-ret));
+    //        rt_fprintf(stderr, "rt_dev_setsockopt: %s\n", strerror(-ret));
     //        goto failure;
     //    }
     //}
@@ -66,7 +66,7 @@ int BLMC_setupCan(BLMC_CanHandle_t canHandle, char* interface, uint32_t err_mask
     ret = rt_dev_bind(can->socket, (struct sockaddr *)&can->recv_addr,
                       sizeof(struct sockaddr_can));
     if (ret < 0) {
-        fprintf(stderr, "rt_dev_bind: %s\n", strerror(-ret));
+        rt_fprintf(stderr, "rt_dev_bind: %s\n", strerror(-ret));
         BLMC_closeCan(canHandle);
         return -1;
     }
@@ -76,7 +76,7 @@ int BLMC_setupCan(BLMC_CanHandle_t canHandle, char* interface, uint32_t err_mask
     ret = rt_dev_ioctl(can->socket,
             RTCAN_RTIOC_TAKE_TIMESTAMP, RTCAN_TAKE_TIMESTAMPS);
     if (ret) {
-        fprintf(stderr, "rt_dev_ioctl TAKE_TIMESTAMP: %s\n", strerror(-ret));
+        rt_fprintf(stderr, "rt_dev_ioctl TAKE_TIMESTAMP: %s\n", strerror(-ret));
         BLMC_closeCan(canHandle);
         return -1;
     }
@@ -110,7 +110,7 @@ int BLMC_closeCan(BLMC_CanHandle_t handle)
         ret = rt_dev_close(can->socket);
         can->socket = -1;
         if (ret) {
-            fprintf(stderr, "rt_dev_close: %s\n", strerror(-ret));
+            rt_fprintf(stderr, "rt_dev_close: %s\n", strerror(-ret));
         }
         return ret;
     } else {
@@ -183,7 +183,7 @@ void BLMC_updateCurrent(frame_t const * const frame, nanosecs_abs_t timestamp,
 void BLMC_updatePosition(frame_t const * const frame, nanosecs_abs_t timestamp,
         BLMC_BoardData_t *bd)
 {
-    //printf("time since last position: %.3f ms\n",
+    //rt_printf("time since last position: %.3f ms\n",
     //        (timestamp - bd->position.timestamp)/1e6);
     BLMC_decodeCanMotorMsg(frame, timestamp, &bd->position);
 }
@@ -205,22 +205,22 @@ void BLMC_printBoardStatus(BLMC_BoardData_t const * const bd)
 {
     int i;
 
-    printf("System:\n");
-    printf("\tSystem enabled: %d\n", bd->status.system_enabled);
-    printf("\tMotor 1 enabled: %d\n", bd->status.motor1_enabled);
-    printf("\tMotor 1 ready: %d\n", bd->status.motor1_ready);
-    printf("\tMotor 2 enabled: %d\n", bd->status.motor2_enabled);
-    printf("\tMotor 2 ready: %d\n", bd->status.motor2_ready);
-    printf("\tError: %d\n", bd->status.error_code);
+    rt_printf("System:\n");
+    rt_printf("\tSystem enabled: %d\n", bd->status.system_enabled);
+    rt_printf("\tMotor 1 enabled: %d\n", bd->status.motor1_enabled);
+    rt_printf("\tMotor 1 ready: %d\n", bd->status.motor1_ready);
+    rt_printf("\tMotor 2 enabled: %d\n", bd->status.motor2_enabled);
+    rt_printf("\tMotor 2 ready: %d\n", bd->status.motor2_ready);
+    rt_printf("\tError: %d\n", bd->status.error_code);
 
     for (i = 0; i < 2; ++i) {
-        printf("Motor %d\n", i+1);
+        rt_printf("Motor %d\n", i+1);
         if (bd->current.timestamp)
-            printf("\tCurrent: %f\n", bd->current.value[i]);
+            rt_printf("\tCurrent: %f\n", bd->current.value[i]);
         if (bd->position.timestamp)
-            printf("\tPosition: %f\n", bd->position.value[i]);
+            rt_printf("\tPosition: %f\n", bd->position.value[i]);
         if (bd->velocity.timestamp)
-            printf("\tVelocity: %f\n", bd->velocity.value[i]);
+            rt_printf("\tVelocity: %f\n", bd->velocity.value[i]);
     }
 }
 

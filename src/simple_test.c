@@ -17,27 +17,24 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
-#include <stdio.h>
-#include <stdlib.h>
 #include <signal.h>
+#include <stdlib.h>
 #include <unistd.h>
 #include <sys/mman.h>
 #include <native/task.h>
 #include <rtdm/rtcan.h>
+#include <rtdk.h>
 #include "blmc_can.h"
 
 
 // GLOBALS
 // **************************************************************************
 
-extern int optind, opterr, optopt;
-static int verbose = 0, print = 1;
+const static int verbose = 0;
 RT_TASK rt_task_desc;
-#define BUF_SIZ 255
-#define MAX_FILTER 16
-struct sockaddr_can recv_addr;
-struct can_filter recv_filter[MAX_FILTER];
-static int filter_count = 0;
+//#define MAX_FILTER 16
+//struct can_filter recv_filter[MAX_FILTER];
+//static int filter_count = 0;
 
 //! global board data
 BLMC_BoardData_t board_data;
@@ -49,22 +46,23 @@ BLMC_CanHandle_t can_handle;
 // FUNCTIONS
 // **************************************************************************
 
-int add_filter(u_int32_t id, u_int32_t mask)
-{
-    if (filter_count >= MAX_FILTER)
-        return -1;
-    recv_filter[filter_count].can_id = id;
-    recv_filter[filter_count].can_mask = mask;
-    printf("Filter #%d: id=0x%08x mask=0x%08x\n", filter_count, id, mask);
-    filter_count++;
-    return 0;
-}
+
+//int add_filter(u_int32_t id, u_int32_t mask)
+//{
+//    if (filter_count >= MAX_FILTER)
+//        return -1;
+//    recv_filter[filter_count].can_id = id;
+//    recv_filter[filter_count].can_mask = mask;
+//    rt_printf("Filter #%d: id=0x%08x mask=0x%08x\n", filter_count, id, mask);
+//    filter_count++;
+//    return 0;
+//}
 
 
 void cleanup_and_exit(int sig)
 {
     if (verbose)
-        printf("Signal %d received\n", sig);
+        rt_printf("Signal %d received\n", sig);
     // Disable system before closing connection
     BLMC_sendCommand(can_handle, BLMC_CMD_ENABLE_SYS, BLMC_DISABLE);
     BLMC_closeCan(can_handle);
@@ -74,7 +72,7 @@ void cleanup_and_exit(int sig)
 
 void rt_task(void)
 {
-    int ret, count = 0;
+    int ret, count = 0, print = 4000;
 
     BLMC_sendCommand(can_handle, BLMC_CMD_ENABLE_SYS, BLMC_ENABLE);
 
@@ -84,14 +82,14 @@ void rt_task(void)
         switch (ret) {
             case -ETIMEDOUT:
                 if (verbose)
-                    printf("rt_dev_send(to): timed out");
+                    rt_printf("rt_dev_send(to): timed out");
                 break;
             case -EBADF:
                 if (verbose)
-                    printf("rt_dev_send(to): aborted because socket was closed");
+                    rt_printf("rt_dev_send(to): aborted because socket was closed");
                 break;
             default:
-                fprintf(stderr, "rt_dev_send: %s\n", strerror(-ret));
+                rt_fprintf(stderr, "rt_dev_send: %s\n", strerror(-ret));
                 break;
         }
     }
@@ -106,22 +104,22 @@ void rt_task(void)
             switch (ret) {
             case -ETIMEDOUT:
                 if (verbose)
-                    printf("rt_dev_recv: timed out");
+                    rt_printf("rt_dev_recv: timed out");
                 continue;
             case -EBADF:
                 if (verbose)
-                    printf("rt_dev_recv: aborted because socket was closed");
+                    rt_printf("rt_dev_recv: aborted because socket was closed");
                 break;
             default:
-                fprintf(stderr, "rt_dev_recv: %s\n", strerror(-ret));
+                rt_fprintf(stderr, "rt_dev_recv: %s\n", strerror(-ret));
             }
             break;
         }
 
         if (print && (count % print) == 0) {
-            printf("#%d: (%d)\n", count, can_con.msg_addr.can_ifindex);
+            rt_printf("#%d: (%d)\n", count, can_con.msg_addr.can_ifindex);
             BLMC_printBoardStatus(&board_data);
-            printf("\n");
+            rt_printf("\n");
         }
         count++;
     }
@@ -130,10 +128,8 @@ void rt_task(void)
 
 int main(int argc, char **argv)
 {
-    int ret;
-    //u_int32_t id, mask;
+    int ret, priority;
     u_int32_t err_mask = 0;
-    //char *ptr;
     char name[32];
 
     mlockall(MCL_CURRENT | MCL_FUTURE);
@@ -169,15 +165,15 @@ int main(int argc, char **argv)
 
     ret = BLMC_setupCan(can_handle, NULL, err_mask);
     if (ret < 0) {
-        printf("Could'nt setup CAN connection. Exit.");
+        rt_printf("Could'nt setup CAN connection. Exit.");
         return -1;
     }
 
-
-    snprintf(name, sizeof(name), "rtcanrecv-%d", getpid());
-    ret = rt_task_shadow(&rt_task_desc, name, 0, 0);
+    snprintf(name, sizeof(name), "blmc_simple_test-%d", getpid());
+    priority = 0;
+    ret = rt_task_shadow(&rt_task_desc, name, priority, 0);
     if (ret) {
-        fprintf(stderr, "rt_task_shadow: %s\n", strerror(-ret));
+        rt_fprintf(stderr, "rt_task_shadow: %s\n", strerror(-ret));
         BLMC_closeCan(can_handle);
         return -1;
     }
