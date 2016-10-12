@@ -8,7 +8,7 @@
 
 // INCLUDES
 // **************************************************************************
-#include <rtdm/rtcan.h>
+#include "can.h"  // FIXME move includes to subfolder to get namespace
 
 
 // DEFINES
@@ -48,51 +48,10 @@
 #define BLMC_ADC_B 1
 
 
-// Macros
-// ------
-
-// Convertion of a byte array to a int32_t.
-#define BYTES_TO_INT32(bytes) (\
-        (int32_t) bytes[3] + \
-        ((int32_t)bytes[2] << 8) + \
-        ((int32_t)bytes[1] << 16) + \
-        ((int32_t)bytes[0] << 24) \
-        )
-
-// Conversion of Q24 value to float.
-#define Q24_TO_FLOAT(qval) ((float)qval / (1 << 24))
-
-// Conversion of float to Q24
-#define FLOAT_TO_Q24(fval) ((int)(fval * (1 << 24)))
-
-// Convertion of Q24 byte array to float.
-#define QBYTES_TO_FLOAT(qbytes) (\
-        Q24_TO_FLOAT( BYTES_TO_INT32(qbytes) ) )
-
-
 // TYPEDEFS
 // **************************************************************************
 
-// just for convenience
-typedef struct can_frame frame_t;
-
-
-//! \brief Encapsulates everything that is required to send/receive CAN frames.
-typedef struct _BLMC_CanConnection_t_
-{
-    struct sockaddr_can recv_addr;
-    struct sockaddr_can send_addr;
-    struct sockaddr_can msg_addr;
-    frame_t frame;
-    struct msghdr msg;
-    struct iovec iov;
-    nanosecs_abs_t timestamp;
-    int socket;
-} BLMC_CanConnection_t;
-
-//! \brief Handle to the CAN connection object.
-typedef BLMC_CanConnection_t *BLMC_CanHandle_t;
-
+typedef CAN_Frame_t const * const const_frame_ptr;
 
 //! \brief Board Status Message.
 typedef struct _BLMC_StatusMsg_t_
@@ -134,25 +93,6 @@ typedef struct _BLMC_BoardData_t_
 // FUNCTIONS
 // **************************************************************************
 
-//! \brief Initialize the CAN handle.
-//! \param can_con Pointer to an CAN connection object.
-//! \returns CAN handle that encapsulates the given connection object.
-inline BLMC_CanHandle_t BLMC_initCanHandle(BLMC_CanConnection_t *can_con);
-
-
-//! \brief Set the CAN connection up.
-//!
-//! This has to be done before sending or receiving messages.
-//! \param handle The CAN connection handle.
-// TODO more params
-int BLMC_setupCan(BLMC_CanHandle_t canHandle, char* interface, uint32_t
-        err_mask);
-
-
-//! \brief Close CAN connection
-//! \returns Return value of rt_dev_close or 0 if there is no open connection.
-int BLMC_closeCan(BLMC_CanHandle_t handle);
-
 
 //! \brief Initialize a stamped value to zero.
 void BLMC_initStampedValue(BLMC_StampedValue_t *sv);
@@ -174,75 +114,50 @@ void BLMC_initBoardData(BLMC_BoardData_t *bd);
 //! as Q24 value which is converted to float.
 //!
 //! \param frame The CAN frame.
-//! \param timestamp Timestamp of the moment the frame was received.
 //! \param out   The decoded data is written to `out`.  The value of the lower
 //!              bytes is stored in out->value[0], the value of the higher
 //!              bytes in out->value[1].
-void BLMC_decodeCanMotorMsg(frame_t const * const frame,
-        nanosecs_abs_t timestamp, BLMC_StampedValue_t *out);
+void BLMC_decodeCanMotorMsg(const_frame_ptr frame, BLMC_StampedValue_t *out);
 
 
 //! \brief Decode a status message from a CAN frame.
 //! \param frame The CAN frame.
 //! \param status Data from the frame is stored here.
-void BLMC_decodeCanStatusMsg(frame_t const * const frame,
-        BLMC_StatusMsg_t *status);
+void BLMC_decodeCanStatusMsg(const_frame_ptr frame, BLMC_StatusMsg_t *status);
 
 
 //! \brief Update board data with status frame.
 //! \param frame CAN frame that contains status message.
-//! \param timestamp Timestamp of the moment the frame was received.
 //! \param bd Board data structure.
-void BLMC_updateStatus(frame_t const * const frame, nanosecs_abs_t timestamp,
-        BLMC_BoardData_t *bd);
+void BLMC_updateStatus(const_frame_ptr frame, BLMC_BoardData_t *bd);
 
 
 //! \brief Update board data with motor current frame.
 //! \param frame CAN frame that contains motor current values.
-//! \param timestamp Timestamp of the moment the frame was received.
 //! \param bd Board data structure.
-void BLMC_updateCurrent(frame_t const * const frame, nanosecs_abs_t timestamp,
-        BLMC_BoardData_t *bd);
+void BLMC_updateCurrent(const_frame_ptr frame, BLMC_BoardData_t *bd);
 
 
 //! \brief Update board data with motor position frame.
 //! \param frame CAN frame that contains motor position values.
-//! \param timestamp Timestamp of the moment the frame was received.
 //! \param bd Board data structure.
-void BLMC_updatePosition(frame_t const * const frame, nanosecs_abs_t timestamp,
-        BLMC_BoardData_t *bd);
+void BLMC_updatePosition(const_frame_ptr frame, BLMC_BoardData_t *bd);
 
 
 //! \brief Update board data with motor velocity frame.
 //! \param frame CAN frame that contains motor velocity values.
-//! \param timestamp Timestamp of the moment the frame was received.
 //! \param bd Board data structure.
-void BLMC_updateVelocity(frame_t const * const frame, nanosecs_abs_t timestamp,
-        BLMC_BoardData_t *bd);
+void BLMC_updateVelocity(const_frame_ptr frame, BLMC_BoardData_t *bd);
 
 
 //! \brief Update board data with ADC6 result frame.
 //! \param frame CAN frame that contains ADC6 values.
-//! \param timestamp Timestamp of the moment the frame was received.
 //! \param bd Board data structure.
-void BLMC_updateAdc6(frame_t const * const frame, nanosecs_abs_t timestamp,
-        BLMC_BoardData_t *bd);
+void BLMC_updateAdc6(const_frame_ptr frame, BLMC_BoardData_t *bd);
 
 
 //! \brief Print the current board status in a human readable way.
 void BLMC_printBoardStatus(BLMC_BoardData_t const * const bd);
-
-
-//! \brief Send the frame currently stored in the handle
-//!
-//! This function assumes that the `frame` of handle is setup as desired. It is
-//! meant as a internal helper functions and not for direct use. Use
-//! BLMC_sendCommand() or BLMC_sendMotorCurrents() instead.
-//!
-//! \param handle The CAN connection handle.
-//! \returns The return value of the rt_dev_send function (< 0 in case of
-//!          error).
-int BLMC_sendCurrentFrame(BLMC_CanHandle_t handle);
 
 
 //! \brief Send a command to the board
@@ -258,7 +173,7 @@ int BLMC_sendCurrentFrame(BLMC_CanHandle_t handle);
 //!               BLMC_DISABLE.
 //! \returns The return value of the rt_dev_send function (< 0 in case of
 //!          error).
-int BLMC_sendCommand(BLMC_CanHandle_t handle, uint32_t cmd_id, int32_t value);
+int BLMC_sendCommand(CAN_CanHandle_t handle, uint32_t cmd_id, int32_t value);
 
 
 //! \brief Send a motor current command to the board
@@ -267,7 +182,7 @@ int BLMC_sendCommand(BLMC_CanHandle_t handle, uint32_t cmd_id, int32_t value);
 //! \param current_mtr2 Reference current for motor 2
 //! \returns The return value of the rt_dev_send function (< 0 in case of
 //!          error).
-int BLMC_sendMotorCurrent(BLMC_CanHandle_t handle, float current_mtr1,
+int BLMC_sendMotorCurrent(CAN_CanHandle_t handle, float current_mtr1,
         float current_mtr2);
 
 
@@ -281,7 +196,7 @@ int BLMC_sendMotorCurrent(BLMC_CanHandle_t handle, float current_mtr1,
 //! \param board_data [in|out] The board data structure.
 //! \returns The return value of the rt_dev_recv function (< 0 in case of
 //!          error).
-int BLMC_receiveBoardMessage(BLMC_CanHandle_t handle,
+int BLMC_receiveBoardMessage(CAN_CanHandle_t handle,
         BLMC_BoardData_t *board_data);
 
 #endif // BLMC_CAN_H_

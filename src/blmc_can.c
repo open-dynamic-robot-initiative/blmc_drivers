@@ -3,120 +3,30 @@
 #include <rtdk.h>  // rt_printf
 
 
-inline BLMC_CanHandle_t BLMC_initCanHandle(BLMC_CanConnection_t *can_con)
-{
-    return (BLMC_CanHandle_t) can_con;
-}
+// DEFINES
+// **************************************************************************
 
-int BLMC_setupCan(BLMC_CanHandle_t canHandle, char* interface, uint32_t err_mask)
-{
-    BLMC_CanConnection_t *can = (BLMC_CanConnection_t*)canHandle;
-    int ret;
-    struct ifreq ifr;
+// Convertion of a byte array to a int32_t.
+#define BYTES_TO_INT32(bytes) (\
+        (int32_t) bytes[3] + \
+        ((int32_t)bytes[2] << 8) + \
+        ((int32_t)bytes[1] << 16) + \
+        ((int32_t)bytes[0] << 24) \
+        )
 
+// Conversion of Q24 value to float.
+#define Q24_TO_FLOAT(qval) ((float)qval / (1 << 24))
 
-    ret = rt_dev_socket(PF_CAN, SOCK_RAW, CAN_RAW);
-    if (ret < 0) {
-        rt_fprintf(stderr, "rt_dev_socket: %s\n", strerror(-ret));
-        return -1;
-    }
-    can->socket = ret;
+// Conversion of float to Q24
+#define FLOAT_TO_Q24(fval) ((int)(fval * (1 << 24)))
 
-
-    // Select interface
-    if (interface == NULL) {
-        ifr.ifr_ifindex = 0;
-    } else {
-        strncpy(ifr.ifr_name, interface, IFNAMSIZ);
-        ret = rt_dev_ioctl(can->socket, SIOCGIFINDEX, &ifr);
-        if (ret < 0) {
-            rt_fprintf(stderr, "rt_dev_ioctl GET_IFINDEX: %s\n", strerror(-ret));
-            BLMC_closeCan(canHandle);
-            return -1;
-        }
-    }
+// Convertion of Q24 byte array to float.
+#define QBYTES_TO_FLOAT(qbytes) (\
+        Q24_TO_FLOAT( BYTES_TO_INT32(qbytes) ) )
 
 
-    // Set error mask
-    if (err_mask) {
-        ret = rt_dev_setsockopt(can->socket, SOL_CAN_RAW, CAN_RAW_ERR_FILTER,
-                                &err_mask, sizeof(err_mask));
-        if (ret < 0) {
-            rt_fprintf(stderr, "rt_dev_setsockopt: %s\n", strerror(-ret));
-            BLMC_closeCan(canHandle);
-            return -1;
-        }
-    }
-
-
-    //if (filter_count) {
-    //    ret = rt_dev_setsockopt(s, SOL_CAN_RAW, CAN_RAW_FILTER,
-    //                            &recv_filter, filter_count *
-    //                            sizeof(struct can_filter));
-    //    if (ret < 0) {
-    //        rt_fprintf(stderr, "rt_dev_setsockopt: %s\n", strerror(-ret));
-    //        goto failure;
-    //    }
-    //}
-
-
-    // Bind to socket
-    can->recv_addr.can_family = AF_CAN;
-    can->recv_addr.can_ifindex = ifr.ifr_ifindex;
-    ret = rt_dev_bind(can->socket, (struct sockaddr *)&can->recv_addr,
-                      sizeof(struct sockaddr_can));
-    if (ret < 0) {
-        rt_fprintf(stderr, "rt_dev_bind: %s\n", strerror(-ret));
-        BLMC_closeCan(canHandle);
-        return -1;
-    }
-
-
-    // Enable timestamps for frames
-    ret = rt_dev_ioctl(can->socket,
-            RTCAN_RTIOC_TAKE_TIMESTAMP, RTCAN_TAKE_TIMESTAMPS);
-    if (ret) {
-        rt_fprintf(stderr, "rt_dev_ioctl TAKE_TIMESTAMP: %s\n", strerror(-ret));
-        BLMC_closeCan(canHandle);
-        return -1;
-    }
-
-
-    can->recv_addr.can_family = AF_CAN;
-    can->recv_addr.can_ifindex = ifr.ifr_ifindex;
-
-    can->msg.msg_iov = &can->iov;
-    can->msg.msg_iovlen = 1;
-    can->msg.msg_name = (void *)&can->msg_addr;
-    can->msg.msg_namelen = sizeof(struct sockaddr_can);
-    can->msg.msg_control = (void *)&can->timestamp;
-    can->msg.msg_controllen = sizeof(nanosecs_abs_t);
-
-    // TODO why the memset?
-    memset(&can->send_addr, 0, sizeof(can->send_addr));
-    can->send_addr.can_family = AF_CAN;
-    can->send_addr.can_ifindex = 1;  // TODO do not hard code!
-
-
-    return 0;
-}
-
-int BLMC_closeCan(BLMC_CanHandle_t handle)
-{
-    BLMC_CanConnection_t *can = (BLMC_CanConnection_t*)handle;
-    int ret;
-
-    if (can->socket >= 0) {
-        ret = rt_dev_close(can->socket);
-        can->socket = -1;
-        if (ret) {
-            rt_fprintf(stderr, "rt_dev_close: %s\n", strerror(-ret));
-        }
-        return ret;
-    } else {
-        return 0;
-    }
-}
+// FUNCTIONS
+// **************************************************************************
 
 void BLMC_initStampedValue(BLMC_StampedValue_t *sv)
 {
@@ -144,17 +54,15 @@ void BLMC_initBoardData(BLMC_BoardData_t *bd)
     BLMC_initStampedValue(&bd->adc6);
 }
 
-void BLMC_decodeCanMotorMsg(frame_t const * const frame,
-        nanosecs_abs_t timestamp, BLMC_StampedValue_t *out)
+void BLMC_decodeCanMotorMsg(const_frame_ptr frame, BLMC_StampedValue_t *out)
 {
     // TODO rename function (no motor, more dual msg, float, Q24)
-    out->timestamp = timestamp;
+    out->timestamp = frame->timestamp;
     out->value[BLMC_MTR1] = QBYTES_TO_FLOAT(frame->data);
     out->value[BLMC_MTR2] = QBYTES_TO_FLOAT((frame->data + 4));
 }
 
-void BLMC_decodeCanStatusMsg(frame_t const * const frame,
-        BLMC_StatusMsg_t *status)
+void BLMC_decodeCanStatusMsg(const_frame_ptr frame, BLMC_StatusMsg_t *status)
 {
     // We only have one byte of data
     uint8_t data = frame->data[0];
@@ -167,37 +75,30 @@ void BLMC_decodeCanStatusMsg(frame_t const * const frame,
     status->error_code     = data >> 5;
 }
 
-void BLMC_updateStatus(frame_t const * const frame, nanosecs_abs_t timestamp,
-        BLMC_BoardData_t *bd)
+void BLMC_updateStatus(const_frame_ptr frame, BLMC_BoardData_t *bd)
 {
     // NOTE: timestamp of status messages is currently not stored.
     BLMC_decodeCanStatusMsg(frame, &bd->status);
 }
 
-void BLMC_updateCurrent(frame_t const * const frame, nanosecs_abs_t timestamp,
-        BLMC_BoardData_t *bd)
+void BLMC_updateCurrent(const_frame_ptr frame, BLMC_BoardData_t *bd)
 {
-    BLMC_decodeCanMotorMsg(frame, timestamp, &bd->current);
+    BLMC_decodeCanMotorMsg(frame, &bd->current);
 }
 
-void BLMC_updatePosition(frame_t const * const frame, nanosecs_abs_t timestamp,
-        BLMC_BoardData_t *bd)
+void BLMC_updatePosition(const_frame_ptr frame, BLMC_BoardData_t *bd)
 {
-    //rt_printf("time since last position: %.3f ms\n",
-    //        (timestamp - bd->position.timestamp)/1e6);
-    BLMC_decodeCanMotorMsg(frame, timestamp, &bd->position);
+    BLMC_decodeCanMotorMsg(frame, &bd->position);
 }
 
-void BLMC_updateVelocity(frame_t const * const frame, nanosecs_abs_t timestamp,
-        BLMC_BoardData_t *bd)
+void BLMC_updateVelocity(const_frame_ptr frame, BLMC_BoardData_t *bd)
 {
-    BLMC_decodeCanMotorMsg(frame, timestamp, &bd->velocity);
+    BLMC_decodeCanMotorMsg(frame, &bd->velocity);
 }
 
-void BLMC_updateAdc6(frame_t const * const frame, nanosecs_abs_t timestamp,
-        BLMC_BoardData_t *bd)
+void BLMC_updateAdc6(const_frame_ptr frame, BLMC_BoardData_t *bd)
 {
-    BLMC_decodeCanMotorMsg(frame, timestamp, &bd->adc6);
+    BLMC_decodeCanMotorMsg(frame, &bd->adc6);
 }
 
 
@@ -224,103 +125,72 @@ void BLMC_printBoardStatus(BLMC_BoardData_t const * const bd)
     }
 }
 
-int BLMC_sendCurrentFrame(BLMC_CanHandle_t handle)
+int BLMC_sendCommand(CAN_CanHandle_t handle, uint32_t cmd_id, int32_t value)
 {
-    int ret;
-    BLMC_CanConnection_t *can = (BLMC_CanConnection_t*)handle;
-
-    ret = rt_dev_sendto(can->socket, (void *)&can->frame, sizeof(can_frame_t),
-            0, (struct sockaddr *)&can->send_addr, sizeof(can->send_addr));
-    return ret;
-}
-
-int BLMC_sendCommand(BLMC_CanHandle_t handle, uint32_t cmd_id, int32_t value)
-{
-    BLMC_CanConnection_t *can = (BLMC_CanConnection_t*)handle;
-
-    // Fill frame
-    // ----------
-
-    // header
-    can->frame.can_id = BLMC_CAN_ID_COMMAND;
-    can->frame.can_dlc = 8;  // number of bytes
+    CAN_CanConnection_t *can = (CAN_CanConnection_t*)handle;
+    uint8_t data[8];
 
     // value
-    can->frame.data[0] = (value >> 24) & 0xFF;
-    can->frame.data[1] = (value >> 16) & 0xFF;
-    can->frame.data[2] = (value >> 8) & 0xFF;
-    can->frame.data[3] = value & 0xFF;
+    data[0] = (value >> 24) & 0xFF;
+    data[1] = (value >> 16) & 0xFF;
+    data[2] = (value >> 8) & 0xFF;
+    data[3] = value & 0xFF;
 
     // command
-    can->frame.data[4] = (cmd_id >> 24) & 0xFF;
-    can->frame.data[5] = (cmd_id >> 16) & 0xFF;
-    can->frame.data[6] = (cmd_id >> 8) & 0xFF;
-    can->frame.data[7] = cmd_id & 0xFF;
+    data[4] = (cmd_id >> 24) & 0xFF;
+    data[5] = (cmd_id >> 16) & 0xFF;
+    data[6] = (cmd_id >> 8) & 0xFF;
+    data[7] = cmd_id & 0xFF;
 
-    return BLMC_sendCurrentFrame(handle);
+    return CAN_sendFrame(handle, BLMC_CAN_ID_COMMAND, data, 8);
 }
 
-int BLMC_sendMotorCurrent(BLMC_CanHandle_t handle, float current_mtr1,
+int BLMC_sendMotorCurrent(CAN_CanHandle_t handle, float current_mtr1,
         float current_mtr2)
 {
-    BLMC_CanConnection_t *can = (BLMC_CanConnection_t*)handle;
+    CAN_CanConnection_t *can = (CAN_CanConnection_t*)handle;
+    uint8_t data[8];
     uint32_t q_current1, q_current2;
 
     // Convert floats to Q24 values
     q_current1 = FLOAT_TO_Q24(current_mtr1);
     q_current2 = FLOAT_TO_Q24(current_mtr2);
 
-    // Fill frame
-    // ----------
-
-    // header
-    can->frame.can_id = BLMC_CAN_ID_IqRef;
-    can->frame.can_dlc = 8;  // number of bytes
-
     // Motor 1
-    can->frame.data[0] = (q_current1 >> 24) & 0xFF;
-    can->frame.data[1] = (q_current1 >> 16) & 0xFF;
-    can->frame.data[2] = (q_current1 >> 8) & 0xFF;
-    can->frame.data[3] =  q_current1 & 0xFF;
+    data[0] = (q_current1 >> 24) & 0xFF;
+    data[1] = (q_current1 >> 16) & 0xFF;
+    data[2] = (q_current1 >> 8) & 0xFF;
+    data[3] =  q_current1 & 0xFF;
 
     // Motor 2
-    can->frame.data[4] = (q_current2 >> 24) & 0xFF;
-    can->frame.data[5] = (q_current2 >> 16) & 0xFF;
-    can->frame.data[6] = (q_current2 >> 8) & 0xFF;
-    can->frame.data[7] =  q_current2 & 0xFF;
+    data[4] = (q_current2 >> 24) & 0xFF;
+    data[5] = (q_current2 >> 16) & 0xFF;
+    data[6] = (q_current2 >> 8) & 0xFF;
+    data[7] =  q_current2 & 0xFF;
 
-    return BLMC_sendCurrentFrame(handle);
+    return CAN_sendFrame(handle, BLMC_CAN_ID_IqRef, data, 8);
 }
 
-int BLMC_receiveBoardMessage(BLMC_CanHandle_t handle,
+int BLMC_receiveBoardMessage(CAN_CanHandle_t handle,
         BLMC_BoardData_t *board_data)
 {
+    CAN_CanConnection_t *can = (CAN_CanConnection_t*)handle;
     int ret;
-    BLMC_CanConnection_t *can = (BLMC_CanConnection_t*)handle;
+    CAN_Frame_t frame;
 
-
-    can->iov.iov_base = (void *)&can->frame;
-    can->iov.iov_len = sizeof(can_frame_t);
-
-    ret = rt_dev_recvmsg(can->socket, &can->msg, 0);
-
-    if (can->msg.msg_controllen == 0) {
-        // No timestamp for this frame available. Make sure we dont get
-        // garbage.
-        can->timestamp = 0;
-    }
+    ret = CAN_receiveFrame(handle, &frame);
 
     if (ret >= 0) {
         if (can->frame.can_id == BLMC_CAN_ID_Iq) {
-            BLMC_updateCurrent(&can->frame, can->timestamp, board_data);
+            BLMC_updateCurrent(&frame, board_data);
         } else if (can->frame.can_id == BLMC_CAN_ID_POS) {
-            BLMC_updatePosition(&can->frame, can->timestamp, board_data);
+            BLMC_updatePosition(&frame, board_data);
         } else if (can->frame.can_id == BLMC_CAN_ID_SPEED) {
-            BLMC_updateVelocity(&can->frame, can->timestamp, board_data);
+            BLMC_updateVelocity(&frame, board_data);
         } else if (can->frame.can_id == BLMC_CAN_ID_ADC6) {
-            BLMC_updateAdc6(&can->frame, can->timestamp, board_data);
+            BLMC_updateAdc6(&frame, board_data);
         } else if (can->frame.can_id == BLMC_CAN_ID_STATUSMSG) {
-            BLMC_updateStatus(&can->frame, can->timestamp, board_data);
+            BLMC_updateStatus(&frame, board_data);
         }
     }
 

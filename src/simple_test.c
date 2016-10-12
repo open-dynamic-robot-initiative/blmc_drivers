@@ -39,8 +39,8 @@ RT_TASK rt_task_desc;
 //! global board data
 BLMC_BoardData_t board_data;
 
-BLMC_CanConnection_t can_con;
-BLMC_CanHandle_t can_handle;
+CAN_CanConnection_t can_con;
+CAN_CanHandle_t can_handle;
 
 
 // FUNCTIONS
@@ -65,7 +65,7 @@ void cleanup_and_exit(int sig)
         rt_printf("Signal %d received\n", sig);
     // Disable system before closing connection
     BLMC_sendCommand(can_handle, BLMC_CMD_ENABLE_SYS, BLMC_DISABLE);
-    BLMC_closeCan(can_handle);
+    CAN_closeCan(can_handle);
     exit(0);
 }
 
@@ -77,7 +77,7 @@ void rt_task(void)
     BLMC_sendCommand(can_handle, BLMC_CMD_ENABLE_SYS, BLMC_ENABLE);
 
     // Send a message to activate position messages
-    ret = BLMC_sendCommand(can_handle, BLMC_CMD_SEND_CURRENT, BLMC_ENABLE);
+    ret = BLMC_sendCommand(can_handle, BLMC_CMD_SEND_ALL, BLMC_ENABLE);
     if (ret < 0) {
         switch (ret) {
             case -ETIMEDOUT:
@@ -133,6 +133,10 @@ int main(int argc, char **argv)
     char name[32];
 
     mlockall(MCL_CURRENT | MCL_FUTURE);
+
+    // for real time printing
+    rt_print_auto_init(1);
+
     signal(SIGTERM, cleanup_and_exit);
     signal(SIGINT, cleanup_and_exit);
 
@@ -160,10 +164,10 @@ int main(int argc, char **argv)
     // Initialize stuff
     // ----------------
     //
-    can_handle = BLMC_initCanHandle(&can_con);
+    can_handle = CAN_initCanHandle(&can_con);
     BLMC_initBoardData(&board_data);
 
-    ret = BLMC_setupCan(can_handle, NULL, err_mask);
+    ret = CAN_setupCan(can_handle, NULL, err_mask);
     if (ret < 0) {
         rt_printf("Could'nt setup CAN connection. Exit.");
         return -1;
@@ -174,7 +178,7 @@ int main(int argc, char **argv)
     ret = rt_task_shadow(&rt_task_desc, name, priority, 0);
     if (ret) {
         rt_fprintf(stderr, "rt_task_shadow: %s\n", strerror(-ret));
-        BLMC_closeCan(can_handle);
+        CAN_closeCan(can_handle);
         return -1;
     }
     rt_task(); /* never returns */
