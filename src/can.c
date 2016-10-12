@@ -137,6 +137,7 @@ int CAN_receiveFrame(CAN_CanHandle_t handle, CAN_Frame_t *out_frame)
     }
 
     if (ret >= 0) {
+        out_frame->id = can->frame.can_id;
         out_frame->data = can->frame.data;
         out_frame->dlc = can->frame.can_dlc;
         out_frame->timestamp = can->timestamp;

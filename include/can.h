@@ -35,6 +35,7 @@ typedef struct _CAN_Frame_t_
 {
     uint8_t *data;
     uint8_t dlc;
+    can_id_t id;
     nanosecs_abs_t timestamp;
     int recv_ifindex;
 } CAN_Frame_t;

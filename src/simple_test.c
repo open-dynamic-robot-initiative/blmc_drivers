@@ -22,9 +22,10 @@
 #include <unistd.h>
 #include <sys/mman.h>
 #include <native/task.h>
-#include <rtdm/rtcan.h>
 #include <rtdk.h>
+#include "can.h"
 #include "blmc_can.h"
+#include "optoforce_can.h"
 
 
 // GLOBALS
@@ -36,11 +37,13 @@ RT_TASK rt_task_desc;
 //struct can_filter recv_filter[MAX_FILTER];
 //static int filter_count = 0;
 
+CAN_CanConnection_t can_con;
+CAN_CanHandle_t can_handle;
+
 //! global board data
 BLMC_BoardData_t board_data;
 
-CAN_CanConnection_t can_con;
-CAN_CanHandle_t can_handle;
+OPTO_SensorData_t opto_data;
 
 
 // FUNCTIONS
@@ -73,6 +76,7 @@ void cleanup_and_exit(int sig)
 void rt_task(void)
 {
     int ret, count = 0, print = 4000;
+    CAN_Frame_t frame;
 
     BLMC_sendCommand(can_handle, BLMC_CMD_ENABLE_SYS, BLMC_ENABLE);
 
@@ -99,7 +103,8 @@ void rt_task(void)
     // Receive messages and print board status
     while (1) {
         //BLMC_sendMotorCurrent(can_handle, 0, 0.3);
-        ret = BLMC_receiveBoardMessage(can_handle, &board_data);
+        //ret = BLMC_receiveBoardMessage(can_handle, &board_data);
+        ret = CAN_receiveFrame(can_handle, &frame);
         if (ret < 0) {
             switch (ret) {
             case -ETIMEDOUT:
@@ -116,9 +121,18 @@ void rt_task(void)
             break;
         }
 
+        ret = BLMC_processCanFrame(&frame, &board_data);
+        if (ret == 1) {
+            // frame remained unprocessed
+            ret = OPTO_processCanFrame(&frame, &opto_data);
+        }
+
         if (print && (count % print) == 0) {
             rt_printf("#%d: (%d)\n", count, can_con.msg_addr.can_ifindex);
             BLMC_printBoardStatus(&board_data);
+            rt_printf("OptoForce:\n");
+            rt_printf("\t(%d, %d, %d)\n", opto_data.fx_counts,
+                    opto_data.fy_counts, opto_data.fz_counts);
             rt_printf("\n");
         }
         count++;

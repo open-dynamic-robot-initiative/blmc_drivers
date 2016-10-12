@@ -48,6 +48,8 @@ int OPTO_decodeDataFrame(const_frame_ptr frame,
 int OPTO_decodeDataPacket31(OPTO_DataPacket31Bytes_t const *bytes,
         OPTO_DataPacket31_t *pkt)
 {
+    if (!bytes->complete)
+        return -OPTO_ERR_INCOMPLETE_PACKET;
     if (!OPTO_checkChecksum(bytes))
         return -OPTO_ERR_WRONG_CHECKSUM;
 
@@ -72,6 +74,8 @@ int OPTO_decodeDataPacket31(OPTO_DataPacket31Bytes_t const *bytes,
     pkt->fz_counts = BYTES_TO_SINT16((bytes->low_bytes + 4));
 
     // TODO f*_N is not set
+
+    return 0;
 }
 
 bool OPTO_checkChecksum(OPTO_DataPacket31Bytes_t const *bytes)
@@ -129,6 +133,27 @@ int OPTO_sendConfig(CAN_CanHandle_t handle,
     if (ret < 0)
         return ret;
 
-    ret = CAN_sendFrame(handle, OPTO_CAN_ID_CONFIG, bytes[8], 1);
+    ret = CAN_sendFrame(handle, OPTO_CAN_ID_CONFIG, &bytes[8], 1);
+    return ret;
+}
+
+int OPTO_processCanFrame(const_frame_ptr frame, OPTO_DataPacket31_t *data)
+{
+    static OPTO_DataPacket31Bytes_t packet_bytes;
+    int ret;
+
+    if (frame->id != OPTO_CAN_ID_SENSOR_DATA)
+        return OPTO_RET_NO_OPTO_FRAME;
+
+    ret = OPTO_decodeDataFrame(frame, &packet_bytes);
+    if (ret < 0)
+        return ret;
+
+    if (!packet_bytes.complete) {
+        return OPTO_RET_DATA_INCOMPLETE;
+    }
+
+    ret = OPTO_decodeDataPacket31(&packet_bytes, data);
+
     return ret;
 }

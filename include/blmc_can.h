@@ -186,17 +186,15 @@ int BLMC_sendMotorCurrent(CAN_CanHandle_t handle, float current_mtr1,
         float current_mtr2);
 
 
-//! \brief Receive message and update board data
+//! \brief Process a CAN frame
 //!
-//! Receives one message from the CAN bus and updates the board data structure
-//! accordingly.  If the received message is not related to the board data, it
-//! is dropped without notice!
+//! Checks if the frame contains data related to the board and, if yes, updates
+//! board_data.
 //!
-//! \param handle The CAN connection handle.
-//! \param board_data [in|out] The board data structure.
-//! \returns The return value of the rt_dev_recv function (< 0 in case of
-//!          error).
-int BLMC_receiveBoardMessage(CAN_CanHandle_t handle,
-        BLMC_BoardData_t *board_data);
+//! \param frame The CAN frame that is to be processed.
+//! \param board_data [out] If the frame contains data related to the board,
+//!                   board_data is updated accordingly
+//! \returns 0 if the frame contained board data, 1 if not.
+int BLMC_processCanFrame(const_frame_ptr frame, BLMC_BoardData_t *board_data);
 
 #endif // BLMC_CAN_H_

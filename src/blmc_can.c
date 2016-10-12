@@ -171,28 +171,25 @@ int BLMC_sendMotorCurrent(CAN_CanHandle_t handle, float current_mtr1,
     return CAN_sendFrame(handle, BLMC_CAN_ID_IqRef, data, 8);
 }
 
-int BLMC_receiveBoardMessage(CAN_CanHandle_t handle,
+int BLMC_processCanFrame(const_frame_ptr frame,
         BLMC_BoardData_t *board_data)
 {
-    CAN_CanConnection_t *can = (CAN_CanConnection_t*)handle;
-    int ret;
-    CAN_Frame_t frame;
 
-    ret = CAN_receiveFrame(handle, &frame);
-
-    if (ret >= 0) {
-        if (can->frame.can_id == BLMC_CAN_ID_Iq) {
-            BLMC_updateCurrent(&frame, board_data);
-        } else if (can->frame.can_id == BLMC_CAN_ID_POS) {
-            BLMC_updatePosition(&frame, board_data);
-        } else if (can->frame.can_id == BLMC_CAN_ID_SPEED) {
-            BLMC_updateVelocity(&frame, board_data);
-        } else if (can->frame.can_id == BLMC_CAN_ID_ADC6) {
-            BLMC_updateAdc6(&frame, board_data);
-        } else if (can->frame.can_id == BLMC_CAN_ID_STATUSMSG) {
-            BLMC_updateStatus(&frame, board_data);
-        }
+    if (frame->id == BLMC_CAN_ID_Iq) {
+        BLMC_updateCurrent(frame, board_data);
+    } else if (frame->id == BLMC_CAN_ID_POS) {
+        BLMC_updatePosition(frame, board_data);
+    } else if (frame->id == BLMC_CAN_ID_SPEED) {
+        BLMC_updateVelocity(frame, board_data);
+    } else if (frame->id == BLMC_CAN_ID_ADC6) {
+        BLMC_updateAdc6(frame, board_data);
+    } else if (frame->id == BLMC_CAN_ID_STATUSMSG) {
+        BLMC_updateStatus(frame, board_data);
+    } else {
+        // no frame for me
+        return 1;  // FIXME no magic numbers
     }
 
-    return ret;
+    // it was a frame for me
+    return 0;
 }
