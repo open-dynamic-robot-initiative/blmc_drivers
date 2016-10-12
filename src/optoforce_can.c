@@ -139,7 +139,8 @@ int OPTO_sendConfig(CAN_CanHandle_t handle,
 
 int OPTO_processCanFrame(const_frame_ptr frame, OPTO_DataPacket31_t *data)
 {
-    static OPTO_DataPacket31Bytes_t packet_bytes;
+    static OPTO_DataPacket31Bytes_t packet_bytes = {
+        .has_high = false, .complete = false};
     int ret;
 
     if (frame->id != OPTO_CAN_ID_SENSOR_DATA)
@@ -154,6 +155,9 @@ int OPTO_processCanFrame(const_frame_ptr frame, OPTO_DataPacket31_t *data)
     }
 
     ret = OPTO_decodeDataPacket31(&packet_bytes, data);
+
+    // reset packet_bytes
+    OPTO_initDataPacketBytes(&packet_bytes);
 
     return ret;
 }
