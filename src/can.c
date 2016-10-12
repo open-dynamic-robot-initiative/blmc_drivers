@@ -32,7 +32,8 @@ int CAN_setupCan(CAN_CanHandle_t canHandle, char* interface, uint32_t err_mask)
         strncpy(ifr.ifr_name, interface, IFNAMSIZ);
         ret = rt_dev_ioctl(can->socket, SIOCGIFINDEX, &ifr);
         if (ret < 0) {
-            rt_fprintf(stderr, "rt_dev_ioctl GET_IFINDEX: %s\n", strerror(-ret));
+            rt_fprintf(stderr, "rt_dev_ioctl GET_IFINDEX: %s\n",
+                    strerror(-ret));
             CAN_closeCan(canHandle);
             return -1;
         }
@@ -78,7 +79,8 @@ int CAN_setupCan(CAN_CanHandle_t canHandle, char* interface, uint32_t err_mask)
     ret = rt_dev_ioctl(can->socket,
             RTCAN_RTIOC_TAKE_TIMESTAMP, RTCAN_TAKE_TIMESTAMPS);
     if (ret) {
-        rt_fprintf(stderr, "rt_dev_ioctl TAKE_TIMESTAMP: %s\n", strerror(-ret));
+        rt_fprintf(stderr, "rt_dev_ioctl TAKE_TIMESTAMP: %s\n",
+                strerror(-ret));
         CAN_closeCan(canHandle);
         return -1;
     }
@@ -97,7 +99,7 @@ int CAN_setupCan(CAN_CanHandle_t canHandle, char* interface, uint32_t err_mask)
     // TODO why the memset?
     memset(&can->send_addr, 0, sizeof(can->send_addr));
     can->send_addr.can_family = AF_CAN;
-    can->send_addr.can_ifindex = 1;  // TODO do not hard code!
+    can->send_addr.can_ifindex = ifr.ifr_ifindex;
 
 
     return 0;
@@ -155,7 +157,6 @@ int CAN_sendFrame(CAN_CanHandle_t handle, uint32_t id, uint8_t *data,
 
     can->frame.can_id = id;
     can->frame.can_dlc = dlc;
-    //can->frame.data = data;
     memcpy(can->frame.data, data, dlc);
 
     ret = rt_dev_sendto(can->socket, (void *)&can->frame, sizeof(can_frame_t),

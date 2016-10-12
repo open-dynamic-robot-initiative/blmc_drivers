@@ -181,7 +181,7 @@ int main(int argc, char **argv)
     can_handle = CAN_initCanHandle(&can_con);
     BLMC_initBoardData(&board_data);
 
-    ret = CAN_setupCan(can_handle, NULL, err_mask);
+    ret = CAN_setupCan(can_handle, "rtcan1", err_mask);
     if (ret < 0) {
         rt_printf("Could'nt setup CAN connection. Exit.");
         return -1;
