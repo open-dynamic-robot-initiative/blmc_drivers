@@ -76,6 +76,7 @@ void cleanup_and_exit(int sig)
 void rt_task(void)
 {
     int ret, count = 0, print = 4000;
+    bool new_opto_data = false;
     CAN_Frame_t frame;
 
     BLMC_sendCommand(can_handle, BLMC_CMD_ENABLE_SYS, BLMC_ENABLE);
@@ -103,7 +104,8 @@ void rt_task(void)
     // Receive messages and print board status
     while (1) {
         //BLMC_sendMotorCurrent(can_handle, 0, 0.3);
-        //ret = BLMC_receiveBoardMessage(can_handle, &board_data);
+
+        // get the next frame from the CAN bus
         ret = CAN_receiveFrame(can_handle, &frame);
         if (ret < 0) {
             switch (ret) {
@@ -121,18 +123,32 @@ void rt_task(void)
             break;
         }
 
-        ret = BLMC_processCanFrame(&frame, &board_data);
-        if (ret == 1) {
-            // frame remained unprocessed
+        // Show the frame to all involved modules. Stop as soon as one of them
+        // can make use of it.
+        do {
+            ret = BLMC_processCanFrame(&frame, &board_data);
+            if (ret != 1)
+                break;
+
             ret = OPTO_processCanFrame(&frame, &opto_data);
-        }
+            // set flag if opto_data is updated
+            new_opto_data |= (ret == 0);
+            if (ret != 1)
+                break;
+        } while(0);
 
         if (print && (count % print) == 0) {
             rt_printf("#%d: (%d)\n", count, can_con.msg_addr.can_ifindex);
+
             BLMC_printBoardStatus(&board_data);
-            rt_printf("OptoForce:\n");
-            rt_printf("\t(%d, %d, %d)\n", opto_data.fx_counts,
-                    opto_data.fy_counts, opto_data.fz_counts);
+
+            if (new_opto_data) {
+                new_opto_data = false;
+                rt_printf("OptoForce:\n");
+                rt_printf("\t(%d, %d, %d)\n", opto_data.fx_counts,
+                        opto_data.fy_counts, opto_data.fz_counts);
+            }
+
             rt_printf("\n");
         }
         count++;
