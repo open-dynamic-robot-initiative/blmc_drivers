@@ -23,9 +23,9 @@
 #include <sys/mman.h>
 #include <native/task.h>
 #include <rtdk.h>
-#include "can.h"
-#include "blmc_can.h"
-#include "optoforce_can.h"
+#include <blmc_can/can.h>
+#include <blmc_can/blmc_can.h>
+#include <blmc_can/optoforce_can.h>
 
 
 // GLOBALS

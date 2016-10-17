@@ -1,4 +1,4 @@
-#include "blmc_can.h"
+#include <blmc_can/blmc_can.h>
 #include <string.h>  // memset
 #include <rtdk.h>  // rt_printf
 

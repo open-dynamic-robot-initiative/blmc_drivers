@@ -1,4 +1,4 @@
-#include "can.h"
+#include <blmc_can/can.h>
 #include <string.h>
 #include <rtdk.h>
 

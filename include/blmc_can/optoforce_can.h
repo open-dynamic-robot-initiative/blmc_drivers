@@ -9,7 +9,7 @@
 // INCLUDES
 // **************************************************************************
 #include <stdbool.h>
-#include "can.h"
+#include <blmc_can/can.h>
 
 
 // DEFINES

@@ -8,7 +8,7 @@
 
 // INCLUDES
 // **************************************************************************
-#include "can.h"  // FIXME move includes to subfolder to get namespace
+#include <blmc_can/can.h>
 
 
 // DEFINES

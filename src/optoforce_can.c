@@ -1,4 +1,4 @@
-#include "optoforce_can.h"
+#include <blmc_can/optoforce_can.h>
 #include <string.h>
 
 
