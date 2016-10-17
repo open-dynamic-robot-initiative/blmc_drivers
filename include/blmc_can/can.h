@@ -31,12 +31,18 @@ typedef struct _CAN_CanConnection_t_
 typedef CAN_CanConnection_t *CAN_CanHandle_t;
 
 
+//! \brief Represents a CAN frame.
 typedef struct _CAN_Frame_t_
 {
+    //! Data content of the frame. Up to 8 bytes (see dlc).
     uint8_t *data;
+    //! Number of bytes in data.
     uint8_t dlc;
+    //! Arbitration Id of the frame.
     can_id_t id;
+    //! Timestamp of the moment the frame was received.
     nanosecs_abs_t timestamp;
+    //! Index of the interface from which the frame was received.
     int recv_ifindex;
 } CAN_Frame_t;
 

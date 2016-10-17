@@ -1,5 +1,13 @@
-/*
- * Program to receive CAN messages
+/**
+ * \brief Demo for the blmc_can library.
+ *
+ * This file shows how the blmc_can library can be used.  At start-up it sends
+ * a few commands to the board to enable it and to make it send motor
+ * information.  Then messages from the board (and optionally the OptoForce
+ * sensor) are received and printed in a loop.
+ *
+ * While it has been changed in wide parts, this demo is originally based on
+ * the rtcanrecv.c example file of xenomai (see copyright and licence below).
  *
  * Copyright (C) 2006 Wolfgang Grandegger <wg@grandegger.com>
  *
