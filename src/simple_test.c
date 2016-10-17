@@ -204,7 +204,7 @@ int main(int argc, char **argv)
     }
 
     snprintf(name, sizeof(name), "blmc_simple_test-%d", getpid());
-    priority = 0;
+    priority = 10;
     ret = rt_task_shadow(&rt_task_desc, name, priority, 0);
     if (ret) {
         rt_fprintf(stderr, "rt_task_shadow: %s\n", strerror(-ret));
