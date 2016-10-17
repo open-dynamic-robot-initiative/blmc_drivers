@@ -197,9 +197,15 @@ int main(int argc, char **argv)
     can_handle = CAN_initCanHandle(&can_con);
     BLMC_initBoardData(&board_data);
 
-    ret = CAN_setupCan(can_handle, "rtcan1", err_mask);
+    if (argc <= 1) {
+        rt_printf("Usage: %s <can_interface>\n", argv[0]);
+        rt_printf("where <can_interface> is something like 'rtcan0'.\n");
+        return -1;
+    }
+
+    ret = CAN_setupCan(can_handle, argv[1], err_mask);
     if (ret < 0) {
-        rt_printf("Could'nt setup CAN connection. Exit.");
+        rt_printf("Couldn't setup CAN connection. Exit.");
         return -1;
     }
 
