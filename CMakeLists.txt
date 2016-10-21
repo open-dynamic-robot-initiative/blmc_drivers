@@ -1,19 +1,37 @@
 cmake_minimum_required(VERSION 2.8)
-set(PROJECT_NAME blmc_can)
+project(blmc_can)
 
-include(../sl_cmake_global/LAB.cmake)
+find_package(catkin REQUIRED)
 
-include_directories(./include)
+find_package(Xenomai REQUIRED)
+
+include_directories(
+    ./include
+    ${Xenomai_INCLUDE_DIR}
+    )
 
 
+catkin_package(
+  INCLUDE_DIRS ./include
+  LIBRARIES ${PROJECT_NAME}
+  #CATKIN_DEPENDS 
+)
+
+
+# The CAN API library
 add_library(${PROJECT_NAME}
     src/can.c
     src/blmc_can.c
     src/optoforce_can.c
     )
-target_link_libraries(${PROJECT_NAME} ${LAB_STD_LIBS} rtdm)
+target_link_libraries(${PROJECT_NAME}
+    ${Xenomai_LIBRARY_XENOMAI}
+    ${Xenomai_LIBRARY_NATIVE}
+    ${Xenomai_LIBRARY_RTDM}
+    )
 
 
+# Demo executable
 add_executable(blmc_can_demo
     src/blmc_can_demo.c
     src/can.c

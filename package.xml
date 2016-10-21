@@ -1,0 +1,18 @@
+<?xml version="1.0"?>
+<package>
+  <name>blmc_can</name>
+  <version>1.0.0</version>
+  <description>
+      Real-time CAN API for the brushless motor control microcontroller
+      board (Texas Instruments LAUNCHXL-F28069M).
+  </description>
+  <maintainer email="fwidmaier@tue.mpg.de">Felix Widmaier</maintainer>
+  <license>TODO</license>
+  <author email="fwidmaier@tue.mpg.de">Felix Widmaier</author>
+
+  <buildtool_depend>catkin</buildtool_depend>
+  <build_depend>xenomai_ros</build_depend>
+
+  <export>
+  </export>
+</package>
