@@ -12,6 +12,11 @@
 #include <blmc_can/can.h>
 
 
+#ifdef __cplusplus
+extern "C"{
+#endif
+
+
 // DEFINES
 // **************************************************************************
 
@@ -203,5 +208,9 @@ int OPTO_sendConfig(CAN_CanHandle_t handle,
 //!             data packet, otherwise it is unchanged.
 //! \return See above.
 int OPTO_processCanFrame(const_frame_ptr frame, OPTO_DataPacket31_t *data);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif  // OPTOFORCE_CAN_H_

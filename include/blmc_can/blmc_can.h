@@ -11,6 +11,11 @@
 #include <blmc_can/can.h>
 
 
+#ifdef __cplusplus
+extern "C"{
+#endif
+
+
 // DEFINES
 // **************************************************************************
 
@@ -196,5 +201,9 @@ int BLMC_sendMotorCurrent(CAN_CanHandle_t handle, float current_mtr1,
 //!                   board_data is updated accordingly
 //! \returns 0 if the frame contained board data, 1 if not.
 int BLMC_processCanFrame(const_frame_ptr frame, BLMC_BoardData_t *board_data);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif // BLMC_CAN_H_

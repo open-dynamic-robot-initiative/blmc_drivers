@@ -11,6 +11,11 @@
 #include <rtdm/rtcan.h>
 
 
+#ifdef __cplusplus
+extern "C"{
+#endif
+
+
 // TYPEDEFS
 // **************************************************************************
 
@@ -94,5 +99,9 @@ int CAN_receiveFrame(CAN_CanHandle_t handle, CAN_Frame_t *out_frame);
 //!          error).
 int CAN_sendFrame(CAN_CanHandle_t handle, uint32_t id, uint8_t *data,
         uint8_t dlc);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif  // CAN_H_
