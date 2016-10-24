@@ -70,7 +70,7 @@ CAN_CanHandle_t CAN_initCanHandle(CAN_CanConnection_t *can_con);
 //! \param interface Name of the CAN interface. If NULL, the socket is
 //!                  connected to all available interfaces.
 //! \param err_mask Error mask. TODO what is this?
-int CAN_setupCan(CAN_CanHandle_t canHandle, char* interface,
+int CAN_setupCan(CAN_CanHandle_t canHandle, char const *interface,
         uint32_t err_mask);
 
 

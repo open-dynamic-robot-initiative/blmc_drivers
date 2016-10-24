@@ -10,7 +10,8 @@ CAN_CanHandle_t CAN_initCanHandle(CAN_CanConnection_t *can_con)
     return (CAN_CanHandle_t) can_con;
 }
 
-int CAN_setupCan(CAN_CanHandle_t canHandle, char* interface, uint32_t err_mask)
+int CAN_setupCan(CAN_CanHandle_t canHandle, char const *interface,
+        uint32_t err_mask)
 {
     CAN_CanConnection_t *can = (CAN_CanConnection_t*)canHandle;
     int ret;
