@@ -4,6 +4,7 @@ project(blmc_can)
 find_package(catkin REQUIRED)
 
 find_package(Xenomai REQUIRED)
+add_definitions(${Xenomai_DEFINITIONS})
 
 include_directories(
     ./include
@@ -12,9 +13,10 @@ include_directories(
 
 
 catkin_package(
-  INCLUDE_DIRS ./include
+  INCLUDE_DIRS ./include ${Xenomai_INCLUDE_DIR}
   LIBRARIES ${PROJECT_NAME}
-  #CATKIN_DEPENDS 
+  #CATKIN_DEPENDS
+  DEPENDS Xenomai
 )
 
 
