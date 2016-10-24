@@ -59,7 +59,7 @@ typedef struct _CAN_Frame_t_
 //! \brief Initialize the CAN handle.
 //! \param can_con Pointer to an CAN connection object.
 //! \returns CAN handle that encapsulates the given connection object.
-inline CAN_CanHandle_t CAN_initCanHandle(CAN_CanConnection_t *can_con);
+CAN_CanHandle_t CAN_initCanHandle(CAN_CanConnection_t *can_con);
 
 
 //! \brief Set the CAN connection up

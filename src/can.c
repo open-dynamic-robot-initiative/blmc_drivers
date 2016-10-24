@@ -5,7 +5,7 @@
 // FUNCTIONS
 // **************************************************************************
 
-inline CAN_CanHandle_t CAN_initCanHandle(CAN_CanConnection_t *can_con)
+CAN_CanHandle_t CAN_initCanHandle(CAN_CanConnection_t *can_con)
 {
     return (CAN_CanHandle_t) can_con;
 }
