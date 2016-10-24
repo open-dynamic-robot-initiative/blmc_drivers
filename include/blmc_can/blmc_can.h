@@ -44,6 +44,15 @@ extern "C"{
 #define BLMC_ENABLE 1
 #define BLMC_DISABLE 0
 
+
+// Synchronization options
+#define BLMC_SYNC_DISABLED 0
+#define BLMC_SYNC_ON_CURRENT 1
+#define BLMC_SYNC_ON_POSITION 2
+#define BLMC_SYNC_ON_VELOCITY 3
+#define BLMC_SYNC_ON_ADC6 4
+
+
 // Motor Indices
 #define BLMC_MTR1 0
 #define BLMC_MTR2 1
@@ -84,14 +93,23 @@ typedef struct _BLMC_StampedValue_t_  // TODO better name? (float and [2])
 } BLMC_StampedValue_t;
 
 
-//! \brief Bundles all data send by the board.
-typedef struct _BLMC_BoardData_t_
+//! \brief Bundles various sensor data from the board
+typedef struct _BLMC_SensorData_t_
 {
-    BLMC_StatusMsg_t status;
     BLMC_StampedValue_t current;
     BLMC_StampedValue_t position;
     BLMC_StampedValue_t velocity;
     BLMC_StampedValue_t adc6;
+} BLMC_SensorData_t;
+
+
+//! \brief Bundles all data send by the board.
+typedef struct _BLMC_BoardData_t_
+{
+    BLMC_StatusMsg_t status;
+    BLMC_SensorData_t latest;
+    BLMC_SensorData_t sync;
+    uint8_t sync_trigger;
 } BLMC_BoardData_t;
 
 
@@ -103,12 +121,24 @@ typedef struct _BLMC_BoardData_t_
 void BLMC_initStampedValue(BLMC_StampedValue_t *sv);
 
 
+//! \brief Initialize a sensor data struct.
+void BLMC_initSensorData(BLMC_SensorData_t *sd);
+
+
 //! \brief Initialize status message (set everything to zero).
 void BLMC_initStatus(BLMC_StatusMsg_t *st);
 
 
 //! \brief Initialize board data structure.
-void BLMC_initBoardData(BLMC_BoardData_t *bd);
+void BLMC_initBoardData(BLMC_BoardData_t *bd, uint8_t sync_trigger);
+
+
+//! Set a new synchronization trigger.
+void BLMC_setSyncTrigger(BLMC_BoardData_t *bd, uint8_t trigger);
+
+
+//! \brief Copy latest sensor data to synchronized.  Do not use this manually.
+void BLMC_synchronize(BLMC_BoardData_t *bd);
 
 
 //! \brief Decode a dual value CAN frame.
@@ -161,8 +191,18 @@ void BLMC_updateVelocity(const_frame_ptr frame, BLMC_BoardData_t *bd);
 void BLMC_updateAdc6(const_frame_ptr frame, BLMC_BoardData_t *bd);
 
 
-//! \brief Print the current board status in a human readable way.
-void BLMC_printBoardStatus(BLMC_BoardData_t const * const bd);
+//! \brief Print the latest board status in a human readable way.
+void BLMC_printLatestBoardStatus(BLMC_BoardData_t const * const bd);
+
+
+//! \brief Print the synchronized board status in a human readable way.
+void BLMC_printSynchronizedBoardStatus(BLMC_BoardData_t const * const bd);
+
+
+void BLMC_printStatus(BLMC_StatusMsg_t const *status);
+
+
+void BLMC_printSensorData(BLMC_SensorData_t const *data);
 
 
 //! \brief Send a command to the board

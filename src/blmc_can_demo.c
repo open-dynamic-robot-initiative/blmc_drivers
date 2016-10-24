@@ -148,7 +148,7 @@ void rt_task(void)
         if (print && (count % print) == 0) {
             rt_printf("#%d: (%d)\n", count, can_con.msg_addr.can_ifindex);
 
-            BLMC_printBoardStatus(&board_data);
+            BLMC_printSynchronizedBoardStatus(&board_data);
 
             if (new_opto_data) {
                 new_opto_data = false;
@@ -203,7 +203,7 @@ int main(int argc, char **argv)
     // ----------------
     //
     can_handle = CAN_initCanHandle(&can_con);
-    BLMC_initBoardData(&board_data);
+    BLMC_initBoardData(&board_data, BLMC_SYNC_ON_ADC6);
 
     if (argc <= 1) {
         rt_printf("Usage: %s <can_interface>\n", argv[0]);

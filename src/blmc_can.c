@@ -35,6 +35,14 @@ void BLMC_initStampedValue(BLMC_StampedValue_t *sv)
     sv->value[1] = 0.0;
 }
 
+void BLMC_initSensorData(BLMC_SensorData_t *sd)
+{
+    BLMC_initStampedValue(&sd->current);
+    BLMC_initStampedValue(&sd->position);
+    BLMC_initStampedValue(&sd->velocity);
+    BLMC_initStampedValue(&sd->adc6);
+}
+
 void BLMC_initStatus(BLMC_StatusMsg_t *st)
 {
     st->system_enabled = 0;
@@ -45,13 +53,22 @@ void BLMC_initStatus(BLMC_StatusMsg_t *st)
     st->error_code     = 0;
 }
 
-void BLMC_initBoardData(BLMC_BoardData_t *bd)
+void BLMC_initBoardData(BLMC_BoardData_t *bd, uint8_t sync_trigger)
 {
     BLMC_initStatus(&bd->status);
-    BLMC_initStampedValue(&bd->current);
-    BLMC_initStampedValue(&bd->position);
-    BLMC_initStampedValue(&bd->velocity);
-    BLMC_initStampedValue(&bd->adc6);
+    BLMC_initSensorData(&bd->latest);
+    BLMC_initSensorData(&bd->sync);
+    bd->sync_trigger = sync_trigger;
+}
+
+void BLMC_setSyncTrigger(BLMC_BoardData_t *bd, uint8_t trigger)
+{
+    bd->sync_trigger = trigger;
+}
+
+void BLMC_synchronize(BLMC_BoardData_t *bd)
+{
+    bd->sync = bd->latest;
 }
 
 void BLMC_decodeCanMotorMsg(const_frame_ptr frame, BLMC_StampedValue_t *out)
@@ -83,47 +100,76 @@ void BLMC_updateStatus(const_frame_ptr frame, BLMC_BoardData_t *bd)
 
 void BLMC_updateCurrent(const_frame_ptr frame, BLMC_BoardData_t *bd)
 {
-    BLMC_decodeCanMotorMsg(frame, &bd->current);
+    BLMC_decodeCanMotorMsg(frame, &bd->latest.current);
+    if (bd->sync_trigger == BLMC_SYNC_ON_CURRENT) {
+        BLMC_synchronize(bd);
+    }
 }
 
 void BLMC_updatePosition(const_frame_ptr frame, BLMC_BoardData_t *bd)
 {
-    BLMC_decodeCanMotorMsg(frame, &bd->position);
+    BLMC_decodeCanMotorMsg(frame, &bd->latest.position);
+    if (bd->sync_trigger == BLMC_SYNC_ON_POSITION) {
+        BLMC_synchronize(bd);
+    }
 }
 
 void BLMC_updateVelocity(const_frame_ptr frame, BLMC_BoardData_t *bd)
 {
-    BLMC_decodeCanMotorMsg(frame, &bd->velocity);
+    BLMC_decodeCanMotorMsg(frame, &bd->latest.velocity);
+    if (bd->sync_trigger == BLMC_SYNC_ON_VELOCITY) {
+        BLMC_synchronize(bd);
+    }
 }
 
 void BLMC_updateAdc6(const_frame_ptr frame, BLMC_BoardData_t *bd)
 {
-    BLMC_decodeCanMotorMsg(frame, &bd->adc6);
+    BLMC_decodeCanMotorMsg(frame, &bd->latest.adc6);
+    if (bd->sync_trigger == BLMC_SYNC_ON_ADC6) {
+        BLMC_synchronize(bd);
+    }
+}
+
+void BLMC_printLatestBoardStatus(BLMC_BoardData_t const * const bd)
+{
+    BLMC_printStatus(&bd->status);
+    BLMC_printSensorData(&bd->latest);
+}
+
+void BLMC_printSynchronizedBoardStatus(BLMC_BoardData_t const * const bd)
+{
+    BLMC_printStatus(&bd->status);
+    BLMC_printSensorData(&bd->sync);
+}
+
+void BLMC_printStatus(BLMC_StatusMsg_t const *status)
+{
+    rt_printf("System:\n");
+    rt_printf("\tSystem enabled: %d\n", status->system_enabled);
+    rt_printf("\tMotor 1 enabled: %d\n", status->motor1_enabled);
+    rt_printf("\tMotor 1 ready: %d\n", status->motor1_ready);
+    rt_printf("\tMotor 2 enabled: %d\n", status->motor2_enabled);
+    rt_printf("\tMotor 2 ready: %d\n", status->motor2_ready);
+    rt_printf("\tError: %d\n", status->error_code);
 }
 
 
-void BLMC_printBoardStatus(BLMC_BoardData_t const * const bd)
+void BLMC_printSensorData(BLMC_SensorData_t const *data)
 {
     int i;
 
-    rt_printf("System:\n");
-    rt_printf("\tSystem enabled: %d\n", bd->status.system_enabled);
-    rt_printf("\tMotor 1 enabled: %d\n", bd->status.motor1_enabled);
-    rt_printf("\tMotor 1 ready: %d\n", bd->status.motor1_ready);
-    rt_printf("\tMotor 2 enabled: %d\n", bd->status.motor2_enabled);
-    rt_printf("\tMotor 2 ready: %d\n", bd->status.motor2_ready);
-    rt_printf("\tError: %d\n", bd->status.error_code);
-
     for (i = 0; i < 2; ++i) {
         rt_printf("Motor %d\n", i+1);
-        if (bd->current.timestamp)
-            rt_printf("\tCurrent: %f\n", bd->current.value[i]);
-        if (bd->position.timestamp)
-            rt_printf("\tPosition: %f\n", bd->position.value[i]);
-        if (bd->velocity.timestamp)
-            rt_printf("\tVelocity: %f\n", bd->velocity.value[i]);
+        if (data->current.timestamp)
+            rt_printf("\tCurrent: %f\n", data->current.value[i]);
+        if (data->position.timestamp)
+            rt_printf("\tPosition: %f\n", data->position.value[i]);
+        if (data->velocity.timestamp)
+            rt_printf("\tVelocity: %f\n", data->velocity.value[i]);
     }
 }
+
+
 
 int BLMC_sendCommand(CAN_CanHandle_t handle, uint32_t cmd_id, int32_t value)
 {
