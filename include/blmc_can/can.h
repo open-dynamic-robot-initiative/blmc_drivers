@@ -25,7 +25,8 @@ typedef struct _CAN_CanConnection_t_
     struct sockaddr_can recv_addr;
     struct sockaddr_can send_addr;
     struct sockaddr_can msg_addr;
-    can_frame_t frame;
+    can_frame_t recv_frame;
+    can_frame_t send_frame;
     struct msghdr msg;
     struct iovec iov;
     nanosecs_abs_t timestamp;

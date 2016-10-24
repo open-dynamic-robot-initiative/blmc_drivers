@@ -128,7 +128,7 @@ int CAN_receiveFrame(CAN_CanHandle_t handle, CAN_Frame_t *out_frame)
     CAN_CanConnection_t *can = (CAN_CanConnection_t*)handle;
     int ret;
 
-    can->iov.iov_base = (void *)&can->frame;
+    can->iov.iov_base = (void *)&can->recv_frame;
     can->iov.iov_len = sizeof(can_frame_t);
 
     ret = rt_dev_recvmsg(can->socket, &can->msg, 0);
@@ -140,9 +140,9 @@ int CAN_receiveFrame(CAN_CanHandle_t handle, CAN_Frame_t *out_frame)
     }
 
     if (ret >= 0) {
-        out_frame->id = can->frame.can_id;
-        out_frame->data = can->frame.data;
-        out_frame->dlc = can->frame.can_dlc;
+        out_frame->id = can->recv_frame.can_id;
+        out_frame->data = can->recv_frame.data;
+        out_frame->dlc = can->recv_frame.can_dlc;
         out_frame->timestamp = can->timestamp;
         out_frame->recv_ifindex = can->msg_addr.can_ifindex;
     }
@@ -156,11 +156,12 @@ int CAN_sendFrame(CAN_CanHandle_t handle, uint32_t id, uint8_t *data,
     CAN_CanConnection_t *can = (CAN_CanConnection_t*)handle;
     int ret;
 
-    can->frame.can_id = id;
-    can->frame.can_dlc = dlc;
-    memcpy(can->frame.data, data, dlc);
+    can->send_frame.can_id = id;
+    can->send_frame.can_dlc = dlc;
+    memcpy(can->send_frame.data, data, dlc);
 
-    ret = rt_dev_sendto(can->socket, (void *)&can->frame, sizeof(can_frame_t),
-            0, (struct sockaddr *)&can->send_addr, sizeof(can->send_addr));
+    ret = rt_dev_sendto(can->socket, (void *)&can->send_frame,
+            sizeof(can_frame_t), 0, (struct sockaddr *)&can->send_addr,
+            sizeof(can->send_addr));
     return ret;
 }
