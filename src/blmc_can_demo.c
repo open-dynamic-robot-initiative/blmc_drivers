@@ -51,7 +51,7 @@ CAN_CanHandle_t can_handle;
 //! global board data
 BLMC_BoardData_t board_data;
 
-OPTO_SensorData_t opto_data;
+OPTO_OptoForceData_t opto_data;
 
 
 // FUNCTIONS
@@ -84,7 +84,6 @@ void cleanup_and_exit(int sig)
 void rt_task(void)
 {
     int ret, count = 0, print = 4000;
-    bool new_opto_data = false;
     CAN_Frame_t frame;
 
     BLMC_sendCommand(can_handle, BLMC_CMD_ENABLE_SYS, BLMC_ENABLE);
@@ -139,8 +138,6 @@ void rt_task(void)
                 break;
 
             ret = OPTO_processCanFrame(&frame, &opto_data);
-            // set flag if opto_data is updated
-            new_opto_data |= (ret == 0);
             if (ret != 1)
                 break;
         } while(0);
@@ -150,11 +147,13 @@ void rt_task(void)
 
             BLMC_printSynchronizedBoardStatus(&board_data);
 
-            if (new_opto_data) {
-                new_opto_data = false;
+            if (opto_data.has_new_data) {
+                opto_data.has_new_data = false;
                 rt_printf("OptoForce:\n");
-                rt_printf("\t(%d, %d, %d)\n", opto_data.fx_counts,
-                        opto_data.fy_counts, opto_data.fz_counts);
+                rt_printf("\t(%d, %d, %d) [counts]\n", opto_data.data.fx_counts,
+                        opto_data.data.fy_counts, opto_data.data.fz_counts);
+                rt_printf("\t(%.2f, %.2f, %.2f) [N]\n", opto_data.data.fx_N,
+                        opto_data.data.fy_N, opto_data.data.fz_N);
             }
 
             rt_printf("\n");
@@ -204,6 +203,7 @@ int main(int argc, char **argv)
     //
     can_handle = CAN_initCanHandle(&can_con);
     BLMC_initBoardData(&board_data, BLMC_SYNC_ON_ADC6);
+    OPTO_initOptoForceData(&opto_data, OPTO_COUNTS_AT_NC_FZ);
 
     if (argc <= 1) {
         rt_printf("Usage: %s <can_interface>\n", argv[0]);

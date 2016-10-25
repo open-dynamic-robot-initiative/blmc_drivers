@@ -5,7 +5,7 @@
  * \author Felix Widmaier <felix.widmaier@tuebingen.mpg.de>
  *
  * \defgroup MotorAPI Motor API
- * \brief API to communicate with the microcontroller board that drives the
+ * \brief API for communication with the microcontroller board that drives the
  *        motors.
  *
  * Usage

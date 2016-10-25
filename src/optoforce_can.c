@@ -21,6 +21,14 @@ void OPTO_initDataPacketBytes(OPTO_DataPacket31Bytes_t *dpb)
     dpb->complete = false;
 }
 
+void OPTO_initOptoForceData(OPTO_OptoForceData_t *ofd, uint16_t z_counts_at_NC)
+{
+    ofd->fz_counts_at_NC = z_counts_at_NC;
+    ofd->has_new_data = false;
+
+    OPTO_initDataPacketBytes(&ofd->_bytes);
+}
+
 int OPTO_decodeDataFrame(const_frame_ptr frame,
         OPTO_DataPacket31Bytes_t *data)
 {
@@ -72,8 +80,6 @@ int OPTO_decodeDataPacket31(OPTO_DataPacket31Bytes_t const *bytes,
     pkt->fx_counts = BYTES_TO_SINT16((bytes->low_bytes + 0));
     pkt->fy_counts = BYTES_TO_SINT16((bytes->low_bytes + 2));
     pkt->fz_counts = BYTES_TO_SINT16((bytes->low_bytes + 4));
-
-    // TODO f*_N is not set
 
     return 0;
 }
@@ -137,27 +143,34 @@ int OPTO_sendConfig(CAN_CanHandle_t handle,
     return ret;
 }
 
-int OPTO_processCanFrame(const_frame_ptr frame, OPTO_DataPacket31_t *data)
+int OPTO_processCanFrame(const_frame_ptr frame, OPTO_OptoForceData_t *ofd)
 {
-    static OPTO_DataPacket31Bytes_t packet_bytes = {
-        .has_high = false, .complete = false};
     int ret;
 
     if (frame->id != OPTO_CAN_ID_SENSOR_DATA)
         return OPTO_RET_NO_OPTO_FRAME;
 
-    ret = OPTO_decodeDataFrame(frame, &packet_bytes);
+    ret = OPTO_decodeDataFrame(frame, &ofd->_bytes);
     if (ret < 0)
         return ret;
 
-    if (!packet_bytes.complete) {
+    if (!ofd->_bytes.complete) {
         return OPTO_RET_DATA_INCOMPLETE;
     }
 
-    ret = OPTO_decodeDataPacket31(&packet_bytes, data);
+    ret = OPTO_decodeDataPacket31(&ofd->_bytes, &ofd->data);
 
-    // reset packet_bytes
-    OPTO_initDataPacketBytes(&packet_bytes);
+    // convert sensor counts to Newton
+    ofd->data.fx_N = (float)ofd->data.fx_counts
+        / OPTO_COUNTS_AT_NC_FX * OPTO_NC_FX;
+    ofd->data.fy_N = (float)ofd->data.fy_counts
+        / OPTO_COUNTS_AT_NC_FY * OPTO_NC_FY;
+    ofd->data.fz_N = (float)ofd->data.fz_counts
+        / ofd->fz_counts_at_NC * OPTO_NC_FZ;
+
+    // reset packet bytes and set new data flag
+    OPTO_initDataPacketBytes(&ofd->_bytes);
+    ofd->has_new_data = true;
 
     return ret;
 }

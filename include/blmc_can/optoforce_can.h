@@ -26,6 +26,24 @@ extern "C"{
 // DEFINES
 // **************************************************************************
 
+//! \name Nominal Capacity
+//! \brief Nominal capacity of OMD-20-SE-40N in Newton according to data sheet
+//! \{
+#define OPTO_NC_FX 20.0
+#define OPTO_NC_FY 20.0
+#define OPTO_NC_FZ 40.0
+//! \}
+
+
+//! \name Counts at Nominal Capacity
+//! \brief Raw counts at nominal capacity for OMD-20-SE-40N (uncalibrated)
+//! \{
+#define OPTO_COUNTS_AT_NC_FX 10000
+#define OPTO_COUNTS_AT_NC_FY 10000
+#define OPTO_COUNTS_AT_NC_FZ 16000
+//! \{
+
+
 //! \name Arbitration IDs
 //! \brief Arbitration IDs of the different message types.
 //! \{
@@ -195,12 +213,37 @@ typedef struct _OPTO_DataPacket31Bytes_t_
 } OPTO_DataPacket31Bytes_t;
 
 
+//! \brief Manages data send by the OptoForce sensor
+typedef struct _OPTO_OptoForceData_t_
+{
+    //! \brief The last received data packet from the sensor.  If no packet has
+    //!        been received yet, this is undefined.
+    OPTO_SensorData_t data;
+    //! Calibrated value for fz counts at nominal capacity.
+    uint16_t fz_counts_at_NC;
+    //! Set to true when `data` is updated. Has to be cleared by the user.
+    bool has_new_data;
+
+    // private
+    OPTO_DataPacket31Bytes_t _bytes;
+} OPTO_OptoForceData_t;
+
+
 // FUNCTIONS
 // **************************************************************************
 
 
 //! \brief Initialize data packet bytes structure.
 void OPTO_initDataPacketBytes(OPTO_DataPacket31Bytes_t *dpb);
+
+//! \brief Initialize OptoForceData structure.
+//! \param[out] ofd Pointer to the OptoForceData instance
+//! \param[in] fz_counts_at_NC Calibrated number of counts for fz at nominal
+//                             capacity (see sensitivity report that ships with
+//                             the sensor).  If no calibrated value is
+//                             available, use OPTO_COUNTS_AT_NC_FZ.
+void OPTO_initOptoForceData(OPTO_OptoForceData_t *ofd,
+        uint16_t fz_counts_at_NC);
 
 
 // FIXME rename
@@ -255,28 +298,30 @@ int OPTO_sendConfig(CAN_CanHandle_t handle,
 //! `data`.  To see when this happens, check the return value of the function.
 //! There are three possible cases, depending on the content of frame:
 //!
-//! 1) If the frame is not sent by the sensor, nothing happens.
+//! 1. If the frame is not sent by the sensor, nothing happens.
 //!    OPTO_RET_NO_OPTO_FRAME is returned.
 //!
-//! 2) If the frame is sent by the sensor and the first part of a data frame is
+//! 2. If the frame is sent by the sensor and the first part of a data frame is
 //!    already stored, the current frame is assumed to be the second part.  The
-//!    packet is decoded and, if successful, the content is stored to `data`.
+//!    packet is decoded and, if successful, the content is written to `ofd`.
 //!    The return value of OPTO_decodeDataPacket31 is returned.
 //!
-//! 3) If the frame is sent by the sensor and no previous data is stored:
-//!    3.1) If the frame begins with the data packet header, it is stored and
-//!         OPTO_RET_DATA_INCOMPLETE is returned.
-//!    3.2) If the frame does not begin with the data packet header,
-//!         -OPTO_ERR_INVALID_HEADER is returned.
+//! 3. If the frame is sent by the sensor and no previous data is stored:
+//!   1. If the frame begins with the data packet header, it is stored and
+//!      OPTO_RET_DATA_INCOMPLETE is returned.
+//!   2. If the frame does not begin with the data packet header,
+//!      -OPTO_ERR_INVALID_HEADER is returned.
 //!
-//! Note that `data` is only filled if the function returns with 0. In all
-//! other cases, data is left unchanged.
+//! Note that the data in `ofd` is only updated if the function returns with 0.
+//! In all other cases, data is left unchanged.
 //!
 //! \param frame The CAN frame that is to be processed.
-//! \param data If return value is 0, this contains the values of the processed
-//!             data packet, otherwise it is unchanged.
+//! \param ofd   Pointer to an OptoForceData instance. If return value is 0,
+//!              the sensor data is updated with the values of the processed
+//!              data packet and the `has_new_data` flag is set data packet,
+//!              otherwise it is unchanged.
 //! \return See above.
-int OPTO_processCanFrame(const_frame_ptr frame, OPTO_DataPacket31_t *data);
+int OPTO_processCanFrame(const_frame_ptr frame, OPTO_OptoForceData_t *ofd);
 
 #ifdef __cplusplus
 }
