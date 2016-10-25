@@ -26,3 +26,15 @@ dual_motor_torque_ctrl.
 While the library has no direct dependency on SL, the LAB.cmake of
 sl_cmake_global is included. Therefore this package is required.
 (TODO: This should be changed. Make the package independent of SL.)
+
+
+Documentation
+-------------
+
+The code is well documented with Doxygen comments.  To generate a HTML
+documentation, simply run the command
+
+    doxygen
+
+in the root directory.  The files are written to the subdirectory `docs` (which
+will be created if it does not exist already).

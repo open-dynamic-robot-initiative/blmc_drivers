@@ -1,7 +1,13 @@
 /**
+ * \file
  * \brief Functions for decoding CAN messages from the OptoForce sensor
  *
  * \author Felix Widmaier <felix.widmaier@tuebingen.mpg.de>
+ *
+ * \defgroup OptoForceAPI OptoForce API
+ * \brief API for communication with the OptoForce sensor via CAN.
+ *
+ * \{
  */
 #ifndef OPTOFORCE_CAN_H_
 #define OPTOFORCE_CAN_H_
@@ -20,54 +26,117 @@ extern "C"{
 // DEFINES
 // **************************************************************************
 
-// Arbitration IDs of the different message types
+//! \name Arbitration IDs
+//! \brief Arbitration IDs of the different message types.
+//! \{
 #define OPTO_CAN_ID_SENSOR_DATA 0x100
 #define OPTO_CAN_ID_CONFIG 0x101
+//! \}
 
 
-// DAQ errors
+//! \name DAQ errors
+//! \{
 #define OPTO_DAQ_ERR_NONE 0
 #define OPTO_DAQ_ERR_DAQ 1
 #define OPTO_DAQ_ERR_COMMUNICATION 2
+//! \}
 
-// Sensor errors
+//! \name Sensor errors
+//! \{
 #define OPTO_SENSOR_ERR_NONE 0
 #define OPTO_SENSOR_ERR_NOT_DETECTED 1
 #define OPTO_SENSOR_ERR_FAILURE 2
 #define OPTO_SENSOR_ERR_TEMPERATURE 4
+//! \}
 
+
+//! \name Sample Frequency Options
+//! \brief Possible values for configuration of the sample frequency.
+//!
+//! Default is 100 Hz.
+//!
+//! \{
+
+//! \brief Disable sampling
 #define OPTO_CONFIG_SAMPLE_FREQ_NONE 0
+//! \brief Sample with 1 kHz
 #define OPTO_CONFIG_SAMPLE_FREQ_1000 1
+//! \brief Sample with 333 Hz
 #define OPTO_CONFIG_SAMPLE_FREQ_333  3
+//! \brief Sample with 100 Hz. This is the default.
 #define OPTO_CONFIG_SAMPLE_FREQ_100 10 // default
+//! \brief Sample with 33 Hz
 #define OPTO_CONFIG_SAMPLE_FREQ_30  33 // TODO: really??
+//! \brief Sample with 10 Hz
 #define OPTO_CONFIG_SAMPLE_FREQ_10 100
+//! \}
 
+
+//! \name Filter Frequency Options
+//! \brief Possible values for configuration of the filter frequency.
+//!
+//! Default is 15 Hz.
+//!
+//! \{
+
+//! \brief Disable filter
 #define OPTO_CONFIG_FILTER_FREQ_NONE 0
+//! \brief Filter with 500 Hz
 #define OPTO_CONFIG_FILTER_FREQ_500  1
+//! \brief Filter with 150 Hz
 #define OPTO_CONFIG_FILTER_FREQ_150  2
+//! \brief Filter with 50 Hz
 #define OPTO_CONFIG_FILTER_FREQ_50   3
+//! \brief Filter with 15 Hz
 #define OPTO_CONFIG_FILTER_FREQ_15   4 // default
+//! \brief Filter with 5 Hz
 #define OPTO_CONFIG_FILTER_FREQ_5    5
+//! \brief Filter with 1.5 Hz
 #define OPTO_CONFIG_FILTER_FREQ_1_5  6 // 1.5 Hz
+//! \}
 
+
+//! \name Zero Options
+//! \brief Possible values for (un-)zeroing the sensor.
+//! \{
+
+//! \brief Zero sensor based on the current offset.
 #define OPTO_CONFIG_SET_ZERO 255
+//! \brief Remove zero offsets.
 #define OPTO_CONFIG_UNZERO 0
-
-// header of config packets
-#define OPTO_PACKET_HEADER_CONFIG 0xAA003203
+//! \}
 
 
-// error codes
+//! \name Function Error Return Codes
+//! \brief Codes that are used as return value by some of the functions to
+//!        indicate errors.
+//! \{
+
+//! \brief Given CAN frame has wrong number of data bytes.
 #define OPTO_ERR_WRONG_DLC 1
+//! \brief Trying to add bytes to an OptoForce packet that is already complete.
 #define OPTO_ERR_DATA_COMPLETE 2
+//! \brief Header of the OptoForce packet is wrong.
 #define OPTO_ERR_INVALID_HEADER 3
+//! \brief Checksum of the OptoForce packet is wrong.
 #define OPTO_ERR_WRONG_CHECKSUM 4
+//! \brief Trying to process an incomplete packet.
 #define OPTO_ERR_INCOMPLETE_PACKET 5
+//! \}
 
+//! \name Function Return Codes
+//! \brief Codes that are used as return value by some of the funcitons to
+//!        indicate an certain result that is not an error.
+//! \{
+
+//! \brief ???
 #define OPTO_RET_DATA_COMPLETE 0
+//! \brief The frame does not come from the sensor and is ignored.
 #define OPTO_RET_NO_OPTO_FRAME 1
+//! \brief The frame was processed but the OptoForce packet is not yet
+//!        complete (i.e. waiting for the next frame).
 #define OPTO_RET_DATA_INCOMPLETE 2
+//! \}
 
 
 // TYPEDEFS
@@ -212,5 +281,7 @@ int OPTO_processCanFrame(const_frame_ptr frame, OPTO_DataPacket31_t *data);
 #ifdef __cplusplus
 }
 #endif
+
+/** \} */ //end group OptoForceAPI
 
 #endif  // OPTOFORCE_CAN_H_

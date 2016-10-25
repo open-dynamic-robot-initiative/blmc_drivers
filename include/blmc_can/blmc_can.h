@@ -1,7 +1,98 @@
 /**
- * API for the CAN interface of the Motor Control Microcontroller Boards.
+ * \file
+ * \brief API for the CAN interface of the Motor Control Microcontroller Boards
  *
  * \author Felix Widmaier <felix.widmaier@tuebingen.mpg.de>
+ *
+ * \defgroup MotorAPI Motor API
+ * \brief API to communicate with the microcontroller board that drives the
+ *        motors.
+ *
+ * Usage
+ * -----
+ *
+ * ### Receive Data
+ *
+ * \code{C}
+ *     CAN_CanConnection_t can_con;
+ *     CAN_CanHandle_t can_handle;
+ *     BLMC_BoardData_t board_data;
+ *     CAN_Frame_t frame;
+ *
+ *     // initialize
+ *     can_handle = CAN_initCanHandle(&can_con);
+ *     BLMC_initBoardData(&board_data, BLMC_SYNC_ON_ADC6);
+ *     CAN_setupCan(can_handle, "rtcan0", 0);
+ *
+ *     // enable all sensor messages
+ *     BLMC_sendCommand(can_handle, BLMC_CMD_SEND_ALL, BLMC_ENABLE);
+ *
+ *     // receive & process messages
+ *     while (1) {
+ *       CAN_receiveFrame(can_handle, &frame);
+ *       BLMC_processCanFrame(&frame, &board_data);
+ *
+ *       BLMC_printSynchronizedBoardStatus(&board_data);
+ *     }
+ * \endcode
+ *
+ *
+ * ### Send Commands
+ *
+ * \code{C}
+ *     CAN_CanConnection_t can_con;
+ *     CAN_CanHandle_t can_handle;
+ *     BLMC_BoardData_t board_data;
+ *     CAN_Frame_t frame;
+ *
+ *     // initialize
+ *     can_handle = CAN_initCanHandle(&can_con);
+ *     BLMC_initBoardData(&board_data, BLMC_SYNC_ON_ADC6);
+ *     CAN_setupCan(can_handle, "rtcan0", 0);
+ *
+ *     // enable system and motor 1
+ *     BLMC_sendCommand(can_handle, BLMC_CMD_ENABLE_SYS, BLMC_ENABLE);
+ *     BLMC_sendCommand(can_handle, BLMC_CMD_ENABLE_MTR1, BLMC_ENABLE);
+ *
+ *     // send current command to motor 1
+ *     BLMC_sendMotorCurrent(can_handle, 0.5, 0);
+ * \endcode
+ *
+ * See also the file `src/blmc_can_demo.c` for a more complex example.
+ *
+ *
+ * Synchronization
+ * ---------------
+ *
+ * \anchor Synchronization
+ *
+ * The different sensor messages are sampled at the same time on the board and
+ * then sent in a squence in the following order: current, position, velocity,
+ * adc6.
+ *
+ * To make sure that the values of one such squence are processed together, a
+ * simple synchronization technique is implemented in this module.  The
+ * BLMC_BoardData_t structure has two members `latest` and `sync` that both
+ * contain the sensor data.
+ *
+ * In `latest` always the latest messages are stored (thus the name)
+ * immediately when they arrive.  This means that `latest.current` may already
+ * contain a new current measurement while `latest.position` still contains the
+ * value from the previous time step.  Once the last message of a sequence is
+ * received, the content of `latest` is copied to `sync`.  This means that
+ * `sync` always contains values that belong to the same time step.
+ *
+ * ### Synchronization Trigger
+ *
+ * Since individual sensor messages can be disabled on the board, it is not
+ * generally determined which message marks the end of the sequence and should
+ * trigger the synchronization.  Therefore this message has to be specified
+ * manually by setting the `sync_trigger` argument of BLMC_initBoardData() to
+ * the correct value.  In the usual case where all messages are enabled, this
+ * should be `BLMC_SYNC_ON_ADC6`.  Make sure to set this correctly, otherwise
+ * the data in `sync` is not synchronized correctly.
+ *
+ * \{
  */
 #ifndef BLMC_CAN_H_
 #define BLMC_CAN_H_
@@ -19,7 +110,9 @@ extern "C"{
 // DEFINES
 // **************************************************************************
 
-// Arbitration IDs of the different message types
+//! \name Arbitration IDs
+//! \brief Arbitration IDs of the different message types.
+//! \{
 #define BLMC_CAN_ID_COMMAND    0x00
 #define BLMC_CAN_ID_IqRef      0x05
 #define BLMC_CAN_ID_STATUSMSG  0x10
@@ -27,9 +120,13 @@ extern "C"{
 #define BLMC_CAN_ID_POS        0x30
 #define BLMC_CAN_ID_SPEED      0x40
 #define BLMC_CAN_ID_ADC6       0x50
+//! \}
 
 
-// COMMAND IDs
+//! \name Command IDs
+//! \anchor CommandIDs
+//! \brief IDs of the various commands that can be sent with BLMC_sendCommand().
+//! \{
 #define BLMC_CMD_ENABLE_SYS 1
 #define BLMC_CMD_ENABLE_MTR1 2
 #define BLMC_CMD_ENABLE_MTR2 3
@@ -40,26 +137,50 @@ extern "C"{
 #define BLMC_CMD_SEND_VELOCITY 14
 #define BLMC_CMD_SEND_ADC6 15
 #define BLMC_CMD_SEND_ALL 20
+//! \}
 
+//! \name Command Values
+//! \anchor CommandValues
+//! \brief Possible values for commands that only take a boolean value.
+//! \see BLMC_sendCommand(), \ref CommandIDs
+//! \{
 #define BLMC_ENABLE 1
 #define BLMC_DISABLE 0
+//! \}
 
 
-// Synchronization options
+//! \name Synchronization options
+//! Use these to specify the message type on which sensor data is synchronized.
+//!
+//! \{
+
+//! \brief No synchronization. If this is set, BoardData_t.sync is undefined.
 #define BLMC_SYNC_DISABLED 0
+//! \brief Synchronize after receiving a current message.
 #define BLMC_SYNC_ON_CURRENT 1
+//! \brief Synchronize after receiving a position message.
 #define BLMC_SYNC_ON_POSITION 2
+//! \brief Synchronize after receiving a velocity message.
 #define BLMC_SYNC_ON_VELOCITY 3
+//! \brief Synchronize after receiving a ADC6 message.
 #define BLMC_SYNC_ON_ADC6 4
+//! \}
 
 
-// Motor Indices
+//! \name Motor Indices
+//! \{
 #define BLMC_MTR1 0
 #define BLMC_MTR2 1
+//! \}
 
-// ADC Indices
+//! \name ADC Indices
+//! \{
 #define BLMC_ADC_A 0
 #define BLMC_ADC_B 1
+//! \}
+
+
+// FIXME error codes
 
 
 // TYPEDEFS
@@ -106,9 +227,13 @@ typedef struct _BLMC_SensorData_t_
 //! \brief Bundles all data send by the board.
 typedef struct _BLMC_BoardData_t_
 {
+    //! Last received status message.
     BLMC_StatusMsg_t status;
+    //! Last received sensor messages.
     BLMC_SensorData_t latest;
+    //! Synchronized sensor messages.
     BLMC_SensorData_t sync;
+    //! Specifies the message type on which messages are synchronized.
     uint8_t sync_trigger;
 } BLMC_BoardData_t;
 
@@ -130,6 +255,11 @@ void BLMC_initStatus(BLMC_StatusMsg_t *st);
 
 
 //! \brief Initialize board data structure.
+//!
+//! \see \ref Synchronization
+//! \param bd Board data instance
+//! \param sync_trigger Specified the message type on which messages are
+//                      sychnronized. Use the BLMC_SYNC_* constants.
 void BLMC_initBoardData(BLMC_BoardData_t *bd, uint8_t sync_trigger);
 
 
@@ -207,11 +337,12 @@ void BLMC_printSensorData(BLMC_SensorData_t const *data);
 
 //! \brief Send a command to the board
 //!
-//! Send a command message with specified command id and value.  Please use the
-//! BLMC_CMD_* defines for the id:
+//! Send a command message with specified command id and value.  Use the
+//! BLMC_CMD_* defines for the ID:
 //!
 //!     BLMC_sendCommand(canHandle, BLMC_CMD_ENABLE_MTR1, BLMC_ENABLE);
 //!
+//! \see \ref CommandIDs, \ref CommandValues
 //! \param handle The CAN connection handle.
 //! \param cmd_id Command ID. See the BLMC_CMD_* defines for possible values.
 //! \param value  The value to be set.  For binary commands use BLMC_ENABLE or
@@ -245,5 +376,7 @@ int BLMC_processCanFrame(const_frame_ptr frame, BLMC_BoardData_t *board_data);
 #ifdef __cplusplus
 }
 #endif
+
+/** \} */ // end group MotorAPI
 
 #endif // BLMC_CAN_H_

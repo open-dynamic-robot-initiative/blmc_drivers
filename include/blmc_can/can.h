@@ -1,7 +1,17 @@
 /**
- * API for CAN access. This is a wrapper for RTCAN.
+ * \file
+ * \brief API for CAN access. This is a wrapper for RTCAN.
  *
  * \author Felix Widmaier <felix.widmaier@tuebingen.mpg.de>
+ *
+ * \defgroup CanApi CAN API
+ * \brief API for the CAN connection.
+ *
+ * This is basically a wrapper for Xenomais rtcan module for simple CAN
+ * communication.  It is independent of the concrete application, i.e. it does
+ * not contain anything related to the motor control board.
+ *
+ * \{
  */
 #ifndef CAN_H_
 #define CAN_H_
@@ -104,5 +114,7 @@ int CAN_sendFrame(CAN_CanHandle_t handle, uint32_t id, uint8_t *data,
 #ifdef __cplusplus
 }
 #endif
+
+/** \} */ // end group CanAPI
 
 #endif  // CAN_H_
