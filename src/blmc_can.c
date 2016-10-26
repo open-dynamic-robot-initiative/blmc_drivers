@@ -239,3 +239,27 @@ int BLMC_processCanFrame(const_frame_ptr frame,
     // it was a frame for me
     return 0;
 }
+
+void BLMC_getErrorName(uint8_t error_code, char* error_name)
+{
+    // NOTE: Error names must not exceed 30 chars
+    switch (error_code) {
+        case BLMC_BOARD_ERROR_NONE:
+            strcpy(error_name, "No Error");
+            break;
+        case BLMC_BOARD_ERROR_ENCODER:
+            strcpy(error_name, "Encoder Error");
+            break;
+        case BLMC_BOARD_ERROR_CAN_RECV_TIMEOUT:
+            strcpy(error_name, "CAN Receive Timeout");
+            break;
+        case BLMC_BOARD_ERROR_CRIT_TEMP:
+            strcpy(error_name, "Critical Motor Temperature");
+            break;
+        case BLMC_BOARD_ERROR_OTHER:
+            strcpy(error_name, "Other Error");
+            break;
+        default:
+            strcpy(error_name, "Unknown Error");
+    }
+}

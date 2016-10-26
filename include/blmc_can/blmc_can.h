@@ -181,7 +181,22 @@ extern "C"{
 //! \}
 
 
-// FIXME error codes
+//! \name Board Error Codes
+//! \brief Possible error codes in the status message
+//! \{
+
+//! \brief No error
+#define BLMC_BOARD_ERROR_NONE 0
+//! \brief Encoder error too high
+#define BLMC_BOARD_ERROR_ENCODER 1
+//! \brief Timeout for receiving current references exceeded
+#define BLMC_BOARD_ERROR_CAN_RECV_TIMEOUT 2
+//! \brief Motor temperature reached critical value
+//! \note This is currently unused as no temperature sensing is done.
+#define BLMC_BOARD_ERROR_CRIT_TEMP 3  // currently unused
+//! \brief Some other error
+#define BLMC_BOARD_ERROR_OTHER 7
+//! \}
 
 
 // TYPEDEFS
@@ -369,10 +384,16 @@ int BLMC_sendMotorCurrent(CAN_CanHandle_t handle, float current_mtr1,
 //! board_data.
 //!
 //! \param frame The CAN frame that is to be processed.
-//! \param board_data [out] If the frame contains data related to the board,
-//!                   board_data is updated accordingly
+//! \param[out] board_data If the frame contains data related to the board,
+//!                        board_data is updated accordingly
 //! \returns 0 if the frame contained board data, 1 if not.
 int BLMC_processCanFrame(const_frame_ptr frame, BLMC_BoardData_t *board_data);
+
+
+//! \brief Get a meaningful error name for a given error code
+//! \param[in]  error_code The error code sent by the board.
+//! \param[out] error_name Human-readable error name.
+void BLMC_getErrorName(uint8_t error_code, char* error_name);
 
 #ifdef __cplusplus
 }
