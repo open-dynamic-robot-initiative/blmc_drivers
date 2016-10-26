@@ -137,6 +137,7 @@ extern "C"{
 #define BLMC_CMD_SEND_VELOCITY 14
 #define BLMC_CMD_SEND_ADC6 15
 #define BLMC_CMD_SEND_ALL 20
+#define BLMC_CMD_SET_CAN_RECV_TIMEOUT 30
 //! \}
 
 //! \name Command Values
