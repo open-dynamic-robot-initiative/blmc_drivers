@@ -216,6 +216,16 @@ typedef struct _BLMC_StatusMsg_t_
 } BLMC_StatusMsg_t;
 
 
+//! \brief Board Status Message with timestamp.
+typedef struct _BLMC_StampedStatus_t_
+{
+    //! Timestamp of the moment, the message was received.
+    nanosecs_abs_t timestamp;
+    //! The status message.
+    BLMC_StatusMsg_t status;
+} BLMC_StampedStatus_t;
+
+
 //! \brief A dual float value with timestamp
 //!
 //! This can be used to store a message from the board that contains two
@@ -244,7 +254,7 @@ typedef struct _BLMC_SensorData_t_
 typedef struct _BLMC_BoardData_t_
 {
     //! Last received status message.
-    BLMC_StatusMsg_t status;
+    BLMC_StampedStatus_t status;
     //! Last received sensor messages.
     BLMC_SensorData_t latest;
     //! Synchronized sensor messages.
@@ -268,6 +278,10 @@ void BLMC_initSensorData(BLMC_SensorData_t *sd);
 
 //! \brief Initialize status message (set everything to zero).
 void BLMC_initStatus(BLMC_StatusMsg_t *st);
+
+
+//! \brief Initialize a stamped status message (set everything to zero)
+void BLMC_initStampedStatus(BLMC_StampedStatus_t *st);
 
 
 //! \brief Initialize board data structure.
@@ -304,7 +318,8 @@ void BLMC_decodeCanMotorMsg(const_frame_ptr frame, BLMC_StampedValue_t *out);
 //! \brief Decode a status message from a CAN frame.
 //! \param frame The CAN frame.
 //! \param status Data from the frame is stored here.
-void BLMC_decodeCanStatusMsg(const_frame_ptr frame, BLMC_StatusMsg_t *status);
+void BLMC_decodeCanStatusMsg(const_frame_ptr frame,
+        BLMC_StampedStatus_t *status);
 
 
 //! \brief Update board data with status frame.
@@ -392,7 +407,8 @@ int BLMC_processCanFrame(const_frame_ptr frame, BLMC_BoardData_t *board_data);
 
 //! \brief Get a meaningful error name for a given error code
 //! \param[in]  error_code The error code sent by the board.
-//! \param[out] error_name Human-readable error name.
+//! \param[out] error_name Human-readable error name.  Assumes that at least
+//!                        32 chars are allocated for this pointer!
 void BLMC_getErrorName(uint8_t error_code, char* error_name);
 
 #ifdef __cplusplus

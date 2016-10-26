@@ -53,9 +53,15 @@ void BLMC_initStatus(BLMC_StatusMsg_t *st)
     st->error_code     = 0;
 }
 
+void BLMC_initStampedStatus(BLMC_StampedStatus_t *st)
+{
+    st->timestamp = 0;
+    BLMC_initStatus(&st->status);
+}
+
 void BLMC_initBoardData(BLMC_BoardData_t *bd, uint8_t sync_trigger)
 {
-    BLMC_initStatus(&bd->status);
+    BLMC_initStampedStatus(&bd->status);
     BLMC_initSensorData(&bd->latest);
     BLMC_initSensorData(&bd->sync);
     bd->sync_trigger = sync_trigger;
@@ -79,17 +85,19 @@ void BLMC_decodeCanMotorMsg(const_frame_ptr frame, BLMC_StampedValue_t *out)
     out->value[BLMC_MTR2] = QBYTES_TO_FLOAT((frame->data + 4));
 }
 
-void BLMC_decodeCanStatusMsg(const_frame_ptr frame, BLMC_StatusMsg_t *status)
+void BLMC_decodeCanStatusMsg(const_frame_ptr frame,
+        BLMC_StampedStatus_t *status)
 {
     // We only have one byte of data
     uint8_t data = frame->data[0];
 
-    status->system_enabled = data >> 0;
-    status->motor1_enabled = data >> 1;
-    status->motor1_ready   = data >> 2;
-    status->motor2_enabled = data >> 3;
-    status->motor2_ready   = data >> 4;
-    status->error_code     = data >> 5;
+    status->timestamp = frame->timestamp;
+    status->status.system_enabled = data >> 0;
+    status->status.motor1_enabled = data >> 1;
+    status->status.motor1_ready   = data >> 2;
+    status->status.motor2_enabled = data >> 3;
+    status->status.motor2_ready   = data >> 4;
+    status->status.error_code     = data >> 5;
 }
 
 void BLMC_updateStatus(const_frame_ptr frame, BLMC_BoardData_t *bd)
@@ -132,13 +140,13 @@ void BLMC_updateAdc6(const_frame_ptr frame, BLMC_BoardData_t *bd)
 
 void BLMC_printLatestBoardStatus(BLMC_BoardData_t const * const bd)
 {
-    BLMC_printStatus(&bd->status);
+    BLMC_printStatus(&bd->status.status);
     BLMC_printSensorData(&bd->latest);
 }
 
 void BLMC_printSynchronizedBoardStatus(BLMC_BoardData_t const * const bd)
 {
-    BLMC_printStatus(&bd->status);
+    BLMC_printStatus(&bd->status.status);
     BLMC_printSensorData(&bd->sync);
 }
 
