@@ -93,6 +93,10 @@ int CAN_closeCan(CAN_CanHandle_t handle);
 
 //! \brief Receive a frame via CAN
 //!
+//! \note This function is not thread-safe.  Do not call it in parallel with
+//!       the same CanHandle.  Parallel execution with different handles should
+//!       be fine, though.
+//!
 //! \param handle The CAN connection handle.
 //! \param out_frame The data of the received frame will be written to this
 //!                  structure.  NOTE: the data will only be valid until the
@@ -101,6 +105,10 @@ int CAN_receiveFrame(CAN_CanHandle_t handle, CAN_Frame_t *out_frame);
 
 
 //! \brief Send a data frame via CAN
+//!
+//! \note This function is not thread-safe.  Do not call it in parallel with
+//!       the same CanHandle.  Parallel execution with different handles should
+//!       be fine, though.
 //!
 //! \param handle The CAN connection handle.
 //! \param id The CAN arbitration id of the frame.
