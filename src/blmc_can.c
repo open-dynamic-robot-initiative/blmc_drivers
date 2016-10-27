@@ -175,6 +175,9 @@ void BLMC_printSensorData(BLMC_SensorData_t const *data)
         if (data->velocity.timestamp)
             rt_printf("\tVelocity: %f\n", data->velocity.value[i]);
     }
+
+    rt_printf("ADC\n\tA6: %f\n\tB6: %f\n", data->adc6.value[0],
+            data->adc6.value[1]);
 }
 
 
