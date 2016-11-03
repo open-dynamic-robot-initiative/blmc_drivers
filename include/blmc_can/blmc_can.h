@@ -194,6 +194,10 @@ extern "C"{
 //! \brief Motor temperature reached critical value
 //! \note This is currently unused as no temperature sensing is done.
 #define BLMC_BOARD_ERROR_CRIT_TEMP 3  // currently unused
+//! \brief Some error in the SpinTAC Position Convert module
+#define BLMC_BOARD_ERROR_POSCONV 4
+//! \brief Position Rollover occured
+#define BLMC_BOARD_ERROR_POS_ROLLOVER 5
 //! \brief Some other error
 #define BLMC_BOARD_ERROR_OTHER 7
 //! \}

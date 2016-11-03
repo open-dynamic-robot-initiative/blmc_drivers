@@ -153,12 +153,17 @@ void BLMC_printSynchronizedBoardStatus(BLMC_BoardData_t const * const bd)
 void BLMC_printStatus(BLMC_StatusMsg_t const *status)
 {
     rt_printf("System:\n");
+    if (status->error_code) {
+        char errname[32];
+        BLMC_getErrorName(status->error_code, errname);
+        rt_printf("\t*** ERROR: %s ***\n", errname);
+    }
     rt_printf("\tSystem enabled: %d\n", status->system_enabled);
     rt_printf("\tMotor 1 enabled: %d\n", status->motor1_enabled);
     rt_printf("\tMotor 1 ready: %d\n", status->motor1_ready);
     rt_printf("\tMotor 2 enabled: %d\n", status->motor2_enabled);
     rt_printf("\tMotor 2 ready: %d\n", status->motor2_ready);
-    rt_printf("\tError: %d\n", status->error_code);
+    rt_printf("\tError Code: %d\n", status->error_code);
 }
 
 
@@ -266,6 +271,12 @@ void BLMC_getErrorName(uint8_t error_code, char* error_name)
             break;
         case BLMC_BOARD_ERROR_CRIT_TEMP:
             strcpy(error_name, "Critical Motor Temperature");
+            break;
+        case BLMC_BOARD_ERROR_POSCONV:
+            strcpy(error_name, "Position Convert Error");
+            break;
+        case BLMC_BOARD_ERROR_POS_ROLLOVER:
+            strcpy(error_name, "Position Rollover");
             break;
         case BLMC_BOARD_ERROR_OTHER:
             strcpy(error_name, "Other Error");
