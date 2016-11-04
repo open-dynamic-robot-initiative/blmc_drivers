@@ -249,11 +249,11 @@ int BLMC_processCanFrame(const_frame_ptr frame,
         BLMC_updateStatus(frame, board_data);
     } else {
         // no frame for me
-        return 1;  // FIXME no magic numbers
+        return BLMC_RET_FOREIGN_FRAME;
     }
 
     // it was a frame for me
-    return 0;
+    return BLMC_RET_FRAME_PROCESSED;
 }
 
 void BLMC_getErrorName(uint8_t error_code, char* error_name)

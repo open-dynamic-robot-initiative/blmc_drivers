@@ -134,11 +134,11 @@ void rt_task(void)
         // can make use of it.
         do {
             ret = BLMC_processCanFrame(&frame, &board_data);
-            if (ret != 1)
+            if (ret != BLMC_RET_FOREIGN_FRAME)
                 break;
 
             ret = OPTO_processCanFrame(&frame, &opto_data);
-            if (ret != 1)
+            if (ret != OPTO_RET_FOREIGN_FRAME)
                 break;
         } while(0);
 

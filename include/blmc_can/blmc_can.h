@@ -138,6 +138,7 @@ extern "C"{
 #define BLMC_CMD_SEND_ADC6 15
 #define BLMC_CMD_SEND_ALL 20
 #define BLMC_CMD_SET_CAN_RECV_TIMEOUT 30
+#define BLMC_CMD_ENABLE_POS_ROLLOVER_ERROR 31
 //! \}
 
 //! \name Command Values
@@ -200,6 +201,16 @@ extern "C"{
 #define BLMC_BOARD_ERROR_POS_ROLLOVER 5
 //! \brief Some other error
 #define BLMC_BOARD_ERROR_OTHER 7
+//! \}
+
+
+//! \name Function Return Values
+//! \brief Return codes used by some of the functions
+//!
+//! See the decription of the functions for the exact meaning of the codes.
+//! \{
+#define BLMC_RET_FRAME_PROCESSED 0
+#define BLMC_RET_FOREIGN_FRAME 1
 //! \}
 
 
@@ -405,7 +416,9 @@ int BLMC_sendMotorCurrent(CAN_CanHandle_t handle, float current_mtr1,
 //! \param frame The CAN frame that is to be processed.
 //! \param[out] board_data If the frame contains data related to the board,
 //!                        board_data is updated accordingly
-//! \returns 0 if the frame contained board data, 1 if not.
+//! \returns BLMC_RET_FRAME_PROCESSED if the frame contained board data and was
+//!          processed. BLMC_RET_FOREIGN_FRAME if the frame did not match any
+//!          expected board message and was therefore ignored.
 int BLMC_processCanFrame(const_frame_ptr frame, BLMC_BoardData_t *board_data);
 
 

@@ -148,7 +148,7 @@ int OPTO_processCanFrame(const_frame_ptr frame, OPTO_OptoForceData_t *ofd)
     int ret;
 
     if (frame->id != OPTO_CAN_ID_SENSOR_DATA)
-        return OPTO_RET_NO_OPTO_FRAME;
+        return OPTO_RET_FOREIGN_FRAME;
 
     ret = OPTO_decodeDataFrame(frame, &ofd->_bytes);
     if (ret < 0)

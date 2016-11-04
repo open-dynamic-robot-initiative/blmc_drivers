@@ -150,7 +150,7 @@ extern "C"{
 //! \brief ???
 #define OPTO_RET_DATA_COMPLETE 0
 //! \brief The frame does not come from the sensor and is ignored.
-#define OPTO_RET_NO_OPTO_FRAME 1
+#define OPTO_RET_FOREIGN_FRAME 1
 //! \brief The frame was processed but the OptoForce packet is not yet
 //!        complete (i.e. waiting for the next frame).
 #define OPTO_RET_DATA_INCOMPLETE 2
@@ -299,7 +299,7 @@ int OPTO_sendConfig(CAN_CanHandle_t handle,
 //! There are three possible cases, depending on the content of frame:
 //!
 //! 1. If the frame is not sent by the sensor, nothing happens.
-//!    OPTO_RET_NO_OPTO_FRAME is returned.
+//!    OPTO_RET_FOREIGN_FRAME is returned.
 //!
 //! 2. If the frame is sent by the sensor and the first part of a data frame is
 //!    already stored, the current frame is assumed to be the second part.  The
