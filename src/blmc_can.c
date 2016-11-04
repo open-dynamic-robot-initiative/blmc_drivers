@@ -28,7 +28,13 @@
 // FUNCTIONS
 // **************************************************************************
 
-void BLMC_initStampedValue(BLMC_StampedValue_t *sv)
+void BLMC_initStampedSingleValue(BLMC_StampedSingleValue_t *sv)
+{
+    sv->timestamp = 0;
+    sv->value = 0.0;
+}
+
+void BLMC_initStampedDualValue(BLMC_StampedDualValue_t *sv)
 {
     sv->timestamp = 0;
     sv->value[0] = 0.0;
@@ -37,10 +43,10 @@ void BLMC_initStampedValue(BLMC_StampedValue_t *sv)
 
 void BLMC_initSensorData(BLMC_SensorData_t *sd)
 {
-    BLMC_initStampedValue(&sd->current);
-    BLMC_initStampedValue(&sd->position);
-    BLMC_initStampedValue(&sd->velocity);
-    BLMC_initStampedValue(&sd->adc6);
+    BLMC_initStampedDualValue(&sd->current);
+    BLMC_initStampedDualValue(&sd->position);
+    BLMC_initStampedDualValue(&sd->velocity);
+    BLMC_initStampedDualValue(&sd->adc6);
 }
 
 void BLMC_initStatus(BLMC_StatusMsg_t *st)
@@ -64,6 +70,8 @@ void BLMC_initBoardData(BLMC_BoardData_t *bd, uint8_t sync_trigger)
     BLMC_initStampedStatus(&bd->status);
     BLMC_initSensorData(&bd->latest);
     BLMC_initSensorData(&bd->sync);
+    BLMC_initStampedSingleValue(&bd->encoder_index[BLMC_MTR1]);
+    BLMC_initStampedSingleValue(&bd->encoder_index[BLMC_MTR2]);
     bd->sync_trigger = sync_trigger;
 }
 
@@ -77,7 +85,8 @@ void BLMC_synchronize(BLMC_BoardData_t *bd)
     bd->sync = bd->latest;
 }
 
-void BLMC_decodeCanMotorMsg(const_frame_ptr frame, BLMC_StampedValue_t *out)
+void BLMC_decodeCanMotorMsg(const_frame_ptr frame,
+        BLMC_StampedDualValue_t *out)
 {
     // TODO rename function (no motor, more dual msg, float, Q24)
     out->timestamp = frame->timestamp;
@@ -138,16 +147,32 @@ void BLMC_updateAdc6(const_frame_ptr frame, BLMC_BoardData_t *bd)
     }
 }
 
+void BLMC_updateEncoderIndex(const_frame_ptr frame, BLMC_BoardData_t *bd)
+{
+    uint8_t mtrNum = frame->data[4];
+    // abort if invalid motor number is given
+    if (mtrNum != 0 && mtrNum != 1) {
+        rt_printf("ERROR: Invalid motor number for encoder index: %d\n",
+                mtrNum);
+        return;
+    }
+
+    bd->encoder_index[mtrNum].timestamp = frame->timestamp;
+    bd->encoder_index[mtrNum].value = QBYTES_TO_FLOAT(frame->data);
+}
+
 void BLMC_printLatestBoardStatus(BLMC_BoardData_t const * const bd)
 {
     BLMC_printStatus(&bd->status.status);
     BLMC_printSensorData(&bd->latest);
+    BLMC_printEncoderIndex(bd->encoder_index);
 }
 
 void BLMC_printSynchronizedBoardStatus(BLMC_BoardData_t const * const bd)
 {
     BLMC_printStatus(&bd->status.status);
     BLMC_printSensorData(&bd->sync);
+    BLMC_printEncoderIndex(bd->encoder_index);
 }
 
 void BLMC_printStatus(BLMC_StatusMsg_t const *status)
@@ -185,6 +210,17 @@ void BLMC_printSensorData(BLMC_SensorData_t const *data)
             data->adc6.value[1]);
 }
 
+
+void BLMC_printEncoderIndex(BLMC_StampedSingleValue_t const data[2])
+{
+    rt_printf("Encoder Position:\n");
+    if (data[BLMC_MTR1].timestamp) {
+        rt_printf("\tMotor 1: %f\n", data[BLMC_MTR1].value);
+    }
+    if (data[BLMC_MTR2].timestamp) {
+        rt_printf("\tMotor 2: %f\n", data[BLMC_MTR2].value);
+    }
+}
 
 
 int BLMC_sendCommand(CAN_CanHandle_t handle, uint32_t cmd_id, int32_t value)
@@ -247,6 +283,8 @@ int BLMC_processCanFrame(const_frame_ptr frame,
         BLMC_updateAdc6(frame, board_data);
     } else if (frame->id == BLMC_CAN_ID_STATUSMSG) {
         BLMC_updateStatus(frame, board_data);
+    } else if (frame->id == BLMC_CAN_ID_ENC_INDEX) {
+        BLMC_updateEncoderIndex(frame, board_data);
     } else {
         // no frame for me
         return BLMC_RET_FOREIGN_FRAME;

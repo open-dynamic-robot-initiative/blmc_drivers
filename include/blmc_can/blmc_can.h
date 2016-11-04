@@ -120,6 +120,7 @@ extern "C"{
 #define BLMC_CAN_ID_POS        0x30
 #define BLMC_CAN_ID_SPEED      0x40
 #define BLMC_CAN_ID_ADC6       0x50
+#define BLMC_CAN_ID_ENC_INDEX  0x60
 //! \}
 
 
@@ -136,6 +137,7 @@ extern "C"{
 #define BLMC_CMD_SEND_POSITION 13
 #define BLMC_CMD_SEND_VELOCITY 14
 #define BLMC_CMD_SEND_ADC6 15
+#define BLMC_CMD_SEND_ENC_INDEX 16
 #define BLMC_CMD_SEND_ALL 20
 #define BLMC_CMD_SET_CAN_RECV_TIMEOUT 30
 #define BLMC_CMD_ENABLE_POS_ROLLOVER_ERROR 31
@@ -241,27 +243,37 @@ typedef struct _BLMC_StampedStatus_t_
 } BLMC_StampedStatus_t;
 
 
+//! \brief A single float value with timestamp
+typedef struct _BLMC_StampedSingleValue_t_
+{
+    //! Timestamp of the moment, the frame was received.
+    nanosecs_abs_t timestamp;
+    //! Value
+    float value;
+} BLMC_StampedSingleValue_t;
+
+
 //! \brief A dual float value with timestamp
 //!
 //! This can be used to store a message from the board that contains two
 //! related values (e.g. position of motor 1 and of motor 2) together with the
 //! timestamp.
-typedef struct _BLMC_StampedValue_t_  // TODO better name? (float and [2])
+typedef struct _BLMC_StampedDualValue_t_
 {
     //! Timestamp of the moment, the frame was received.
     nanosecs_abs_t timestamp;
     //! Pair of values (e.g. for the two motors).
     float value[2];
-} BLMC_StampedValue_t;
+} BLMC_StampedDualValue_t;
 
 
 //! \brief Bundles various sensor data from the board
 typedef struct _BLMC_SensorData_t_
 {
-    BLMC_StampedValue_t current;
-    BLMC_StampedValue_t position;
-    BLMC_StampedValue_t velocity;
-    BLMC_StampedValue_t adc6;
+    BLMC_StampedDualValue_t current;
+    BLMC_StampedDualValue_t position;
+    BLMC_StampedDualValue_t velocity;
+    BLMC_StampedDualValue_t adc6;
 } BLMC_SensorData_t;
 
 
@@ -274,6 +286,8 @@ typedef struct _BLMC_BoardData_t_
     BLMC_SensorData_t latest;
     //! Synchronized sensor messages.
     BLMC_SensorData_t sync;
+    //! Last received encoder index position of both motors.
+    BLMC_StampedSingleValue_t encoder_index[2];
     //! Specifies the message type on which messages are synchronized.
     uint8_t sync_trigger;
 } BLMC_BoardData_t;
@@ -283,8 +297,12 @@ typedef struct _BLMC_BoardData_t_
 // **************************************************************************
 
 
-//! \brief Initialize a stamped value to zero.
-void BLMC_initStampedValue(BLMC_StampedValue_t *sv);
+//! \brief Initialize a stamped single value to zero.
+void BLMC_initStampedSingleValue(BLMC_StampedSingleValue_t *sv);
+
+
+//! \brief Initialize a stamped dual value to zero.
+void BLMC_initStampedDualValue(BLMC_StampedDualValue_t *sv);
 
 
 //! \brief Initialize a sensor data struct.
@@ -327,7 +345,8 @@ void BLMC_synchronize(BLMC_BoardData_t *bd);
 //! \param out   The decoded data is written to `out`.  The value of the lower
 //!              bytes is stored in out->value[0], the value of the higher
 //!              bytes in out->value[1].
-void BLMC_decodeCanMotorMsg(const_frame_ptr frame, BLMC_StampedValue_t *out);
+void BLMC_decodeCanMotorMsg(const_frame_ptr frame,
+        BLMC_StampedDualValue_t *out);
 
 
 //! \brief Decode a status message from a CAN frame.
@@ -367,6 +386,12 @@ void BLMC_updateVelocity(const_frame_ptr frame, BLMC_BoardData_t *bd);
 void BLMC_updateAdc6(const_frame_ptr frame, BLMC_BoardData_t *bd);
 
 
+//! \brief Update board data with encoder index position frame.
+//! \param frame CAN frame that contains encoder position index.
+//! \param bd Board data structure.
+void BLMC_updateEncoderIndex(const_frame_ptr frame, BLMC_BoardData_t *bd);
+
+
 //! \brief Print the latest board status in a human readable way.
 void BLMC_printLatestBoardStatus(BLMC_BoardData_t const * const bd);
 
@@ -379,6 +404,9 @@ void BLMC_printStatus(BLMC_StatusMsg_t const *status);
 
 
 void BLMC_printSensorData(BLMC_SensorData_t const *data);
+
+
+void BLMC_printEncoderIndex(BLMC_StampedSingleValue_t const data[2]);
 
 
 //! \brief Send a command to the board
