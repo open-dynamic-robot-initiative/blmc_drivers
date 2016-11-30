@@ -86,9 +86,16 @@ void rt_task(void)
     int ret, count = 0, print = 4000;
     CAN_Frame_t frame;
 
+    // configure OptoForce
+    OPTO_sendConfig(can_handle,
+            OPTO_CONFIG_SAMPLE_FREQ_1000,
+            OPTO_CONFIG_FILTER_FREQ_15,
+            OPTO_CONFIG_SET_ZERO);
+
+    // enable board
     BLMC_sendCommand(can_handle, BLMC_CMD_ENABLE_SYS, BLMC_ENABLE);
 
-    // Send a message to activate position messages
+    // configure board to send all motor data
     ret = BLMC_sendCommand(can_handle, BLMC_CMD_SEND_ALL, BLMC_ENABLE);
     if (ret < 0) {
         switch (ret) {
