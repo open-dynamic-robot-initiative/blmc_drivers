@@ -120,14 +120,13 @@ void OPTO_encodeConfig(uint8_t sample_freq, uint8_t filter_freq,
 
     // compute and set checksum
     checksum = 0xAA + 0x00 + 0x32 + 0x03 + sample_freq + filter_freq + zero;
-    bytes[7] = checksum & 0xFF;
-    bytes[8] = (checksum >> 8) & 0xFF;
+    bytes[7] = (checksum >> 8) & 0xFF;
+    bytes[8] = checksum & 0xFF;
 }
 
 int OPTO_sendConfig(CAN_CanHandle_t handle,
         uint8_t sample_freq, uint8_t filter_freq, uint8_t zero)
 {
-    CAN_CanConnection_t *can = (CAN_CanConnection_t*)handle;
     uint8_t bytes[9];
     int ret;
 
