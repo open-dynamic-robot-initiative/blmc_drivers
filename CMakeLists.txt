@@ -35,15 +35,6 @@ if(Xenomai_FOUND)
         ${Xenomai_LIBRARY_NATIVE}
         ${Xenomai_LIBRARY_RTDM}
         )
-
-    # Demo executable
-    add_executable(blmc_can_motor_demo
-        src/blmc_can_motor_demo.cpp
-        src/can.c
-        src/blmc_can.c
-        src/optoforce_can.c
-        )
-    target_link_libraries(blmc_can_motor_demo ${PROJECT_NAME})
     # Demo executable
     add_executable(blmc_can_demo
         src/blmc_can_demo.c
@@ -52,16 +43,6 @@ if(Xenomai_FOUND)
         src/optoforce_can.c
         )
     target_link_libraries(blmc_can_demo ${PROJECT_NAME})
-    # Demo executable
-    add_executable(lifter_reset_demo
-        src/lifter_reset_demo.cpp
-        src/blmc_can_motor_class.cpp
-        src/can.c
-        src/blmc_can.c
-        src/optoforce_can.c
-        )
-    target_link_libraries(lifter_reset_demo ${PROJECT_NAME})
-
 else()
     message(WARNING "Xenomai not found. blmc_can will NOT be compiled!")
 endif()
