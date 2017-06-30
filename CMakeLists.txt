@@ -37,12 +37,22 @@ if(Xenomai_FOUND)
 
     # Demo executable
     add_executable(blmc_can_demo
-        src/blmc_can_demo.c
+        demo/blmc_can_demo.c
         src/can.c
         src/blmc_can.c
         src/optoforce_can.c
         )
     target_link_libraries(blmc_can_demo ${PROJECT_NAME})
+
+
+    # Demo executable
+    add_executable(blmc_can_demo_optoforce_dumper
+        demo/blmc_can_demo_optoforce_dumper.c
+        src/can.c
+        src/blmc_can.c
+        src/optoforce_can.c
+        )
+    target_link_libraries(blmc_can_demo_optoforce_dumper ${PROJECT_NAME})
 else()
     message(WARNING "Xenomai not found. blmc_can will NOT be compiled!")
 endif()

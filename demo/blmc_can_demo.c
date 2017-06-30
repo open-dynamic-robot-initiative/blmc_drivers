@@ -113,7 +113,8 @@ void rt_task(void)
         }
     }
 
-    //BLMC_sendCommand(can_handle, BLMC_CMD_ENABLE_MTR2, BLMC_ENABLE);
+    // BLMC_sendCommand(can_handle, BLMC_CMD_ENABLE_MTR1, BLMC_ENABLE);
+    // BLMC_sendCommand(can_handle, BLMC_CMD_ENABLE_MTR2, BLMC_ENABLE);
 
     // Receive messages and print board status
     while (1) {
