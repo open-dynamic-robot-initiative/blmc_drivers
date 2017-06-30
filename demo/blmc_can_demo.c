@@ -38,7 +38,6 @@
 
 // GLOBALS
 // **************************************************************************
-
 const static int verbose = 0;
 RT_TASK rt_task_desc;
 //#define MAX_FILTER 16
@@ -177,6 +176,7 @@ int main(int argc, char **argv)
     u_int32_t err_mask = 0;
     char name[32];
 
+    // for memory management
     mlockall(MCL_CURRENT | MCL_FUTURE);
 
     // for real time printing
@@ -237,4 +237,3 @@ int main(int argc, char **argv)
 
     return 0;
 }
-

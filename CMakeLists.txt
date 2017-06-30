@@ -4,6 +4,8 @@ project(blmc_can)
 find_package(catkin REQUIRED)
 find_package(Xenomai QUIET)
 
+SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++0x")
+
 # Do nothing if Xenomai is not found
 if(Xenomai_FOUND)
     add_definitions(${Xenomai_DEFINITIONS})
@@ -33,8 +35,6 @@ if(Xenomai_FOUND)
         ${Xenomai_LIBRARY_NATIVE}
         ${Xenomai_LIBRARY_RTDM}
         )
-
-
     # Demo executable
     add_executable(blmc_can_demo
         demo/blmc_can_demo.c
