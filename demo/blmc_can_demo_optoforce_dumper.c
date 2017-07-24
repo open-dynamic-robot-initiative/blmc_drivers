@@ -53,6 +53,9 @@ BLMC_BoardData_t board_data;
 
 OPTO_OptoForceData_t opto_data;
 
+uint16_t sample_counter_offset = 0;
+bool first_recorded_package = true;
+
 
 // FUNCTIONS
 // **************************************************************************
@@ -128,12 +131,21 @@ void rt_task(void)
         if (opto_data.has_new_data) {
             opto_data.has_new_data = false;
 
+            if (first_recorded_package == true) {
+                first_recorded_package = false;
+                sample_counter_offset = opto_data.data.sample_counter;
+            }
+
             fprintf(log_file, "%0.3f,%d,%d,%d,%d,%d,%0.2f,%0.2f,%0.2f\n",
                 // Convert to microseconds.
                 // See: https://stackoverflow.com/a/12948865
                 ((double)rt_timer_read()) / 1000.,
                 count,
-                opto_data.data.sample_counter,
+
+                // Substracting the initial sample_counter value to avoid
+                // overflows while recording the data.
+                opto_data.data.sample_counter - sample_counter_offset,
+
                 opto_data.data.fx_counts,
                 opto_data.data.fy_counts,
                 opto_data.data.fz_counts,

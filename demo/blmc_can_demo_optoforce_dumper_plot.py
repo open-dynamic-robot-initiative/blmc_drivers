@@ -18,14 +18,17 @@ fig, axes = plt.subplots(nrows=3, ncols=1, figsize=(10, 12), dpi=80)
 	'F_{x, y, z} [N] vs Package Counter',
 	'Ratio "Package Counter" vs "Program Counter"',
 ])]
-axes[0].plot(my_data[:, IDX_COUNTER], my_data[:, -3:])
+for label, i in zip(['x', 'y', 'z'], [-3, -2, -1]):
+	axes[0].plot(my_data[:, IDX_COUNTER], my_data[:, i], label=label)
 
 axes[1].plot(my_data[:, IDX_SAMPLE_COUNTER], my_data[:, -3:])
 
-axes[2].plot(my_data[:, IDX_COUNTER], 
+axes[2].plot(my_data[:, IDX_COUNTER],
 	(my_data[:, IDX_SAMPLE_COUNTER] - my_data[0, IDX_SAMPLE_COUNTER])/
     (my_data[:, IDX_COUNTER] + 1))
 axes[2].set_ylim([0, 1])
+
+axes[0].legend()
 
 plt.tight_layout()
 plt.show()
