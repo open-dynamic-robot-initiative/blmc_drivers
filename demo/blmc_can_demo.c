@@ -39,7 +39,7 @@
 // GLOBALS
 // **************************************************************************
 const static int verbose = 0;
-RT_TASK rt_task_desc;
+RT_TASK task_desc; // task descriptor. Used to reference rt tasks
 //#define MAX_FILTER 16
 //struct can_filter recv_filter[MAX_FILTER];
 //static int filter_count = 0;
@@ -80,7 +80,7 @@ void cleanup_and_exit(int sig)
 }
 
 
-void rt_task(void)
+void my_task(void)
 {
     int ret, count = 0, print = 4000;
     CAN_Frame_t frame;
@@ -227,13 +227,25 @@ int main(int argc, char **argv)
 
     snprintf(name, sizeof(name), "blmc_simple_test-%d", getpid());
     priority = 10;
-    ret = rt_task_shadow(&rt_task_desc, name, priority, 0);
+    // ret = rt_task_shadow(&task_desc, name, priority, 0);
+
+    ret = rt_task_create(&task_desc, name, 0, priority,  T_JOINABLE | T_FPU);
+    // rt_task_create inputs
+    // task descriptor address
+    // name
+    // stack size. 0 defaults to "a reasonable amount"
+    // priority set to 10 (doesn't really matter since we only have 1 task)
+    // mode. T_JOINABLE and T_FPU are important, since we want main to wait on
+    // our rt-task (see below) and FPU so we can do floating-point operations.
+
     if (ret) {
         rt_fprintf(stderr, "rt_task_shadow: %s\n", strerror(-ret));
         CAN_closeCan(can_handle);
         return -1;
     }
-    rt_task(); /* never returns */
+
+    rt_task_start(&task_desc, &my_task, NULL);
+    rt_task_join(&task_desc); // wait for my_task to finish before exiting main
 
     return 0;
 }
