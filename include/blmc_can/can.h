@@ -18,8 +18,24 @@
 
 // INCLUDES
 // **************************************************************************
+#ifdef __XENO__
 #include <rtdm/rtcan.h>
+#else
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <string.h>
 
+#include <net/if.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <sys/ioctl.h>
+
+#include <linux/can.h>
+#include <linux/can/raw.h>
+
+typedef struct can_frame can_frame_t;
+#endif
 
 #ifdef __cplusplus
 extern "C"{

@@ -54,5 +54,39 @@ if(Xenomai_FOUND)
         )
     target_link_libraries(blmc_can_demo_optoforce_dumper ${PROJECT_NAME})
 else()
-    message(WARNING "Xenomai not found. blmc_can will NOT be compiled!")
+  include_directories(
+      ./include
+      )
+
+
+  catkin_package(
+    LIBRARIES ${PROJECT_NAME}
+  )
+
+
+  # The CAN API library
+  add_library(${PROJECT_NAME}
+      src/can.c
+      src/blmc_can.c
+      src/optoforce_can.c
+      )
+
+  # Demo executable
+  add_executable(blmc_can_demo
+      demo/blmc_can_demo.c
+      src/can.c
+      src/blmc_can.c
+      src/optoforce_can.c
+      )
+  target_link_libraries(blmc_can_demo ${PROJECT_NAME})
+
+
+  # Demo executable
+  add_executable(blmc_can_demo_optoforce_dumper
+      demo/blmc_can_demo_optoforce_dumper.c
+      src/can.c
+      src/blmc_can.c
+      src/optoforce_can.c
+      )
+  target_link_libraries(blmc_can_demo_optoforce_dumper ${PROJECT_NAME})
 endif()
