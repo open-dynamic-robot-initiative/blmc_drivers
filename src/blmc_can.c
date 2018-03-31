@@ -1,7 +1,11 @@
 #include <blmc_can/blmc_can.h>
 #include <string.h>  // memset
-#include <rtdk.h>  // rt_printf
 
+#ifdef __XENO__
+#include <rtdk.h>  // rt_printf
+#else
+
+#endif
 
 // DEFINES
 // **************************************************************************

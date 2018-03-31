@@ -29,8 +29,10 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <sys/mman.h>
+#ifdef __xeno__
 #include <native/task.h>
 #include <rtdk.h>
+#endif
 #include <blmc_can/can.h>
 #include <blmc_can/blmc_can.h>
 #include <blmc_can/optoforce_can.h>
@@ -218,4 +220,3 @@ int main(int argc, char **argv)
 
     return 0;
 }
-

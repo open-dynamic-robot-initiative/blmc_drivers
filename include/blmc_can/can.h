@@ -21,9 +21,11 @@
 #ifdef __XENO__
 #include <rtdm/rtcan.h>
 #else
+// Include header for SocketCAN.
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <stdint.h>
 #include <string.h>
 
 #include <net/if.h>
@@ -34,7 +36,14 @@
 #include <linux/can.h>
 #include <linux/can/raw.h>
 
+// Define typedefs to make code compatible with Xenoami code.
 typedef struct can_frame can_frame_t;
+typedef canid_t can_id_t;
+typedef uint64_t 	nanosecs_abs_t;
+
+#define rt_fprintf fprintf
+#define rt_printf printf
+
 #endif
 
 #ifdef __cplusplus

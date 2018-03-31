@@ -29,8 +29,17 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <sys/mman.h>
+#ifdef __xeno__
 #include <native/task.h>
 #include <rtdk.h>
+#else
+#include <limits.h>
+#include <pthread.h>
+#include <sched.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <sys/mman.h>
+#endif
 #include <blmc_can/can.h>
 #include <blmc_can/blmc_can.h>
 #include <blmc_can/optoforce_can.h>
@@ -39,7 +48,7 @@
 // GLOBALS
 // **************************************************************************
 const static int verbose = 0;
-RT_TASK task_desc; // task descriptor. Used to reference rt tasks
+
 //#define MAX_FILTER 16
 //struct can_filter recv_filter[MAX_FILTER];
 //static int filter_count = 0;
@@ -79,8 +88,11 @@ void cleanup_and_exit(int sig)
     exit(0);
 }
 
-
+#ifdef __xeno__
 void my_task(void)
+#else
+void *my_task(void *data)
+#endif
 {
     int ret, count = 0, print = 4000;
     CAN_Frame_t frame;
@@ -97,19 +109,20 @@ void my_task(void)
     // configure board to send all motor data
     ret = BLMC_sendCommand(can_handle, BLMC_CMD_SEND_ALL, BLMC_ENABLE);
     if (ret < 0) {
-        switch (ret) {
-            case -ETIMEDOUT:
-                if (verbose)
-                    rt_printf("rt_dev_send(to): timed out");
-                break;
-            case -EBADF:
-                if (verbose)
-                    rt_printf("rt_dev_send(to): aborted because socket was closed");
-                break;
-            default:
-                rt_fprintf(stderr, "rt_dev_send: %s\n", strerror(-ret));
-                break;
-        }
+        // TODO: Add support for error handling.
+        // switch (ret) {
+        //     case -ETIMEDOUT:
+        //         if (verbose)
+        //             rt_printf("rt_dev_send(to): timed out");
+        //         break;
+        //     case -EBADF:
+        //         if (verbose)
+        //             rt_printf("rt_dev_send(to): aborted because socket was closed");
+        //         break;
+        //     default:
+        //         rt_fprintf(stderr, "rt_dev_send: %s\n", strerror(-ret));
+        //         break;
+        // }
     }
 
     // BLMC_sendCommand(can_handle, BLMC_CMD_ENABLE_MTR1, BLMC_ENABLE);
@@ -122,18 +135,19 @@ void my_task(void)
         // get the next frame from the CAN bus
         ret = CAN_receiveFrame(can_handle, &frame);
         if (ret < 0) {
-            switch (ret) {
-            case -ETIMEDOUT:
-                if (verbose)
-                    rt_printf("rt_dev_recv: timed out");
-                continue;
-            case -EBADF:
-                if (verbose)
-                    rt_printf("rt_dev_recv: aborted because socket was closed");
-                break;
-            default:
-                rt_fprintf(stderr, "rt_dev_recv: %s\n", strerror(-ret));
-            }
+            // TODO: Add support for error handling.
+            // switch (ret) {
+            // case -ETIMEDOUT:
+            //     if (verbose)
+            //         rt_printf("rt_dev_recv: timed out");
+            //     continue;
+            // case -EBADF:
+            //     if (verbose)
+            //         rt_printf("rt_dev_recv: aborted because socket was closed");
+            //     break;
+            // default:
+            //     rt_fprintf(stderr, "rt_dev_recv: %s\n", strerror(-ret));
+            // }
             break;
         }
 
@@ -179,8 +193,6 @@ int main(int argc, char **argv)
     // for memory management
     mlockall(MCL_CURRENT | MCL_FUTURE);
 
-    // for real time printing
-    rt_print_auto_init(1);
 
     signal(SIGTERM, cleanup_and_exit);
     signal(SIGINT, cleanup_and_exit);
@@ -226,6 +238,13 @@ int main(int argc, char **argv)
     }
 
     snprintf(name, sizeof(name), "blmc_simple_test-%d", getpid());
+
+#ifdef __XENO__ /** Spawn a Xenomai thread **/
+    // for real time printing
+    rt_print_auto_init(1);
+
+    RT_TASK task_desc; // task descriptor. Used to reference rt tasks
+
     priority = 10;
     // ret = rt_task_shadow(&task_desc, name, priority, 0);
 
@@ -246,6 +265,60 @@ int main(int argc, char **argv)
 
     rt_task_start(&task_desc, &my_task, NULL);
     rt_task_join(&task_desc); // wait for my_task to finish before exiting main
+#else /** Spawn a rt_preempt thread **/
+    // Based on:
+    // https://wiki.linuxfoundation.org/realtime/documentation/howto/applications/application_base
+
+    struct sched_param param;
+    pthread_attr_t attr;
+    pthread_t thread;
+
+    ret = pthread_attr_init(&attr);
+    if (ret) {
+        printf("init pthread attributes failed\n");
+        return ret;
+    }
+
+    /* Set a specific stack size  */
+    ret = pthread_attr_setstacksize(&attr, PTHREAD_STACK_MIN);
+    if (ret) {
+        printf("pthread setstacksize failed\n");
+        return ret;
+    }
+
+    /* Set scheduler policy and priority of pthread */
+    ret = pthread_attr_setschedpolicy(&attr, SCHED_FIFO);
+    if (ret) {
+        printf("pthread setschedpolicy failed\n");
+        return ret;
+    }
+    param.sched_priority = 80;
+    ret = pthread_attr_setschedparam(&attr, &param);
+    if (ret) {
+        printf("pthread setschedparam failed\n");
+        return ret;
+    }
+    /* Use scheduling parameters of attr */
+    ret = pthread_attr_setinheritsched(&attr, PTHREAD_EXPLICIT_SCHED);
+    if (ret) {
+        printf("pthread setinheritsched failed\n");
+        return ret;
+    }
+
+    /* Create a pthread with specified attributes */
+    ret = pthread_create(&thread, &attr, &my_task, NULL);
+    if (ret) {
+        printf("create pthread failed\n");
+        return ret;
+    }
+
+    /* Join the thread and wait until it is done */
+    ret = pthread_join(thread, NULL);
+    if (ret)
+        printf("join pthread failed.\n");
+        return ret;
+#endif
+
 
     return 0;
 }

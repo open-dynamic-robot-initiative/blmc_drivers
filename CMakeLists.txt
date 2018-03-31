@@ -78,15 +78,15 @@ else()
       src/blmc_can.c
       src/optoforce_can.c
       )
-  target_link_libraries(blmc_can_demo ${PROJECT_NAME})
+  target_link_libraries(blmc_can_demo ${PROJECT_NAME} pthread)
 
 
   # Demo executable
-  add_executable(blmc_can_demo_optoforce_dumper
-      demo/blmc_can_demo_optoforce_dumper.c
-      src/can.c
-      src/blmc_can.c
-      src/optoforce_can.c
-      )
-  target_link_libraries(blmc_can_demo_optoforce_dumper ${PROJECT_NAME})
+#  add_executable(blmc_can_demo_optoforce_dumper
+#      demo/blmc_can_demo_optoforce_dumper.c
+#      src/can.c
+#      src/blmc_can.c
+#      src/optoforce_can.c
+#      )
+#  target_link_libraries(blmc_can_demo_optoforce_dumper ${PROJECT_NAME})
 endif()

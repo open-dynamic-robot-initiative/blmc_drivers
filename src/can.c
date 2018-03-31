@@ -1,6 +1,19 @@
 #include <blmc_can/can.h>
 #include <string.h>
+
+#ifdef __XENO__
 #include <rtdk.h>
+#else
+// Defining the Xenomai (CAN) API for the Linux SocketCan via #define.
+#define rt_dev_socket socket
+#define rt_dev_ioctl ioctl
+#define rt_dev_close close
+#define rt_dev_setsockopt setsockopt
+#define rt_dev_bind bind
+#define rt_dev_recvmsg recvmsg
+#define rt_dev_sendto sendto
+
+#endif
 
 // FUNCTIONS
 // **************************************************************************
@@ -75,7 +88,7 @@ int CAN_setupCan(CAN_CanHandle_t canHandle, char const *interface,
         return -1;
     }
 
-
+#ifdef __XENO__
     // Enable timestamps for frames
     ret = rt_dev_ioctl(can->socket,
             RTCAN_RTIOC_TAKE_TIMESTAMP, RTCAN_TAKE_TIMESTAMPS);
@@ -85,6 +98,9 @@ int CAN_setupCan(CAN_CanHandle_t canHandle, char const *interface,
         CAN_closeCan(canHandle);
         return -1;
     }
+#else
+// TODO: Need to support timestamps.
+#endif
 
 
     can->recv_addr.can_family = AF_CAN;
