@@ -342,7 +342,7 @@ int main(int argc, char **argv)
         printf("create pthread failed. Ret=%d\n", ret);
         if (ret == 1) {
             printf("NOTE: This program must be executed as root to get the "
-                "required realtime permissions.");
+                "required realtime permissions.\n");
         }
         return ret;
     }
