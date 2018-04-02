@@ -39,6 +39,22 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/mman.h>
+#include <time.h>
+
+/**
+ * Computes the time as target = a - b;
+ */
+void timespec_sub(struct timespec *target, struct timespec *a, struct timespec *b)
+{
+    if (b->tv_nsec > a->tv_nsec) {
+        target->tv_nsec = (a->tv_nsec - b->tv_nsec) + 1000000000;
+        target->tv_sec = a->tv_sec - b->tv_sec - 1;
+    } else {
+        target->tv_nsec = a->tv_nsec - b->tv_nsec;
+        target->tv_sec = a->tv_sec - b->tv_sec;
+    }
+}
+
 #endif
 #include <blmc_can/can.h>
 #include <blmc_can/blmc_can.h>
@@ -88,7 +104,7 @@ void cleanup_and_exit(int sig)
     exit(0);
 }
 
-#ifdef __xeno__
+#ifdef  __XENO__
 void my_task(void)
 #else
 void *my_task(void *data)
@@ -96,6 +112,13 @@ void *my_task(void *data)
 {
     int ret, count = 0, print = 4000;
     CAN_Frame_t frame;
+
+#ifndef __XENO__
+    struct timespec now;
+    struct timespec prev;
+    struct timespec elapsed;
+    clock_gettime(CLOCK_REALTIME, &prev);
+#endif
 
     // configure OptoForce
     OPTO_sendConfig(can_handle,
@@ -165,6 +188,14 @@ void *my_task(void *data)
 
         if (print && (count % print) == 0) {
             rt_printf("#%d: (%d)\n", count, can_con.msg_addr.can_ifindex);
+#ifndef __XENO__
+            clock_gettime(CLOCK_REALTIME, &now);
+            timespec_sub(&elapsed, &now, &prev);
+            prev = now;
+            float elapsed_sec = (float)(elapsed.tv_sec) + (elapsed.tv_nsec/1e9);
+            rt_printf("(Receiving %d pkgs took time_sec=%0.6f, freq=%0.3f)\n",
+                print, elapsed_sec, (float)(print)/elapsed_sec);
+#endif
 
             BLMC_printSynchronizedBoardStatus(&board_data);
 
