@@ -159,7 +159,14 @@ int CAN_receiveFrame(CAN_CanHandle_t handle, CAN_Frame_t *out_frame)
         out_frame->id = can->recv_frame.can_id;
         out_frame->data = can->recv_frame.data;
         out_frame->dlc = can->recv_frame.can_dlc;
+#ifdef __XENO__
         out_frame->timestamp = can->timestamp;
+#else
+        // TODO: Need to support timestamps.
+        // HACK: Adding a non-zero value here as part of the code (e.g. BLMC_printEncoderIndex)
+        //       checks if the timestamp is nonzero before printing anything.
+        out_frame->timestamp = 1;
+#endif
         out_frame->recv_ifindex = can->msg_addr.can_ifindex;
     }
 

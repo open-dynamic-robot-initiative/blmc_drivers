@@ -125,8 +125,8 @@ void *my_task(void *data)
         // }
     }
 
-    // BLMC_sendCommand(can_handle, BLMC_CMD_ENABLE_MTR1, BLMC_ENABLE);
-    // BLMC_sendCommand(can_handle, BLMC_CMD_ENABLE_MTR2, BLMC_ENABLE);
+    BLMC_sendCommand(can_handle, BLMC_CMD_ENABLE_MTR1, BLMC_ENABLE);
+    BLMC_sendCommand(can_handle, BLMC_CMD_ENABLE_MTR2, BLMC_ENABLE);
 
     // Receive messages and print board status
     while (1) {
@@ -308,7 +308,11 @@ int main(int argc, char **argv)
     /* Create a pthread with specified attributes */
     ret = pthread_create(&thread, &attr, &my_task, NULL);
     if (ret) {
-        printf("create pthread failed\n");
+        printf("create pthread failed. Ret=%d\n", ret);
+        if (ret == 1) {
+            printf("NOTE: This program must be executed as root to get the "
+                "required realtime permissions.");
+        }
         return ret;
     }
 
