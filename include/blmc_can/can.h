@@ -20,7 +20,7 @@
 // **************************************************************************
 #ifdef __XENO__
 #include <rtdm/rtcan.h>
-#else
+#elif defined __RT_PREEMPT__
 // Include header for SocketCAN.
 #include <stdio.h>
 #include <stdlib.h>

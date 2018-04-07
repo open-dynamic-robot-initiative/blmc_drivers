@@ -3,7 +3,7 @@
 
 #ifdef __XENO__
 #include <rtdk.h>
-#else
+#elif defined __RT_PREEMPT__
 // Defining the Xenomai (CAN) API for the Linux SocketCan via #define.
 #define rt_dev_socket socket
 #define rt_dev_ioctl ioctl
@@ -98,7 +98,7 @@ int CAN_setupCan(CAN_CanHandle_t canHandle, char const *interface,
         CAN_closeCan(canHandle);
         return -1;
     }
-#else
+#elif defined __RT_PREEMPT__
 // TODO: Need to support timestamps.
 #endif
 
@@ -161,7 +161,7 @@ int CAN_receiveFrame(CAN_CanHandle_t handle, CAN_Frame_t *out_frame)
         out_frame->dlc = can->recv_frame.can_dlc;
 #ifdef __XENO__
         out_frame->timestamp = can->timestamp;
-#else
+#elif defined __RT_PREEMPT__
         // TODO: Need to support timestamps.
         // HACK: Adding a non-zero value here as part of the code (e.g. BLMC_printEncoderIndex)
         //       checks if the timestamp is nonzero before printing anything.

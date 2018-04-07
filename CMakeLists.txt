@@ -6,7 +6,10 @@ find_package(Xenomai QUIET)
 
 SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++0x")
 
-# Do nothing if Xenomai is not found
+# Use the `uname` command to determine if running on a RT_PREEMPTED system.
+execute_process(COMMAND uname -v OUTPUT_VARIABLE uname_OUTPUT)
+
+# Do nothing if Xenomai and RT_PREEMPT is not found
 if(Xenomai_FOUND)
     add_definitions(${Xenomai_DEFINITIONS})
 
@@ -53,32 +56,33 @@ if(Xenomai_FOUND)
         src/optoforce_can.c
         )
     target_link_libraries(blmc_can_demo_optoforce_dumper ${PROJECT_NAME})
-else()
-  include_directories(
-      ./include
-      )
+elseif(${uname_OUTPUT} MATCHES "PREEMPT")
+    add_definitions("-D__RT_PREEMPT__")
+
+    include_directories(
+        ./include
+     )
+
+    catkin_package(
+        LIBRARIES ${PROJECT_NAME}
+    )
 
 
-  catkin_package(
-    LIBRARIES ${PROJECT_NAME}
-  )
+    # The CAN API library
+    add_library(${PROJECT_NAME}
+        src/can.c
+        src/blmc_can.c
+        src/optoforce_can.c
+    )
 
-
-  # The CAN API library
-  add_library(${PROJECT_NAME}
-      src/can.c
-      src/blmc_can.c
-      src/optoforce_can.c
-      )
-
-  # Demo executable
-  add_executable(blmc_can_demo
-      demo/blmc_can_demo.c
-      src/can.c
-      src/blmc_can.c
-      src/optoforce_can.c
-      )
-  target_link_libraries(blmc_can_demo ${PROJECT_NAME} pthread)
+    # Demo executable
+    add_executable(blmc_can_demo
+        demo/blmc_can_demo.c
+        src/can.c
+        src/blmc_can.c
+        src/optoforce_can.c
+    )
+    target_link_libraries(blmc_can_demo ${PROJECT_NAME} pthread)
 
 
   # Demo executable

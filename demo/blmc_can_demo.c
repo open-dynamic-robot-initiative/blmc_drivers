@@ -32,7 +32,7 @@
 #ifdef __xeno__
 #include <native/task.h>
 #include <rtdk.h>
-#else
+#elif defined __RT_PREEMPT__
 #include <limits.h>
 #include <pthread.h>
 #include <sched.h>
@@ -106,14 +106,14 @@ void cleanup_and_exit(int sig)
 
 #ifdef  __XENO__
 void my_task(void)
-#else
+#elif defined __RT_PREEMPT__
 void *my_task(void *data)
 #endif
 {
     int ret, count = 0, print = 4000;
     CAN_Frame_t frame;
 
-#ifndef __XENO__
+#if defined __RT_PREEMPT__
     struct timespec now;
     struct timespec prev;
     struct timespec elapsed;
@@ -188,7 +188,7 @@ void *my_task(void *data)
 
         if (print && (count % print) == 0) {
             rt_printf("#%d: (%d)\n", count, can_con.msg_addr.can_ifindex);
-#ifndef __XENO__
+#ifdef __RT_PREEMPT__
             clock_gettime(CLOCK_REALTIME, &now);
             timespec_sub(&elapsed, &now, &prev);
             prev = now;
@@ -296,7 +296,7 @@ int main(int argc, char **argv)
 
     rt_task_start(&task_desc, &my_task, NULL);
     rt_task_join(&task_desc); // wait for my_task to finish before exiting main
-#else /** Spawn a rt_preempt thread **/
+#elif defined __RT_PREEMPT__ /** Spawn a rt_preempt thread **/
     // Based on:
     // https://wiki.linuxfoundation.org/realtime/documentation/howto/applications/application_base
 
