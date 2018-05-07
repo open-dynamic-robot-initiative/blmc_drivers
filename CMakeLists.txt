@@ -64,6 +64,7 @@ elseif(${uname_OUTPUT} MATCHES "PREEMPT")
      )
 
     catkin_package(
+        INCLUDE_DIRS ./include
         LIBRARIES ${PROJECT_NAME}
     )
 
