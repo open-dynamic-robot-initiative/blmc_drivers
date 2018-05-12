@@ -47,6 +47,13 @@ if(Xenomai_FOUND)
         )
     target_link_libraries(blmc_can_demo ${PROJECT_NAME})
 
+    add_executable(blmc_can_latency_demo
+        demo/blmc_can_latency_demo.c
+        src/can.c
+        src/blmc_can.c
+        src/optoforce_can.c
+    )
+    target_link_libraries(blmc_can_latency_demo ${PROJECT_NAME})
 
     # Demo executable
     add_executable(blmc_can_demo_optoforce_dumper
@@ -56,7 +63,8 @@ if(Xenomai_FOUND)
         src/optoforce_can.c
         )
     target_link_libraries(blmc_can_demo_optoforce_dumper ${PROJECT_NAME})
-elseif(${uname_OUTPUT} MATCHES "PREEMPT")
+# elseif(${uname_OUTPUT} MATCHES "PREEMPT")
+else()
     add_definitions("-D__RT_PREEMPT__")
 
     include_directories(
@@ -85,6 +93,13 @@ elseif(${uname_OUTPUT} MATCHES "PREEMPT")
     )
     target_link_libraries(blmc_can_demo ${PROJECT_NAME} pthread)
 
+    add_executable(blmc_can_latency_demo
+        demo/blmc_can_latency_demo.c
+        src/can.c
+        src/blmc_can.c
+        src/optoforce_can.c
+    )
+    target_link_libraries(blmc_can_latency_demo ${PROJECT_NAME} pthread)
 
   # Demo executable
 #  add_executable(blmc_can_demo_optoforce_dumper

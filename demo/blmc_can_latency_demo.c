@@ -113,12 +113,9 @@ void *my_task(void *data)
     int ret, count = 0, print = 4000;
     CAN_Frame_t frame;
 
-#if defined __RT_PREEMPT__
     struct timespec now;
     struct timespec prev;
     struct timespec elapsed;
-    clock_gettime(CLOCK_REALTIME, &prev);
-#endif
 
     // configure OptoForce
     OPTO_sendConfig(can_handle,
@@ -132,45 +129,21 @@ void *my_task(void *data)
     // configure board to send all motor data
     ret = BLMC_sendCommand(can_handle, BLMC_CMD_SEND_ALL, BLMC_ENABLE);
     if (ret < 0) {
-        // TODO: Add support for error handling.
-        // switch (ret) {
-        //     case -ETIMEDOUT:
-        //         if (verbose)
-        //             rt_printf("rt_dev_send(to): timed out");
-        //         break;
-        //     case -EBADF:
-        //         if (verbose)
-        //             rt_printf("rt_dev_send(to): aborted because socket was closed");
-        //         break;
-        //     default:
-        //         rt_fprintf(stderr, "rt_dev_send: %s\n", strerror(-ret));
-        //         break;
-        // }
+        rt_printf("Error occured enabling BLMC_CMD_SEND_ALL.\n");
+        exit(-1);
     }
 
     BLMC_sendCommand(can_handle, BLMC_CMD_ENABLE_MTR1, BLMC_ENABLE);
     // BLMC_sendCommand(can_handle, BLMC_CMD_ENABLE_MTR2, BLMC_ENABLE);
 
+    BLMC_sendMotorCurrent(can_handle, 0.0, 0.0);
+
     // Receive messages and print board status
     while (1) {
-        //BLMC_sendMotorCurrent(can_handle, 0, 0.3);
-
         // get the next frame from the CAN bus
         ret = CAN_receiveFrame(can_handle, &frame);
         if (ret < 0) {
-            // TODO: Add support for error handling.
-            // switch (ret) {
-            // case -ETIMEDOUT:
-            //     if (verbose)
-            //         rt_printf("rt_dev_recv: timed out");
-            //     continue;
-            // case -EBADF:
-            //     if (verbose)
-            //         rt_printf("rt_dev_recv: aborted because socket was closed");
-            //     break;
-            // default:
-            //     rt_fprintf(stderr, "rt_dev_recv: %s\n", strerror(-ret));
-            // }
+            rt_printf("Error occured receiving frame.\n");
             break;
         }
 
@@ -186,16 +159,41 @@ void *my_task(void *data)
                 break;
         } while(0);
 
-        if (print && (count % print) == 0) {
-            rt_printf("#%d: (%d)\n", count, can_con.msg_addr.can_ifindex);
-#ifdef __RT_PREEMPT__
+        if (count == 40000) {
+          BLMC_sendMotorCurrent(can_handle, 0.3, 0.0);
+          clock_gettime(CLOCK_REALTIME, &prev);
+        }
+
+        // if (count >= 30000) {
+        //     // rt_printf("send motor current\n");
+        //
+        //     if (count == 30000)
+        //       clock_gettime(CLOCK_REALTIME, &prev);
+        // } else if (count > 35000) {
+        //     BLMC_sendMotorCurrent(can_handle, BLMC_MTR1, 0.0);
+        // }
+
+        if (board_data.latest.current.value[0] > 0.2) {
             clock_gettime(CLOCK_REALTIME, &now);
+            BLMC_sendMotorCurrent(can_handle, 0.0, 0.0);
+
+            count = 0;
             timespec_sub(&elapsed, &now, &prev);
-            prev = now;
-            float elapsed_sec = (float)(elapsed.tv_sec) + (elapsed.tv_nsec/1e9);
-            rt_printf("(Receiving %d pkgs took time_sec=%0.6f, freq=%0.3f)\n",
-                print, elapsed_sec, (float)(print)/elapsed_sec);
-#endif
+
+            float elapsed_ms = (float)(elapsed.tv_sec)*1000 + (elapsed.tv_nsec/1e6);
+            rt_printf("Latency: %0.6f ms, current value=%0.4f\n", elapsed_ms, board_data.latest.current.value[0]);
+        }
+
+        if (print && (count % print) == 0 && count > 0) {
+            rt_printf("#%d: (%d)\n", count, can_con.msg_addr.can_ifindex);
+// #ifdef __RT_PREEMPT__
+//             clock_gettime(CLOCK_REALTIME, &now);
+//             timespec_sub(&elapsed, &now, &prev);
+//             prev = now;
+//             float elapsed_sec = (float)(elapsed.tv_sec) + (elapsed.tv_nsec/1e9);
+//             rt_printf("(Receiving %d pkgs took time_sec=%0.6f, freq=%0.3f)\n",
+//                 print, elapsed_sec, (float)(print)/elapsed_sec);
+// #endif
 
             BLMC_printSynchronizedBoardStatus(&board_data);
 
