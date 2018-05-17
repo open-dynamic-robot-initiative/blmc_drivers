@@ -29,7 +29,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <sys/mman.h>
-#ifdef __xeno__
+#ifdef __XENO__
 #include <native/task.h>
 #include <rtdk.h>
 #endif
