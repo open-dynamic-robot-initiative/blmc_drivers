@@ -257,14 +257,14 @@ int main(int argc, char **argv)
     OPTO_initOptoForceData(&opto_data, OPTO_COUNTS_AT_NC_FZ);
 
     if (argc <= 1) {
-        rt_printf("Usage: %s <can_interface>\n", argv[0]);
-        rt_printf("where <can_interface> is something like 'rtcan0'.\n");
+        printf("Usage: %s <can_interface>\n", argv[0]);
+        printf("where <can_interface> is something like 'rtcan0'.\n");
         return -1;
     }
 
     ret = CAN_setupCan(can_handle, argv[1], err_mask);
     if (ret < 0) {
-        rt_printf("Couldn't setup CAN connection. Exit.");
+        printf("Couldn't setup CAN connection. Exit.");
         return -1;
     }
 
@@ -289,7 +289,7 @@ int main(int argc, char **argv)
     // our rt-task (see below) and FPU so we can do floating-point operations.
 
     if (ret) {
-        rt_fprintf(stderr, "rt_task_shadow: %s\n", strerror(-ret));
+        fprintf(stderr, "rt_task_shadow: %s\n", strerror(-ret));
         CAN_closeCan(can_handle);
         return -1;
     }
