@@ -101,6 +101,15 @@ else()
     )
     target_link_libraries(blmc_can_latency_demo ${PROJECT_NAME} pthread)
 
+
+    add_executable(blmc_can_sine_demo
+        demo/blmc_can_sine_demo.c
+        src/can.c
+        src/blmc_can.c
+        src/optoforce_can.c
+    )
+    target_link_libraries(blmc_can_sine_demo ${PROJECT_NAME} pthread m)
+
   # Demo executable
 #  add_executable(blmc_can_demo_optoforce_dumper
 #      demo/blmc_can_demo_optoforce_dumper.c
