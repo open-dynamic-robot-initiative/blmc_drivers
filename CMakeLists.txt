@@ -3,8 +3,15 @@ project(blmc_can)
 
 find_package(catkin REQUIRED)
 find_package(Xenomai QUIET)
+find_package(Eigen REQUIRED)
 
-SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++0x")
+# support for c++ 11 -----------------------------------
+SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=gnu++11")
+# SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++0x")
+
+# for convenience for qtcreator, does nothing ----------
+FILE(GLOB_RECURSE LibFiles "*.h")
+add_custom_target(headers SOURCES ${LibFiles})
 
 # Use the `uname` command to determine if running on a RT_PREEMPTED system.
 execute_process(COMMAND uname -v OUTPUT_VARIABLE uname_OUTPUT)
