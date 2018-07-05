@@ -656,9 +656,6 @@ int main(int argc, char **argv)
     auto analog_sensor_2 = std::make_shared<AnalogSensor>(board1, BLMC_ADC_B);
     auto analog_sensor_3 = std::make_shared<AnalogSensor>(board2, BLMC_ADC_A);
 
-
-
-
     Controller controller1(motor_1, analog_sensor_1);
     Controller controller2(motor_2, analog_sensor_2);
     Controller controller3(motor_3, analog_sensor_3);
@@ -666,7 +663,6 @@ int main(int argc, char **argv)
 
 
     rt_task_shadow(NULL, "shibuya", 0, 0);
-
     board1->enable();
     board2->enable();
 
@@ -674,17 +670,10 @@ int main(int argc, char **argv)
     controller2.start_loop();
     controller3.start_loop();
 
-
-
-
-//    can_bus1.join();
-//    can_bus2.join();
-
     while(true)
     {
         rt_task_sleep(1000000);
     }
-
 
     return 0;
 }
