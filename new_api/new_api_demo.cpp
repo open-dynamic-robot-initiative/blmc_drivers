@@ -42,6 +42,7 @@
 
 #include <iostream>
 #include <stdlib.h>
+#include <memory>
 
 #include <eigen3/Eigen/Core>
 
@@ -349,7 +350,7 @@ class Board
     // \todo: add time stamps!
 private:
     // should probably make this a shared pointer
-    CanBus& can_bus_;
+    std::shared_ptr<CanBus> can_bus_;
 
     BLMC_BoardData_t data_;
     RT_MUTEX data_mutex_;
@@ -360,14 +361,14 @@ private:
 
 
 public:
-    Board(CanBus& can_bus): can_bus_(can_bus)
+    Board(std::shared_ptr<CanBus> can_bus): can_bus_(can_bus)
     {
         rt_mutex_create(&data_mutex_, NULL);
         rt_mutex_create(&current_targets_mutex_, NULL);
 
         // register callback for obtaining data from can bus
         CanBus::Callback callback = std::bind(&Board::consume_can_frame, this, std::placeholders::_1);
-        can_bus_.add_callback(callback);
+        can_bus_->add_callback(callback);
 
         // initialize members
         BLMC_initBoardData(&data_, BLMC_SYNC_ON_ADC6);
@@ -420,7 +421,7 @@ public:
         data[6] = (cmd_id >> 8) & 0xFF;
         data[7] = cmd_id & 0xFF;
 
-        can_bus_.send_frame(BLMC_CAN_ID_COMMAND, data, 8);
+        can_bus_->send_frame(BLMC_CAN_ID_COMMAND, data, 8);
     }
 
     void set_current_targets(Eigen::Vector2d currents)
@@ -451,7 +452,7 @@ public:
         data[6] = (q_current2 >> 8) & 0xFF;
         data[7] =  q_current2 & 0xFF;
 
-        return can_bus_.send_frame(BLMC_CAN_ID_IqRef, data, 8);
+        return can_bus_->send_frame(BLMC_CAN_ID_IqRef, data, 8);
     }
     void set_current_target(double current, unsigned motor_id)
     {
@@ -522,54 +523,49 @@ private:
 class Motor
 {
     // \todo: should probably make this a shared pointer
-    Board& board_;
+    std::shared_ptr<Board> board_;
     unsigned motor_id_;
 public:
 
-    Motor(Board& board, unsigned motor_id): board_(board), motor_id_(motor_id) { }
+    Motor(std::shared_ptr<Board> board, unsigned motor_id): board_(board), motor_id_(motor_id) { }
 
     double get_current_measurement()
     {
-        return board_.get_current_measurement(motor_id_);
+        return board_->get_current_measurement(motor_id_);
     }
     double get_position_measurement()
     {
-        return board_.get_position_measurement(motor_id_);
+        return board_->get_position_measurement(motor_id_);
     }
     double get_velocity_measurement()
     {
-        return board_.get_velocity_measurement(motor_id_);
+        return board_->get_velocity_measurement(motor_id_);
     }
     double get_encoder_measurement()
     {
-        return board_.get_encoder_measurement(motor_id_);
+        return board_->get_encoder_measurement(motor_id_);
     }
 
     void set_current_target(double current_target)
     {
-        board_.set_current_target(current_target, motor_id_);
+        board_->set_current_target(current_target, motor_id_);
     }
 };
 
-
-//class Finger
-//{
-//    std::array<Motor&, 3> motors_;
-//};
 
 
 
 class AnalogSensor
 {
-    Board& board_;
+    std::shared_ptr<Board> board_;
     unsigned sensor_id_;
 public:
 
-    AnalogSensor(Board& board, unsigned sensor_id): board_(board), sensor_id_(sensor_id) { }
+    AnalogSensor(std::shared_ptr<Board> board, unsigned sensor_id): board_(board), sensor_id_(sensor_id) { }
 
     double get_analog_measurement()
     {
-        board_.get_analog_measurement(sensor_id_);
+        board_->get_analog_measurement(sensor_id_);
     }
 };
 
@@ -581,11 +577,12 @@ private:
     RT_TASK rt_task_;
 
     // \todo: should probably make this a shared pointer
-    Motor& motor_;
-    AnalogSensor& analog_sensor_;
+    std::shared_ptr<Motor> motor_;
+    std::shared_ptr<AnalogSensor> analog_sensor_;
 
 public:
-    Controller(Motor& motor, AnalogSensor& analog_sensor): motor_(motor), analog_sensor_(analog_sensor) { }
+    Controller(std::shared_ptr<Motor> motor, std::shared_ptr<AnalogSensor> analog_sensor):
+        motor_(motor), analog_sensor_(analog_sensor) { }
 
     void start_loop()
     {
@@ -619,8 +616,8 @@ public:
         TimeLogger<10> time_logger("controller", 1000);
         while(true)
         {
-            double current_target = 2 * (analog_sensor_.get_analog_measurement() - 0.5);
-            motor_.set_current_target(current_target);
+            double current_target = 2 * (analog_sensor_->get_analog_measurement() - 0.5);
+            motor_->set_current_target(current_target);
 
             // print --------------------------------------------------------------
             rt_task_sleep(1000000);
@@ -644,21 +641,20 @@ public:
 
 int main(int argc, char **argv)
 {
-    CanBus can_bus1("rtcan0");
-    CanBus can_bus2("rtcan1");
+    // create bus and boards -------------------------------------------------
+    auto can_bus1 = std::make_shared<CanBus>("rtcan0");
+    auto can_bus2 = std::make_shared<CanBus>("rtcan1");
+    auto board1 = std::make_shared<Board>(can_bus1);
+    auto board2 = std::make_shared<Board>(can_bus2);
 
-    Board board1(can_bus1);
-    Board board2(can_bus2);
+    // create motors and sensors ---------------------------------------------
+    auto motor_1 = std::make_shared<Motor>(board1, BLMC_MTR1);
+    auto motor_2 = std::make_shared<Motor>(board1, BLMC_MTR2);
+    auto motor_3 = std::make_shared<Motor>(board2, BLMC_MTR1);
 
-    Motor motor_1(board1, BLMC_MTR1);
-    Motor motor_2(board1, BLMC_MTR2);
-    Motor motor_3(board2, BLMC_MTR1);
-
-
-
-    AnalogSensor analog_sensor_1(board1, BLMC_ADC_A);
-    AnalogSensor analog_sensor_2(board1, BLMC_ADC_B);
-    AnalogSensor analog_sensor_3(board2, BLMC_ADC_A);
+    auto analog_sensor_1 = std::make_shared<AnalogSensor>(board1, BLMC_ADC_A);
+    auto analog_sensor_2 = std::make_shared<AnalogSensor>(board1, BLMC_ADC_B);
+    auto analog_sensor_3 = std::make_shared<AnalogSensor>(board2, BLMC_ADC_A);
 
 
 
@@ -671,8 +667,8 @@ int main(int argc, char **argv)
 
     rt_task_shadow(NULL, "shibuya", 0, 0);
 
-    board1.enable();
-    board2.enable();
+    board1->enable();
+    board2->enable();
 
     controller1.start_loop();
     controller2.start_loop();
