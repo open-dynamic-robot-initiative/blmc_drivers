@@ -94,15 +94,10 @@ void cleanup_and_exit(int sig)
 class CanFrame
 {
 public:
-    //! Data content of the frame. Up to 8 bytes (see dlc).
     std::array<uint8_t, 8> data;
-    //! Number of bytes in data.
     uint8_t dlc;
-    //! Arbitration Id of the frame.
     can_id_t id;
-    //! Timestamp of the moment the frame was received.
     nanosecs_abs_t timestamp;
-    //! Index of the interface from which the frame was received.
     // \todo: do we need this?
     int recv_ifindex;
 };
@@ -117,14 +112,12 @@ public:
 };
 
 
-
 #define FLOAT_TO_Q24(fval) ((int)(fval * (1 << 24)))
 
 class CanBus
 {
 public:
     typedef std::function<void(CanFrame)> Callback;
-
 
 private:
     CanConnection can_connection_;
@@ -167,6 +160,9 @@ public:
         signal(SIGINT, cleanup_and_exit);
         signal(SIGDEBUG, action_upon_switch);
         rt_print_auto_init(1);
+
+
+        start_loop();
     }
 
     void add_callback(Callback callback)
@@ -556,6 +552,12 @@ public:
 };
 
 
+//class Finger
+//{
+//    std::array<Motor&, 3> motors_;
+//};
+
+
 
 class AnalogSensor
 {
@@ -668,9 +670,6 @@ int main(int argc, char **argv)
 
 
     rt_task_shadow(NULL, "shibuya", 0, 0);
-
-    can_bus1.start_loop();
-    can_bus2.start_loop();
 
     board1.enable();
     board2.enable();
