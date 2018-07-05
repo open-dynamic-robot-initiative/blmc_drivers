@@ -54,6 +54,15 @@ if(Xenomai_FOUND)
         )
     target_link_libraries(blmc_can_demo ${PROJECT_NAME})
 
+
+    add_executable(new_api_demo
+        new_api/new_api_demo.cpp
+        src/can.c
+        src/blmc_can.c
+        src/optoforce_can.c
+        )
+    target_link_libraries(new_api_demo ${PROJECT_NAME})
+
 #    add_executable(blmc_can_latency_demo
 #        demo/blmc_can_latency_demo.c
 #        src/can.c
