@@ -287,31 +287,20 @@ public:
 
 class CanBus: public XenomaiDevice
 {
-public:
-    typedef std::function<void(CanFrame)> Callback;
-
 private:
     CanConnection can_connection_;
     RT_MUTEX can_connection_mutex_;
 
-    std::vector<Callback> callbacks_;
-    unsigned callback_count_;
-    RT_MUTEX callback_mutex_;
-
     RT_MUTEX rt_task_mutex_;
-
-
 
     StampedData<CanFrame> output_;
     RT_COND output_condition_;
     RT_MUTEX output_mutex_;
 
-
 public: 
-    CanBus(std::string can_interface_name, unsigned max_callback_count = 10)
+    CanBus(std::string can_interface_name)
     {
         rt_mutex_create(&can_connection_mutex_, NULL);
-        rt_mutex_create(&callback_mutex_, NULL);
         rt_mutex_create(&rt_task_mutex_, NULL);
 
         rt_mutex_create(&output_mutex_, NULL);
@@ -321,16 +310,23 @@ public:
         // \todo get rid of old format stuff
         CAN_CanConnection_t can_connection_old_format;
         int ret = CAN_setupCan(&can_connection_old_format, can_interface_name.c_str(), 0);
-        if (ret < 0) {
+        if (ret < 0)
+        {
             rt_printf("Couldn't setup CAN connection. Exit.");
             exit(-1);
         }
         can_connections.push_back(can_connection_old_format);
         can_connection_.send_addr = can_connection_old_format.send_addr;
         can_connection_.socket = can_connection_old_format.socket;
-
-        callbacks_.resize(max_callback_count);
-        callback_count_ = 0;
+    }
+    virtual ~CanBus()
+    {
+        int ret = rt_dev_close(can_connection_.socket);
+        if (ret)
+        {
+            rt_fprintf(stderr, "rt_dev_close: %s\n", strerror(-ret));
+            exit(-1);
+        }
     }
 
     void loop()
@@ -338,61 +334,20 @@ public:
         TimeLogger<100> loop_time_logger("can bus loop", 4000);
         TimeLogger<100> receive_time_logger("receive", 4000);
 
-
-        while (true) {
+        while (true)
+        {
             receive_time_logger.start_interval();
             CanFrame frame = receive_frame();
-
-
             receive_time_logger.end_interval();
-
-            rt_mutex_acquire(&callback_mutex_, TM_INFINITE);
-            for(int i = 0; i < callback_count_; i++)
-            {
-                callbacks_[i](frame);
-            }
-            rt_mutex_release(&callback_mutex_);
-
 
             rt_mutex_acquire(&output_mutex_, TM_INFINITE);
             output_ = StampedData<CanFrame>(frame, output_.get_count() + 1, TimeLogger<1>::current_time());
             rt_mutex_release(&output_mutex_);
 
             rt_cond_broadcast(&output_condition_);
-
             loop_time_logger.end_and_start_interval();
         }
     }
-
-
-
-    virtual ~CanBus()
-    {
-        close_can(can_connection_.socket);
-    }
-
-    void add_callback(Callback callback)
-    {
-        rt_mutex_acquire(&callback_mutex_, TM_INFINITE);
-
-        if(callback_count_ >= callbacks_.size())
-        {
-            rt_printf("you exceeded the max number of callbacks\n");
-            exit(-1);
-        }
-
-        callbacks_[callback_count_] = callback;
-        callback_count_++;
-
-        rt_mutex_release(&callback_mutex_);
-    }
-
-
-
-
-
-
-
 
     unsigned wait_for_output()
     {
@@ -416,27 +371,6 @@ public:
         rt_mutex_release(&output_mutex_);
 
         return output;
-    }
-
-
-    static void close_can(int socket)
-    {
-        int ret = rt_dev_close(socket);
-        if (ret)
-        {
-            rt_fprintf(stderr, "rt_dev_close: %s\n", strerror(-ret));
-            exit(-1);
-        }
-    }
-
-
-
-
-    int join()
-    {
-        rt_mutex_acquire(&rt_task_mutex_, TM_INFINITE);
-        rt_task_join(&rt_task_);
-        rt_mutex_release(&rt_task_mutex_);
     }
 
     void send_frame(uint32_t id, uint8_t *data, uint8_t dlc)
@@ -465,19 +399,6 @@ public:
     }
 
 private:
-    static CAN_CanConnection_t setup_can(std::string can_interface_name)
-    {
-        CAN_CanConnection_t can_connection;
-
-        int return_can_setup = CAN_setupCan(&can_connection, can_interface_name.c_str(), 0);
-        if (return_can_setup < 0) {
-            rt_printf("Couldn't setup CAN connection. Exit.");
-            exit(-1);
-        }
-
-        return can_connection;
-    }
-
     CanFrame receive_frame()
     {
         rt_mutex_acquire(&can_connection_mutex_, TM_INFINITE);
@@ -509,7 +430,6 @@ private:
             rt_printf("something went wrong with receiving CAN frame, error code: %d\n", ret);
             exit(-1);
         }
-
 
         // process received data and put into felix widmaier's format --------------------
         if (message_header.msg_controllen == 0)
@@ -555,10 +475,6 @@ public:
     {
         rt_mutex_create(&data_mutex_, NULL);
         rt_mutex_create(&current_targets_mutex_, NULL);
-
-//        // register callback for obtaining data from can bus
-//        CanBus::Callback callback = std::bind(&Board::consume_can_frame, this, std::placeholders::_1);
-//        can_bus_->add_callback(callback);
 
         // initialize members
         BLMC_initBoardData(&data_, BLMC_SYNC_ON_ADC6);
