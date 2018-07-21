@@ -52,6 +52,9 @@
 #include <time_logger.hpp>
 
 
+#include <tuple>
+
+
 
 
 long unsigned count_xenomai_mode_switches = 0;
@@ -187,6 +190,110 @@ public:
 };
 
 
+template<typename ...Types> class ThreadsafeObject
+{
+public:
+    ThreadsafeObject()
+    {
+        rt_mutex_create(&mutex_, NULL);
+    }
+
+    std::tuple<Types ...> get() const
+    {
+        rt_mutex_acquire(&mutex_, TM_INFINITE);
+        std::tuple<Types ...> content = content_;
+        rt_mutex_release(&mutex_);
+
+        return content;
+    }
+
+    void set(const std::tuple<Types ...>& content)
+    {
+        rt_mutex_acquire(&mutex_, TM_INFINITE);
+        content_ = content;
+        rt_mutex_release(&mutex_);
+    }
+
+private:
+
+    std::tuple<Types ...> content_;
+//    double time_stamp_;
+
+    mutable RT_MUTEX mutex_;
+};
+
+
+template<typename DataType> class StampedData
+{
+    DataType data_;
+    unsigned long count_;
+    double time_stamp_;
+};
+
+
+
+
+
+template <typename...>
+struct Device;
+
+template <typename...InputTypes, typename...OutputTypes>
+class Device< std::tuple<InputTypes...>, std::tuple<OutputTypes...> >
+{
+public:
+    template<int I> using InputType = typename std::tuple_element<I, std::tuple<InputTypes...>>::type;
+    template<int I> using OutputType = typename std::tuple_element<I, std::tuple<OutputTypes...>>::type;
+
+    static const std::size_t input_size = sizeof...(InputTypes);
+    static const std::size_t output_size = sizeof...(OutputTypes);
+
+    typedef std::tuple<StampedData<OutputTypes> ...> OutputTuple;
+
+private:
+    OutputTuple output_;
+
+    //    std::array<RT_COND, > individual_conditions;
+    RT_COND global_condition;
+
+public:
+    OutputTuple get_current_data()
+    {
+        return output_;
+    }
+
+    template<int N> OutputType<N> get_current_data()
+    {
+        return output_[N];
+    }
+
+    void wait_until_next_data(unsigned index)
+    {
+        // return when next data of type index is received
+        return;
+    }
+
+
+    unsigned wait_until_next_data()
+    {
+        // return when next data of type index is received
+        return;
+    }
+
+    static void show_types()
+    {
+     std::cout << __PRETTY_FUNCTION__ << std::endl;
+    }
+
+};
+
+
+
+
+
+
+
+
+
 #define FLOAT_TO_Q24(fval) ((int)(fval * (1 << 24)))
 
 class CanBus
@@ -206,12 +313,24 @@ private:
     bool rt_task_is_running_;
     RT_MUTEX rt_task_mutex_;
 
+
+
+    CanFrame latest_frame_;
+    RT_COND condition_variable_;
+    RT_MUTEX latest_frame__mutex_;
+
+
 public: 
     CanBus(std::string can_interface_name, unsigned max_callback_count = 10)
     {
         rt_mutex_create(&can_connection_mutex_, NULL);
         rt_mutex_create(&callback_mutex_, NULL);
         rt_mutex_create(&rt_task_mutex_, NULL);
+
+        rt_mutex_create(&latest_frame__mutex_, NULL);
+
+
+        rt_cond_create(&condition_variable_, NULL);
 
         // setup can connection ----------------------------------------------------------
         // \todo get rid of old format stuff
@@ -265,6 +384,9 @@ public:
         while (true) {
             receive_time_logger.start_interval();
             CanFrame frame = receive_frame();
+
+            latest_frame_ = frame;
+
             receive_time_logger.end_interval();
 
             rt_mutex_acquire(&callback_mutex_, TM_INFINITE);
@@ -274,9 +396,22 @@ public:
             }
             rt_mutex_release(&callback_mutex_);
 
+            rt_cond_broadcast(&condition_variable_);
+
             loop_time_logger.end_and_start_interval();
         }
     }
+
+
+    CanFrame wait_for_next_frame()
+    {
+        rt_mutex_acquire(&latest_frame__mutex_, TM_INFINITE);
+        rt_cond_wait(&condition_variable_, &latest_frame__mutex_, TM_INFINITE);
+
+
+        rt_mutex_release(&latest_frame__mutex_);
+    }
+
 
     static void close_can(int socket)
     {
@@ -418,6 +553,8 @@ private:
         return out_frame;
     }
 };
+
+
 
 
 class Board
@@ -716,6 +853,15 @@ public:
 
 int main(int argc, char **argv)
 {
+
+//    {
+//     Device<std::tuple<int>, std::tuple<float, int, int, double, bool>> device;
+//     device.show_types();
+//    }
+
+//    exit(-1);
+
+
     // create bus and boards -------------------------------------------------
     auto can_bus1 = std::make_shared<CanBus>("rtcan0");
     auto can_bus2 = std::make_shared<CanBus>("rtcan1");
