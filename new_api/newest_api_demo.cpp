@@ -382,6 +382,11 @@ public:
         start_loop();
     }
 
+    ~CanBus()
+    {
+        close_can(can_connection_.socket);
+    }
+
     void add_callback(Callback callback)
     {
         rt_mutex_acquire(&callback_mutex_, TM_INFINITE);
@@ -396,6 +401,37 @@ public:
         callback_count_++;
 
         rt_mutex_release(&callback_mutex_);
+    }
+
+
+
+    void start_loop()
+    {
+        rt_mutex_acquire(&rt_task_mutex_, TM_INFINITE);
+
+        if(rt_task_is_running_)
+        {
+            rt_mutex_release(&rt_task_mutex_);
+            return;
+        }
+
+        int priority = 10;
+        int return_task_create = rt_task_create(&rt_task_, NULL, 0, priority,  T_JOINABLE | T_FPU);
+        if (return_task_create) {
+            rt_fprintf(stderr, "rt_task_shadow: %s\n", strerror(-return_task_create));
+            close_can(can_connection_.socket);
+            exit(-1);
+        }
+
+        rt_task_start(&rt_task_, &CanBus::loop, this);
+        rt_task_is_running_ = true;
+
+        rt_mutex_release(&rt_task_mutex_);
+    }
+
+    static void loop(void* instance_pointer)
+    {
+        ((CanBus*)(instance_pointer))->loop();
     }
 
     void loop()
@@ -466,34 +502,7 @@ public:
     }
 
 
-    static void loop(void* instance_pointer)
-    {
-        ((CanBus*)(instance_pointer))->loop();
-    }
 
-    void start_loop()
-    {
-        rt_mutex_acquire(&rt_task_mutex_, TM_INFINITE);
-
-        if(rt_task_is_running_)
-        {
-            rt_mutex_release(&rt_task_mutex_);
-            return;
-        }
-
-        int priority = 10;
-        int return_task_create = rt_task_create(&rt_task_, NULL, 0, priority,  T_JOINABLE | T_FPU);
-        if (return_task_create) {
-            rt_fprintf(stderr, "rt_task_shadow: %s\n", strerror(-return_task_create));
-            close_can(can_connection_.socket);
-            exit(-1);
-        }
-
-        rt_task_start(&rt_task_, &CanBus::loop, this);
-        rt_task_is_running_ = true;
-
-        rt_mutex_release(&rt_task_mutex_);
-    }
 
     int join()
     {
@@ -603,7 +612,6 @@ class Board
 {
     // \todo: add time stamps!
 private:
-    // should probably make this a shared pointer
     std::shared_ptr<CanBus> can_bus_;
 
     BLMC_BoardData_t data_;
