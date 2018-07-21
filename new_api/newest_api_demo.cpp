@@ -314,14 +314,46 @@ public:
 
 
 
+class XenomaiDevice
+{
+protected:
+    RT_TASK rt_task_;
 
+public:
+    XenomaiDevice()
+    {
+        // TODO: not sure if this is the right place for this
+        mlockall(MCL_CURRENT | MCL_FUTURE);
+        signal(SIGTERM, cleanup_and_exit);
+        signal(SIGINT, cleanup_and_exit);
+        signal(SIGDEBUG, action_upon_switch);
+        rt_print_auto_init(1);
+
+        int priority = 10;
+        int return_task_create = rt_task_create(&rt_task_, NULL, 0, priority,  T_JOINABLE | T_FPU);
+        if (return_task_create) {
+            rt_fprintf(stderr, "rt_task_shadow: %s\n", strerror(-return_task_create));
+            exit(-1);
+        }
+
+        rt_task_start(&rt_task_, &XenomaiDevice::loop, this);
+    }
+
+    static void loop(void* instance_pointer)
+    {
+        ((XenomaiDevice*)(instance_pointer))->loop();
+    }
+
+    virtual void loop() = 0;
+
+};
 
 
 
 
 #define FLOAT_TO_Q24(fval) ((int)(fval * (1 << 24)))
 
-class CanBus
+class CanBus: public XenomaiDevice
 {
 public:
     typedef std::function<void(CanFrame)> Callback;
@@ -334,7 +366,6 @@ private:
     unsigned callback_count_;
     RT_MUTEX callback_mutex_;
 
-    RT_TASK rt_task_;
     bool rt_task_is_running_;
     RT_MUTEX rt_task_mutex_;
 
@@ -370,68 +401,6 @@ public:
         callbacks_.resize(max_callback_count);
         callback_count_ = 0;
         rt_task_is_running_ = false;
-
-        // TODO: not sure if this is the right place for this
-        mlockall(MCL_CURRENT | MCL_FUTURE);
-        signal(SIGTERM, cleanup_and_exit);
-        signal(SIGINT, cleanup_and_exit);
-        signal(SIGDEBUG, action_upon_switch);
-        rt_print_auto_init(1);
-
-
-        start_loop();
-    }
-
-    ~CanBus()
-    {
-        close_can(can_connection_.socket);
-    }
-
-    void add_callback(Callback callback)
-    {
-        rt_mutex_acquire(&callback_mutex_, TM_INFINITE);
-
-        if(callback_count_ >= callbacks_.size())
-        {
-            rt_printf("you exceeded the max number of callbacks\n");
-            exit(-1);
-        }
-
-        callbacks_[callback_count_] = callback;
-        callback_count_++;
-
-        rt_mutex_release(&callback_mutex_);
-    }
-
-
-
-    void start_loop()
-    {
-        rt_mutex_acquire(&rt_task_mutex_, TM_INFINITE);
-
-        if(rt_task_is_running_)
-        {
-            rt_mutex_release(&rt_task_mutex_);
-            return;
-        }
-
-        int priority = 10;
-        int return_task_create = rt_task_create(&rt_task_, NULL, 0, priority,  T_JOINABLE | T_FPU);
-        if (return_task_create) {
-            rt_fprintf(stderr, "rt_task_shadow: %s\n", strerror(-return_task_create));
-            close_can(can_connection_.socket);
-            exit(-1);
-        }
-
-        rt_task_start(&rt_task_, &CanBus::loop, this);
-        rt_task_is_running_ = true;
-
-        rt_mutex_release(&rt_task_mutex_);
-    }
-
-    static void loop(void* instance_pointer)
-    {
-        ((CanBus*)(instance_pointer))->loop();
     }
 
     void loop()
@@ -464,6 +433,35 @@ public:
             loop_time_logger.end_and_start_interval();
         }
     }
+
+
+
+    virtual ~CanBus()
+    {
+        close_can(can_connection_.socket);
+    }
+
+    void add_callback(Callback callback)
+    {
+        rt_mutex_acquire(&callback_mutex_, TM_INFINITE);
+
+        if(callback_count_ >= callbacks_.size())
+        {
+            rt_printf("you exceeded the max number of callbacks\n");
+            exit(-1);
+        }
+
+        callbacks_[callback_count_] = callback;
+        callback_count_++;
+
+        rt_mutex_release(&callback_mutex_);
+    }
+
+
+
+
+
+
 
 
     unsigned wait_for_output()
