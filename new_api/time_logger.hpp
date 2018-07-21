@@ -75,7 +75,7 @@ public:
     }
 
     // getters ----------------------------------------------------------
-    double current_time() const
+    static double current_time()
     {
         return double(rt_timer_read()) / 1000000.;
     }
