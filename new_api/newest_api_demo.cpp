@@ -94,79 +94,6 @@ void cleanup_and_exit(int sig)
 }
 
 
-//template <typename Input, typename Output> class XenomaiDevice
-//{
-//private:
-//    RT_COND condition;
-
-//public:
-//    XenomaiDevice()
-//    {
-//        rt_task_is_running_ = false;
-
-//        // TODO: not sure if this is the right place for this
-//        mlockall(MCL_CURRENT | MCL_FUTURE);
-//        signal(SIGTERM, cleanup_and_exit);
-//        signal(SIGINT, cleanup_and_exit);
-//        signal(SIGDEBUG, action_upon_switch);
-//        rt_print_auto_init(1);
-
-
-//        rt_mutex_acquire(&rt_task_mutex_, TM_INFINITE);
-
-//        if(rt_task_is_running_)
-//        {
-//            rt_mutex_release(&rt_task_mutex_);
-//            return;
-//        }
-
-//        int priority = 10;
-//        int return_task_create = rt_task_create(&rt_task_, NULL, 0, priority,  T_JOINABLE | T_FPU);
-//        if (return_task_create) {
-//            rt_fprintf(stderr, "rt_task_shadow: %s\n", strerror(-return_task_create));
-//            close_can(can_connection_.socket);
-//            exit(-1);
-//        }
-
-//        rt_task_start(&rt_task_, &CanBus::loop, this);
-//        rt_task_is_running_ = true;
-
-//        rt_mutex_release(&rt_task_mutex_);
-//    }
-
-
-//    void set(Input input)
-//    {
-
-//    }
-
-//    Output get()
-//    {
-
-//    }
-
-//    void wait_for_data(RT_MUTEX mutex)
-//    {
-
-//    }
-
-//private:
-//    void loop()
-//    {
-//        update_data();
-//        condition.signal_all();
-//    }
-
-
-
-//    void update_data()
-//    {
-
-//    }
-
-//};
-
-
 // new class created to replace CAN_Frame_t,
 // avoiding dangerous pointers
 class CanFrame
@@ -236,6 +163,11 @@ public:
         data_ = data;
         count_ = count;
         time_stamp_ = time_stamp;
+    }
+
+    DataType get_data()
+    {
+        return data_;
     }
 
     size_t get_count()
@@ -366,7 +298,6 @@ private:
     unsigned callback_count_;
     RT_MUTEX callback_mutex_;
 
-    bool rt_task_is_running_;
     RT_MUTEX rt_task_mutex_;
 
 
@@ -400,7 +331,6 @@ public:
 
         callbacks_.resize(max_callback_count);
         callback_count_ = 0;
-        rt_task_is_running_ = false;
     }
 
     void loop()
@@ -606,7 +536,7 @@ private:
 
 
 
-class Board
+class Board: public XenomaiDevice
 {
     // \todo: add time stamps!
 private:
@@ -626,13 +556,23 @@ public:
         rt_mutex_create(&data_mutex_, NULL);
         rt_mutex_create(&current_targets_mutex_, NULL);
 
-        // register callback for obtaining data from can bus
-        CanBus::Callback callback = std::bind(&Board::consume_can_frame, this, std::placeholders::_1);
-        can_bus_->add_callback(callback);
+//        // register callback for obtaining data from can bus
+//        CanBus::Callback callback = std::bind(&Board::consume_can_frame, this, std::placeholders::_1);
+//        can_bus_->add_callback(callback);
 
         // initialize members
         BLMC_initBoardData(&data_, BLMC_SYNC_ON_ADC6);
         current_targets_.setZero();
+    }
+
+    void loop()
+    {
+        while(true)
+        {
+            can_bus_->wait_for_output();
+            auto stamped_can_frame = can_bus_->get_latest_output();
+            consume_can_frame(stamped_can_frame.get_data());
+        }
     }
 
     void enable()
