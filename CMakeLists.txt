@@ -16,6 +16,16 @@ add_custom_target(headers SOURCES ${LibFiles})
 # Use the `uname` command to determine if running on a RT_PREEMPTED system.
 execute_process(COMMAND uname -v OUTPUT_VARIABLE uname_OUTPUT)
 
+
+
+
+
+
+
+
+
+
+
 # Do nothing if Xenomai and RT_PREEMPT is not found
 if(Xenomai_FOUND)
     add_definitions(${Xenomai_DEFINITIONS})
@@ -89,6 +99,28 @@ if(Xenomai_FOUND)
         src/optoforce_can.c
         )
     target_link_libraries(blmc_can_demo_optoforce_dumper ${PROJECT_NAME})
+
+
+
+    ####################################################################################
+    #                       example of unit tests                                      #
+    ####################################################################################
+
+    # to compile and run:
+    # after calling catkin_make, source ./devel/setup.bash
+    # then after typing "catkin_make run_", you may press "tab" for autocompletion
+    # selecting "catkin_make run_tests" will results in all found tests to be compiled
+    # and run, but you may select specific test
+
+    catkin_add_gtest(blmc_can_tests
+      tests/main.cpp
+      tests/threadsafe_object_test.cpp
+    )
+    target_link_libraries(blmc_can_tests
+      ${PROJECT_NAME})
+
+
+
 # elseif(${uname_OUTPUT} MATCHES "PREEMPT")
 else()
     add_definitions("-D__RT_PREEMPT__")
@@ -145,3 +177,8 @@ else()
 #      )
 #  target_link_libraries(blmc_can_demo_optoforce_dumper ${PROJECT_NAME})
 endif()
+
+
+
+
+

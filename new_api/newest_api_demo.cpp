@@ -327,7 +327,7 @@ public:
         mlockall(MCL_CURRENT | MCL_FUTURE);
         signal(SIGTERM, cleanup_and_exit);
         signal(SIGINT, cleanup_and_exit);
-        signal(SIGDEBUG, action_upon_switch);
+//        signal(SIGDEBUG, action_upon_switch);
         rt_print_auto_init(1);
 
         int priority = 10;
@@ -397,7 +397,9 @@ public:
             rt_printf("Couldn't setup CAN connection. Exit.");
             exit(-1);
         }
-        can_connections.push_back(can_connection_old_format);
+
+        // \todo: how do we make sure that can connection is closed when we close
+//        can_connections.push_back(can_connection_old_format);
         can_connection_.send_addr = can_connection_old_format.send_addr;
         can_connection_.socket = can_connection_old_format.socket;
     }
