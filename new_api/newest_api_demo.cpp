@@ -191,57 +191,126 @@ private:
 
 
 
-template <typename...>
-struct Device;
+//template <typename...>
+//struct Device;
 
-template <typename...InputTypes, typename...OutputTypes>
-class Device< std::tuple<InputTypes...>, std::tuple<OutputTypes...> >
-{
-public:
-    template<int I> using InputType = typename std::tuple_element<I, std::tuple<InputTypes...>>::type;
-    template<int I> using OutputType = typename std::tuple_element<I, std::tuple<OutputTypes...>>::type;
+//template <typename...InputTypes, typename...OutputTypes>
+//class Device< std::tuple<InputTypes...>, std::tuple<OutputTypes...> >
+//{
+//public:
+//    template<int I> using InputType = typename std::tuple_element<I, std::tuple<InputTypes...>>::type;
+//    template<int I> using OutputType = typename std::tuple_element<I, std::tuple<OutputTypes...>>::type;
 
-    static const std::size_t input_size = sizeof...(InputTypes);
-    static const std::size_t output_size = sizeof...(OutputTypes);
+//    static const std::size_t input_size = sizeof...(InputTypes);
+//    static const std::size_t output_size = sizeof...(OutputTypes);
 
-    typedef std::tuple<StampedData<OutputTypes> ...> OutputTuple;
+//    typedef std::tuple<StampedData<InputTypes> ...> InputTuple;
+//    typedef std::tuple<StampedData<OutputTypes> ...> OutputTuple;
 
-private:
-    OutputTuple output_;
+//private:
+//    OutputTuple outputs_;
 
-    //    std::array<RT_COND, > individual_conditions;
-    RT_COND global_condition;
+//    std::array<RT_COND, output_size> output_conditions_;
+//    RT_COND output_global_condition_;
 
-public:
-    OutputTuple get_current_data()
-    {
-        return output_;
-    }
+//    std::array<RT_MUTEX, output_size> output_mutexes_;
+//    RT_MUTEX output_global_mutex_;
 
-    template<int N> OutputType<N> get_current_data()
-    {
-        return output_[N];
-    }
+//public:
+//    Device()
+//    {
+//        rt_mutex_create(&output_global_mutex_, NULL);
+//        rt_cond_create(&output_global_condition_, NULL);
 
-    void wait_for_output(unsigned index)
-    {
-        // return when next data of type index is received
-        return;
-    }
+//        for(size_t i = 0; i < output_size; i++)
+//        {
+//            rt_mutex_create(&output_mutexes_[i], NULL);
+//            rt_cond_create(&output_conditions_[i], NULL);
+//        }
+//    }
+
+//    unsigned wait_for_output()
+//    {
+//        rt_mutex_acquire(&output_mutex_, TM_INFINITE);
+//        size_t latest_count = output_.get_count();
+
+//        while(output_.get_count() == latest_count)
+//        {
+//            rt_cond_wait(&output_condition_, &output_mutex_, TM_INFINITE);
+//        }
+
+//        rt_mutex_release(&output_mutex_);
+
+//        return 0;
+//    }
+
+//    StampedData<CanFrame> get_latest_output()
+//    {
+//        rt_mutex_acquire(&output_mutex_, TM_INFINITE);
+//        StampedData<CanFrame> output = output_;
+//        rt_mutex_release(&output_mutex_);
+
+//        return output;
+//    }
 
 
-    unsigned wait_for_output()
-    {
-        // return when next data of type index is received
-        return;
-    }
 
-    static void show_types()
-    {
-     std::cout << __PRETTY_FUNCTION__ << std::endl;
-    }
 
-};
+//    virtual void set_input(InputTuple input_tuple) = 0;
+
+
+//    OutputTuple get_latest_output()
+//    {
+//        return output_;
+//    }
+
+//    template<int I> OutputType<I> get_latest_output()
+//    {
+//        return output_[I];
+//    }
+
+//    template<int I> void wait_for_output()
+//    {
+//        // return when next data of type index is received
+//        return;
+//    }
+
+//    unsigned wait_for_output()
+//    {
+//        // return when next data of type index is received
+//        return;
+//    }
+
+//    static void show_types()
+//    {
+//     std::cout << __PRETTY_FUNCTION__ << std::endl;
+//    }
+
+
+//protected:
+//    template<int I> void set_latest_output(OutputType<I> output)
+//    {
+
+//        rt_mutex_acquire(&output_mutexes_[I], TM_INFINITE);
+//        rt_mutex_acquire(&output_global_mutex_, TM_INFINITE);
+//        outputs_[I] = output;
+//        rt_cond_broadcast(&output_conditions_[I]);
+//        rt_cond_broadcast(&output_global_condition_);
+
+//        rt_mutex_release(&output_global_mutex_);
+//        rt_mutex_release(&output_mutexes_[I]);
+
+//        output_conditions_
+
+//        rt_cond_broadcast(&output_global_condition_);
+
+//    }
+
+//};
+
+
+
+
 
 
 
@@ -280,6 +349,19 @@ public:
 
 };
 
+
+
+class XenomaiMutex
+{
+private:
+    RT_MUTEX rt_mutex_;
+
+public:
+    XenomaiMutex()
+    {
+        rt_mutex_create(&rt_mutex_, NULL);
+    }
+};
 
 
 
