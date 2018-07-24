@@ -12,7 +12,7 @@
 
 const int DATA_LENGTH = 10000;
 
-const int OUTPUT_COUNT = 4;
+const int OUTPUT_COUNT = 5;
 
 const double RATE_MS = 0.01;
 
@@ -63,11 +63,42 @@ template <int DATA_INDEX, int OUTPUT_INDEX> void output_function(void * trash)
         logger.end_and_start_interval();
     }
 
-//    logger.print_status();
+    //    logger.print_status();
 }
 
 
-void start_thread(void (*function)(void *cookie))
+template <int OUTPUT_INDEX> void complete_output_function(void * trash)
+{
+
+    TimeLogger<100> logger("complete output " + std::to_string(OUTPUT_INDEX));
+
+    int i_0, i_1, i_2, i_3 = 0;
+    for(size_t i = 0; i < 4 * DATA_LENGTH; i++)
+    {
+        unsigned data_index = threadsafe_object.wait_for_datum();
+        switch(data_index)
+        {
+        case 0:
+            std::get<0>(output_tuples[OUTPUT_INDEX])[i_0++] = threadsafe_object.get<0>();
+            break;
+        case 1:
+            std::get<1>(output_tuples[OUTPUT_INDEX])[i_1++] = threadsafe_object.get<1>();
+            break;
+        case 2:
+            std::get<2>(output_tuples[OUTPUT_INDEX])[i_2++] = threadsafe_object.get<2>();
+            break;
+        case 3:
+            std::get<3>(output_tuples[OUTPUT_INDEX])[i_3++] = threadsafe_object.get<3>();
+            break;
+        }
+        logger.end_and_start_interval();
+    }
+
+    logger.print_status();
+}
+
+
+RT_TASK start_thread(void (*function)(void *cookie))
 {
 
     RT_TASK trash;
@@ -79,6 +110,8 @@ void start_thread(void (*function)(void *cookie))
         exit(-1);
     }
     rt_task_start(&trash, function, NULL);
+
+    return trash;
 }
 
 
@@ -118,19 +151,22 @@ TEST(threadsafe_object, general)
     start_thread(output_function<3,2>);
     start_thread(output_function<3,3>);
 
+    start_thread(complete_output_function<4>);
+
 
     usleep(1000);
 
-    start_thread(input_function<0>);
-    start_thread(input_function<1>);
-    start_thread(input_function<2>);
-    start_thread(input_function<3>);
+    auto task_1 = start_thread(input_function<0>);
+    auto task_2 = start_thread(input_function<1>);
+    auto task_3 = start_thread(input_function<2>);
+    auto task_4 = start_thread(input_function<3>);
 
+    rt_task_join(&task_1);
+    rt_task_join(&task_2);
+    rt_task_join(&task_3);
+    rt_task_join(&task_4);
 
-
-    usleep(DATA_LENGTH * RATE_MS * 1000 * 2);
     usleep(1000000);
-
 
     // check that the outputs written by the individual threads
     // correspond to the input.
@@ -138,6 +174,9 @@ TEST(threadsafe_object, general)
     EXPECT_TRUE(input_tuple == output_tuples[1]);
     EXPECT_TRUE(input_tuple == output_tuples[2]);
     EXPECT_TRUE(input_tuple == output_tuples[3]);
+    EXPECT_TRUE(input_tuple == output_tuples[4]);
+
+
 
     // sanity check
     std::get<1>(input_tuple)[0](1,1) = 33.;

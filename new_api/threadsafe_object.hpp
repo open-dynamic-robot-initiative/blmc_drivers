@@ -105,6 +105,8 @@ public:
     long unsigned wait_for_datum()
     {
         rt_mutex_acquire(&condition_mutex_, TM_INFINITE);
+
+        std::array<long unsigned, SIZE> initial_modification_counts = modification_counts_;
         long unsigned initial_modification_count = total_modification_count_;
 
         while(initial_modification_count == total_modification_count_)
@@ -120,7 +122,28 @@ public:
             exit(-1);
         }
 
+        int modified_index = -1;
+        for(size_t i = 0; i < SIZE; i++)
+        {
+            if(initial_modification_counts[i] + 1 == modification_counts_[i])
+            {
+                if(modified_index != -1)
+                {
+                    rt_printf("something in the threadsafe object went horribly wrong\n");
+                    exit(-1);
+                }
+
+                modified_index = i;
+            }
+            else if(initial_modification_counts[i] != modification_counts_[i])
+            {
+                rt_printf("something in the threadsafe object went horribly wrong\n");
+                exit(-1);
+            }
+        }
+
         rt_mutex_release(&condition_mutex_);
+        return modified_index;
     }
 
 
