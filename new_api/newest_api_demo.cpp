@@ -303,9 +303,9 @@ public:
     {
         // TODO: not sure if this is the right place for this
         mlockall(MCL_CURRENT | MCL_FUTURE);
-//        signal(SIGTERM, cleanup_and_exit);
-//        signal(SIGINT, cleanup_and_exit);
-//        signal(SIGDEBUG, action_upon_switch);
+        //        signal(SIGTERM, cleanup_and_exit);
+        //        signal(SIGINT, cleanup_and_exit);
+        //        signal(SIGDEBUG, action_upon_switch);
         rt_print_auto_init(1);
 
         int priority = 10;
@@ -329,8 +329,177 @@ private:
 
 };
 
-// Design Pattern:
 
+
+
+#define FLOAT_TO_Q24(fval) ((int)(fval * (1 << 24)))
+
+
+/// >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+class CanBus: public XenomaiDevice
+{
+private:
+    CanConnection can_connection_;
+    RT_MUTEX can_connection_mutex_;
+
+    ThreadsafeObject<StampedData<CanFrame>> can_frame_;
+
+    // send and get ============================================================
+public:
+    StampedData<CanFrame> get_latest_can_frame()
+    {
+        return can_frame_.get<0>();
+    }
+    void wait_for_can_frame_()
+    {
+        can_frame_.wait_for_datum(0);
+    }
+    unsigned wait_for_any_output()
+    {
+        return can_frame_.wait_for_datum();
+    }
+
+    void send_can_frame(uint32_t id, uint8_t *data, uint8_t dlc)
+    {
+        // get address ---------------------------------------------------------
+        rt_mutex_acquire(&can_connection_mutex_, TM_INFINITE);
+        int socket = can_connection_.socket;
+        struct sockaddr_can address = can_connection_.send_addr;
+        rt_mutex_release(&can_connection_mutex_);
+
+        // put data into can frame ---------------------------------------------
+        can_frame_t can_frame;
+        can_frame.can_id = id;
+        can_frame.can_dlc = dlc;
+        memcpy(can_frame.data, data, dlc);
+
+        // send ----------------------------------------------------------------
+        int ret = rt_dev_sendto(socket,
+                                (void *)&can_frame,
+                                sizeof(can_frame_t),
+                                0,
+                                (struct sockaddr *)&address,
+                                sizeof(address));
+        if (ret < 0)
+        {
+            rt_printf("something went wrong with "
+                      "sending CAN frame, error code: %d\n", ret);
+            exit(-1);
+        }
+    }
+
+    // constructor and destructor ==============================================
+public: 
+    CanBus(std::string can_interface_name)
+    {
+        rt_mutex_create(&can_connection_mutex_, NULL);
+
+        // setup can connection --------------------------------
+        // \todo get rid of old format stuff
+        CAN_CanConnection_t can_connection_old_format;
+        int ret = CAN_setupCan(&can_connection_old_format,
+                               can_interface_name.c_str(), 0);
+        if (ret < 0)
+        {
+            rt_printf("Couldn't setup CAN connection. Exit.");
+            exit(-1);
+        }
+
+        // \todo:how do we make sure that can connection is closed when we close
+        //        can_connections.push_back(can_connection_old_format);
+        can_connection_.send_addr = can_connection_old_format.send_addr;
+        can_connection_.socket = can_connection_old_format.socket;
+    }
+    virtual ~CanBus()
+    {
+        int ret = rt_dev_close(can_connection_.socket);
+        if (ret)
+        {
+            rt_fprintf(stderr, "rt_dev_close: %s\n", strerror(-ret));
+            exit(-1);
+        }
+    }
+
+    // private =================================================================
+private:
+    void loop()
+    {
+        TimeLogger<100> loop_time_logger("can bus loop", 4000);
+        TimeLogger<100> receive_time_logger("receive", 4000);
+
+        while (true)
+        {
+            receive_time_logger.start_interval();
+            CanFrame frame = receive_frame();
+            receive_time_logger.end_interval();
+
+            can_frame_.set<0>(StampedData<CanFrame>(
+                                  frame,
+                                  can_frame_.get<0>().get_count() + 1,
+                                  TimeLogger<1>::current_time()));
+
+            loop_time_logger.end_and_start_interval();
+        }
+    }
+
+    CanFrame receive_frame()
+    {
+        rt_mutex_acquire(&can_connection_mutex_, TM_INFINITE);
+        int socket = can_connection_.socket;
+        rt_mutex_release(&can_connection_mutex_);
+
+        // data we want to obtain ----------------------------------------------
+        can_frame_t can_frame;
+        nanosecs_abs_t timestamp;
+        struct sockaddr_can message_address;
+
+        // setup message such that data can be received to variables above -----
+        struct iovec input_output_vector;
+        input_output_vector.iov_base = (void *)&can_frame;
+        input_output_vector.iov_len = sizeof(can_frame_t);
+
+        struct msghdr message_header;
+        message_header.msg_iov = &input_output_vector;
+        message_header.msg_iovlen = 1;
+        message_header.msg_name = (void *)&message_address;
+        message_header.msg_namelen = sizeof(struct sockaddr_can);
+        message_header.msg_control = (void *)&timestamp;
+        message_header.msg_controllen = sizeof(nanosecs_abs_t);
+
+        // receive message from can bus ----------------------------------------
+        int ret = rt_dev_recvmsg(socket, &message_header, 0);
+        if (ret < 0)
+        {
+            rt_printf("something went wrong with receiving "
+                      "CAN frame, error code: %d\n", ret);
+            exit(-1);
+        }
+
+        // process received data and put into felix widmaier's format ----------
+        if (message_header.msg_controllen == 0)
+        {
+            // No timestamp for this frame available. Make sure we dont get
+            // garbage.
+            timestamp = 0;
+        }
+
+        CanFrame out_frame;
+        out_frame.id = can_frame.can_id;
+        out_frame.dlc = can_frame.can_dlc;
+        for(size_t i = 0; i < can_frame.can_dlc; i++)
+        {
+            out_frame.data[i] = can_frame.data[i];
+        }
+        out_frame.timestamp = timestamp;
+        out_frame.recv_ifindex = message_address.can_ifindex;
+
+        return out_frame;
+    }
+};
+
+
+
+/// Design Pattern >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 class DevicePattern
 {
     typedef int Torque;
@@ -374,224 +543,50 @@ class DevicePattern
 };
 
 
-#define FLOAT_TO_Q24(fval) ((int)(fval * (1 << 24)))
-
-class CanBus: public XenomaiDevice
-{
-private:
-    CanConnection can_connection_;
-    RT_MUTEX can_connection_mutex_;
-
-    ThreadsafeObject<StampedData<CanFrame>> can_frame_;
-
-public:
-    StampedData<CanFrame> get_latest_can_frame()
-    {
-        return can_frame_.get<0>();
-    }
-    void wait_for_can_frame_()
-    {
-        can_frame_.wait_for_datum(0);
-    }
-    unsigned wait_for_any_output()
-    {
-        return can_frame_.wait_for_datum();
-    }
-
-    void send_can_frame(uint32_t id, uint8_t *data, uint8_t dlc)
-    {
-        // get address ----------------------------------------
-        rt_mutex_acquire(&can_connection_mutex_, TM_INFINITE);
-        int socket = can_connection_.socket;
-        struct sockaddr_can address = can_connection_.send_addr;
-        rt_mutex_release(&can_connection_mutex_);
-
-        // put data into can frame ----------------------------
-        can_frame_t can_frame;
-        can_frame.can_id = id;
-        can_frame.can_dlc = dlc;
-        memcpy(can_frame.data, data, dlc);
-
-        // send ----------------------------------------------------
-        int ret = rt_dev_sendto(socket, (void *)&can_frame,
-                sizeof(can_frame_t), 0, (struct sockaddr *)&address,
-                sizeof(address));
-        if (ret < 0)
-        {
-            rt_printf("something went wrong with sending CAN frame, error code: %d\n", ret);
-            exit(-1);
-        }
-    }
-
-public: 
-    CanBus(std::string can_interface_name)
-    {
-        rt_mutex_create(&can_connection_mutex_, NULL);
-
-        // setup can connection ----------------------------------------------------------
-        // \todo get rid of old format stuff
-        CAN_CanConnection_t can_connection_old_format;
-        int ret = CAN_setupCan(&can_connection_old_format, can_interface_name.c_str(), 0);
-        if (ret < 0)
-        {
-            rt_printf("Couldn't setup CAN connection. Exit.");
-            exit(-1);
-        }
-
-        // \todo: how do we make sure that can connection is closed when we close
-//        can_connections.push_back(can_connection_old_format);
-        can_connection_.send_addr = can_connection_old_format.send_addr;
-        can_connection_.socket = can_connection_old_format.socket;
-    }
-    virtual ~CanBus()
-    {
-        int ret = rt_dev_close(can_connection_.socket);
-        if (ret)
-        {
-            rt_fprintf(stderr, "rt_dev_close: %s\n", strerror(-ret));
-            exit(-1);
-        }
-    }
-
-private:
-    void loop()
-    {
-        TimeLogger<100> loop_time_logger("can bus loop", 4000);
-        TimeLogger<100> receive_time_logger("receive", 4000);
-
-        while (true)
-        {
-            receive_time_logger.start_interval();
-            CanFrame frame = receive_frame();
-            receive_time_logger.end_interval();
-
-            can_frame_.set<0>(StampedData<CanFrame>(frame, can_frame_.get<0>().get_count() + 1,
-                                                 TimeLogger<1>::current_time()));
-
-            loop_time_logger.end_and_start_interval();
-        }
-    }
-
-    CanFrame receive_frame()
-    {
-        rt_mutex_acquire(&can_connection_mutex_, TM_INFINITE);
-        int socket = can_connection_.socket;
-        rt_mutex_release(&can_connection_mutex_);
-
-        // data we want to obtain ------------------------------------------------------
-        can_frame_t can_frame;
-        nanosecs_abs_t timestamp;
-        struct sockaddr_can message_address;
-
-        // setup message such that data can be received to variables above -------------
-        struct iovec input_output_vector;
-        input_output_vector.iov_base = (void *)&can_frame;
-        input_output_vector.iov_len = sizeof(can_frame_t);
-
-        struct msghdr message_header;
-        message_header.msg_iov = &input_output_vector;
-        message_header.msg_iovlen = 1;
-        message_header.msg_name = (void *)&message_address;
-        message_header.msg_namelen = sizeof(struct sockaddr_can);
-        message_header.msg_control = (void *)&timestamp;
-        message_header.msg_controllen = sizeof(nanosecs_abs_t);
-
-        // receive message from can bus ------------------------------------------------
-        int ret = rt_dev_recvmsg(socket, &message_header, 0);
-        if (ret < 0)
-        {
-            rt_printf("something went wrong with receiving CAN frame, error code: %d\n", ret);
-            exit(-1);
-        }
-
-        // process received data and put into felix widmaier's format --------------------
-        if (message_header.msg_controllen == 0)
-        {
-            // No timestamp for this frame available. Make sure we dont get
-            // garbage.
-            timestamp = 0;
-        }
-
-        CanFrame out_frame;
-        out_frame.id = can_frame.can_id;
-        out_frame.dlc = can_frame.can_dlc;
-        for(size_t i = 0; i < can_frame.can_dlc; i++)
-        {
-            out_frame.data[i] = can_frame.data[i];
-        }
-        out_frame.timestamp = timestamp;
-        out_frame.recv_ifindex = message_address.can_ifindex;
-
-        return out_frame;
-    }
-};
-
-
-
-
+/// >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 class Board: public XenomaiDevice
 {
-    // \todo: add time stamps!
-private:
-    std::shared_ptr<CanBus> can_bus_;
-
-    BLMC_BoardData_t data_;
-    RT_MUTEX data_mutex_;
-
-    // controls
-    Eigen::Vector2d current_targets_;
-    RT_MUTEX current_targets_mutex_;
-
-
+    // public interface ========================================================
 public:
-    Board(std::shared_ptr<CanBus> can_bus): can_bus_(can_bus)
+    double get_latest_current_measurement(unsigned motor_id)
     {
-        rt_mutex_create(&data_mutex_, NULL);
-        rt_mutex_create(&current_targets_mutex_, NULL);
-
-        // initialize members
-        BLMC_initBoardData(&data_, BLMC_SYNC_ON_ADC6);
-        current_targets_.setZero();
-    }
-
-    void loop()
-    {
-        while(true)
-        {
-            can_bus_->wait_for_any_output();
-            auto stamped_can_frame = can_bus_->get_latest_can_frame();
-            consume_can_frame(stamped_can_frame.get_data());
-        }
-    }
-
-    void enable()
-    {
-        send_command(BLMC_CMD_ENABLE_SYS, BLMC_ENABLE);
-        send_command(BLMC_CMD_SEND_ALL, BLMC_ENABLE);
-        send_command(BLMC_CMD_ENABLE_MTR1, BLMC_ENABLE);
-        send_command(BLMC_CMD_ENABLE_MTR2, BLMC_ENABLE);
-    }
-
-    void consume_can_frame(CanFrame frame)
-    {
-        // \todo: this conversion is necessary now because the BLMC_processCanFrame
-        // function has not been updated yet to use new frame format.
-        CAN_Frame_t frame_old_format;
-        frame_old_format.data = frame.data.begin();
-        frame_old_format.dlc = frame.dlc;
-        frame_old_format.id = frame.id;
-        frame_old_format.timestamp = frame.timestamp;
-        frame_old_format.recv_ifindex = frame.recv_ifindex;
-
         rt_mutex_acquire(&data_mutex_, TM_INFINITE);
-        BLMC_processCanFrame(&frame_old_format, &data_);
-
-        static int count = 0;
-        if(count % 4000 == 0)
-            BLMC_printLatestBoardStatus(&data_);
-        count++;
-
+        double current_measurement = data_.latest.current.value[id_to_index(motor_id)];
         rt_mutex_release(&data_mutex_);
+
+        return current_measurement;
+    }
+    double get_latest_position_measurement(unsigned motor_id)
+    {
+        rt_mutex_acquire(&data_mutex_, TM_INFINITE);
+        double position_measurement = data_.latest.position.value[id_to_index(motor_id)];
+        rt_mutex_release(&data_mutex_);
+
+        return position_measurement;
+    }
+    double get_latest_velocity_measurement(unsigned motor_id)
+    {
+        rt_mutex_acquire(&data_mutex_, TM_INFINITE);
+        double velocity_measurement = data_.latest.velocity.value[id_to_index(motor_id)];
+        rt_mutex_release(&data_mutex_);
+
+        return velocity_measurement;
+    }
+    double get_latest_encoder_measurement(unsigned motor_id)
+    {
+        rt_mutex_acquire(&data_mutex_, TM_INFINITE);
+        double encoder_measurement = data_.encoder_index[id_to_index(motor_id)].value;
+        rt_mutex_release(&data_mutex_);
+
+        return encoder_measurement;
+    }
+    double get_latest_analog_measurement(unsigned adc_id)
+    {
+        rt_mutex_acquire(&data_mutex_, TM_INFINITE);
+        double analog_measurement = data_.latest.adc6.value[id_to_index(adc_id)];
+        rt_mutex_release(&data_mutex_);
+
+        return analog_measurement;
     }
 
     void send_command(uint32_t cmd_id, int32_t value)
@@ -613,7 +608,51 @@ public:
         can_bus_->send_can_frame(BLMC_CAN_ID_COMMAND, data, 8);
     }
 
-    void set_current_targets(Eigen::Vector2d currents)
+    void send_current_target(double current, unsigned motor_id)
+    {
+        rt_mutex_acquire(&current_targets_mutex_, TM_INFINITE);
+        Eigen::Vector2d current_targets = current_targets_;
+        rt_mutex_release(&current_targets_mutex_);
+
+        current_targets[id_to_index(motor_id)] = current;
+        send_current_targets(current_targets);
+    }
+
+    // todo: this should go away
+    void enable()
+    {
+        send_command(BLMC_CMD_ENABLE_SYS, BLMC_ENABLE);
+        send_command(BLMC_CMD_SEND_ALL, BLMC_ENABLE);
+        send_command(BLMC_CMD_ENABLE_MTR1, BLMC_ENABLE);
+        send_command(BLMC_CMD_ENABLE_MTR2, BLMC_ENABLE);
+    }
+
+    // private members =========================================================
+private:
+    std::shared_ptr<CanBus> can_bus_;
+
+    BLMC_BoardData_t data_;
+    RT_MUTEX data_mutex_;
+
+    // controls
+    Eigen::Vector2d current_targets_;
+    RT_MUTEX current_targets_mutex_;
+
+    // constructor =============================================================
+public:
+    Board(std::shared_ptr<CanBus> can_bus): can_bus_(can_bus)
+    {
+        rt_mutex_create(&data_mutex_, NULL);
+        rt_mutex_create(&current_targets_mutex_, NULL);
+
+        // initialize members
+        BLMC_initBoardData(&data_, BLMC_SYNC_ON_ADC6);
+        current_targets_.setZero();
+    }
+
+    // private methods =========================================================
+private:
+    void send_current_targets(Eigen::Vector2d currents)
     {
         rt_mutex_acquire(&current_targets_mutex_, TM_INFINITE);
         current_targets_ = currents;
@@ -643,58 +682,39 @@ public:
 
         return can_bus_->send_can_frame(BLMC_CAN_ID_IqRef, data, 8);
     }
-    void set_current_target(double current, unsigned motor_id)
-    {
-        rt_mutex_acquire(&current_targets_mutex_, TM_INFINITE);
-        Eigen::Vector2d current_targets = current_targets_;
-        rt_mutex_release(&current_targets_mutex_);
 
-        current_targets[id_to_index(motor_id)] = current;
-        set_current_targets(current_targets);
+    void loop()
+    {
+        while(true)
+        {
+            can_bus_->wait_for_any_output();
+            auto stamped_can_frame = can_bus_->get_latest_can_frame();
+            consume_can_frame(stamped_can_frame.get_data());
+        }
     }
 
-    double get_current_measurement(unsigned motor_id)
+    void consume_can_frame(CanFrame frame)
     {
+        // \todo: this conversion is necessary now because the BLMC_processCanFrame
+        // function has not been updated yet to use new frame format.
+        CAN_Frame_t frame_old_format;
+        frame_old_format.data = frame.data.begin();
+        frame_old_format.dlc = frame.dlc;
+        frame_old_format.id = frame.id;
+        frame_old_format.timestamp = frame.timestamp;
+        frame_old_format.recv_ifindex = frame.recv_ifindex;
+
         rt_mutex_acquire(&data_mutex_, TM_INFINITE);
-        double current_measurement = data_.latest.current.value[id_to_index(motor_id)];
-        rt_mutex_release(&data_mutex_);
+        BLMC_processCanFrame(&frame_old_format, &data_);
 
-        return current_measurement;
-    }
-    double get_position_measurement(unsigned motor_id)
-    {
-        rt_mutex_acquire(&data_mutex_, TM_INFINITE);
-        double position_measurement = data_.latest.position.value[id_to_index(motor_id)];
-        rt_mutex_release(&data_mutex_);
+        static int count = 0;
+        if(count % 4000 == 0)
+            BLMC_printLatestBoardStatus(&data_);
+        count++;
 
-        return position_measurement;
-    }
-    double get_velocity_measurement(unsigned motor_id)
-    {
-        rt_mutex_acquire(&data_mutex_, TM_INFINITE);
-        double velocity_measurement = data_.latest.velocity.value[id_to_index(motor_id)];
         rt_mutex_release(&data_mutex_);
-
-        return velocity_measurement;
-    }
-    double get_encoder_measurement(unsigned motor_id)
-    {
-        rt_mutex_acquire(&data_mutex_, TM_INFINITE);
-        double encoder_measurement = data_.encoder_index[id_to_index(motor_id)].value;
-        rt_mutex_release(&data_mutex_);
-
-        return encoder_measurement;
-    }
-    double get_analog_measurement(unsigned adc_id)
-    {
-        rt_mutex_acquire(&data_mutex_, TM_INFINITE);
-        double analog_measurement = data_.latest.adc6.value[id_to_index(adc_id)];
-        rt_mutex_release(&data_mutex_);
-
-        return analog_measurement;
     }
 
-private:
     unsigned id_to_index(unsigned motor_id)
     {
         if(motor_id == BLMC_MTR1)
@@ -708,7 +728,7 @@ private:
 };
 
 
-
+/// >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 class Motor
 {
     // \todo: should probably make this a shared pointer
@@ -718,26 +738,26 @@ public:
 
     Motor(std::shared_ptr<Board> board, unsigned motor_id): board_(board), motor_id_(motor_id) { }
 
-    double get_current_measurement()
+    double get_latest_current_measurement()
     {
-        return board_->get_current_measurement(motor_id_);
+        return board_->get_latest_current_measurement(motor_id_);
     }
-    double get_position_measurement()
+    double get_latest_position_measurement()
     {
-        return board_->get_position_measurement(motor_id_);
+        return board_->get_latest_position_measurement(motor_id_);
     }
-    double get_velocity_measurement()
+    double get_latest_velocity_measurement()
     {
-        return board_->get_velocity_measurement(motor_id_);
+        return board_->get_latest_velocity_measurement(motor_id_);
     }
-    double get_encoder_measurement()
+    double get_latest_encoder_measurement()
     {
-        return board_->get_encoder_measurement(motor_id_);
+        return board_->get_latest_encoder_measurement(motor_id_);
     }
 
     void set_current_target(double current_target)
     {
-        board_->set_current_target(current_target, motor_id_);
+        board_->send_current_target(current_target, motor_id_);
     }
 };
 
@@ -752,9 +772,9 @@ public:
 
     AnalogSensor(std::shared_ptr<Board> board, unsigned sensor_id): board_(board), sensor_id_(sensor_id) { }
 
-    double get_analog_measurement()
+    double get_latest_analog_measurement()
     {
-        board_->get_analog_measurement(sensor_id_);
+        board_->get_latest_analog_measurement(sensor_id_);
     }
 };
 
@@ -778,8 +798,8 @@ public:
         // for memory management
         mlockall(MCL_CURRENT | MCL_FUTURE);
 
-//        signal(SIGTERM, cleanup_and_exit);
-//        signal(SIGINT, cleanup_and_exit);
+        //        signal(SIGTERM, cleanup_and_exit);
+        //        signal(SIGINT, cleanup_and_exit);
 
         // start real-time thread ------------------------------------------------------------------
         // for real time printing
@@ -805,7 +825,7 @@ public:
         TimeLogger<10> time_logger("controller", 1000);
         while(true)
         {
-            double current_target = 2 * (analog_sensor_->get_analog_measurement() - 0.5);
+            double current_target = 2 * (analog_sensor_->get_latest_analog_measurement() - 0.5);
             motor_->set_current_target(current_target);
 
             // print --------------------------------------------------------------
@@ -831,12 +851,12 @@ public:
 int main(int argc, char **argv)
 {
 
-//    {
-//     Device<std::tuple<int>, std::tuple<float, int, int, double, bool>> device;
-//     device.show_types();
-//    }
+    //    {
+    //     Device<std::tuple<int>, std::tuple<float, int, int, double, bool>> device;
+    //     device.show_types();
+    //    }
 
-//    exit(-1);
+    //    exit(-1);
 
 
     // create bus and boards -------------------------------------------------
