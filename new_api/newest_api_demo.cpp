@@ -339,11 +339,11 @@ class DevicePattern
     typedef int Current;
 
     // inputs ---------------------------------
-    void set_torque(Torque torque)
+    void send_torque(Torque torque)
     {
 
     }
-    void set_speed(Speed speed)
+    void send_speed(Speed speed)
     {
 
     }
@@ -382,23 +382,51 @@ private:
     CanConnection can_connection_;
     RT_MUTEX can_connection_mutex_;
 
-    RT_MUTEX rt_task_mutex_;
-
-//    StampedData<CanFrame> output_;
-//    RT_COND output_condition_;
-//    RT_MUTEX output_mutex_;
-
-
     ThreadsafeObject<StampedData<CanFrame>> can_frame_;
+
+public:
+    StampedData<CanFrame> get_latest_can_frame()
+    {
+        return can_frame_.get<0>();
+    }
+    void wait_for_can_frame_()
+    {
+        can_frame_.wait_for_datum(0);
+    }
+    unsigned wait_for_any_output()
+    {
+        return can_frame_.wait_for_datum();
+    }
+
+    void send_can_frame(uint32_t id, uint8_t *data, uint8_t dlc)
+    {
+        // get address ----------------------------------------
+        rt_mutex_acquire(&can_connection_mutex_, TM_INFINITE);
+        int socket = can_connection_.socket;
+        struct sockaddr_can address = can_connection_.send_addr;
+        rt_mutex_release(&can_connection_mutex_);
+
+        // put data into can frame ----------------------------
+        can_frame_t can_frame;
+        can_frame.can_id = id;
+        can_frame.can_dlc = dlc;
+        memcpy(can_frame.data, data, dlc);
+
+        // send ----------------------------------------------------
+        int ret = rt_dev_sendto(socket, (void *)&can_frame,
+                sizeof(can_frame_t), 0, (struct sockaddr *)&address,
+                sizeof(address));
+        if (ret < 0)
+        {
+            rt_printf("something went wrong with sending CAN frame, error code: %d\n", ret);
+            exit(-1);
+        }
+    }
 
 public: 
     CanBus(std::string can_interface_name)
     {
         rt_mutex_create(&can_connection_mutex_, NULL);
-        rt_mutex_create(&rt_task_mutex_, NULL);
-
-//        rt_mutex_create(&output_mutex_, NULL);
-//        rt_cond_create(&output_condition_, NULL);
 
         // setup can connection ----------------------------------------------------------
         // \todo get rid of old format stuff
@@ -425,7 +453,6 @@ public:
         }
     }
 
-
 private:
     void loop()
     {
@@ -441,78 +468,10 @@ private:
             can_frame_.set<0>(StampedData<CanFrame>(frame, can_frame_.get<0>().get_count() + 1,
                                                  TimeLogger<1>::current_time()));
 
-//            rt_mutex_acquire(&output_mutex_, TM_INFINITE);
-//            output_ = StampedData<CanFrame>(frame, output_.get_count() + 1, TimeLogger<1>::current_time());
-//            rt_mutex_release(&output_mutex_);
-
-//            rt_cond_broadcast(&output_condition_);
-
             loop_time_logger.end_and_start_interval();
         }
     }
-public:
-    unsigned wait_for_any_output()
-    {
-        return can_frame_.wait_for_datum();
 
-
-//        rt_mutex_acquire(&output_mutex_, TM_INFINITE);
-//        size_t latest_count = output_.get_count();
-
-//        while(output_.get_count() == latest_count)
-//        {
-//            rt_cond_wait(&output_condition_, &output_mutex_, TM_INFINITE);
-//        }
-
-//        rt_mutex_release(&output_mutex_);
-
-//        return 0;
-    }
-
-    void wait_for_can_frame_()
-    {
-        can_frame_.wait_for_datum(0);
-    }
-
-
-
-    StampedData<CanFrame> get_latest_output()
-    {
-//        rt_mutex_acquire(&output_mutex_, TM_INFINITE);
-//        StampedData<CanFrame> output = output_;
-//        rt_mutex_release(&output_mutex_);
-
-//        return output;
-
-        return can_frame_.get<0>();
-    }
-
-    void send_frame(uint32_t id, uint8_t *data, uint8_t dlc)
-    {
-        // get address ----------------------------------------
-        rt_mutex_acquire(&can_connection_mutex_, TM_INFINITE);
-        int socket = can_connection_.socket;
-        struct sockaddr_can address = can_connection_.send_addr;
-        rt_mutex_release(&can_connection_mutex_);
-
-        // put data into can frame ----------------------------
-        can_frame_t can_frame;
-        can_frame.can_id = id;
-        can_frame.can_dlc = dlc;
-        memcpy(can_frame.data, data, dlc);
-
-        // send ----------------------------------------------------
-        int ret = rt_dev_sendto(socket, (void *)&can_frame,
-                sizeof(can_frame_t), 0, (struct sockaddr *)&address,
-                sizeof(address));
-        if (ret < 0)
-        {
-            rt_printf("something went wrong with sending CAN frame, error code: %d\n", ret);
-            exit(-1);
-        }
-    }
-
-private:
     CanFrame receive_frame()
     {
         rt_mutex_acquire(&can_connection_mutex_, TM_INFINITE);
@@ -600,7 +559,7 @@ public:
         while(true)
         {
             can_bus_->wait_for_any_output();
-            auto stamped_can_frame = can_bus_->get_latest_output();
+            auto stamped_can_frame = can_bus_->get_latest_can_frame();
             consume_can_frame(stamped_can_frame.get_data());
         }
     }
@@ -651,7 +610,7 @@ public:
         data[6] = (cmd_id >> 8) & 0xFF;
         data[7] = cmd_id & 0xFF;
 
-        can_bus_->send_frame(BLMC_CAN_ID_COMMAND, data, 8);
+        can_bus_->send_can_frame(BLMC_CAN_ID_COMMAND, data, 8);
     }
 
     void set_current_targets(Eigen::Vector2d currents)
@@ -682,7 +641,7 @@ public:
         data[6] = (q_current2 >> 8) & 0xFF;
         data[7] =  q_current2 & 0xFF;
 
-        return can_bus_->send_frame(BLMC_CAN_ID_IqRef, data, 8);
+        return can_bus_->send_can_frame(BLMC_CAN_ID_IqRef, data, 8);
     }
     void set_current_target(double current, unsigned motor_id)
     {
