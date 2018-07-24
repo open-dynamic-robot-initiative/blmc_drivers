@@ -48,50 +48,58 @@
 #include <eigen3/Eigen/Core>
 
 
+
 #include <array>
 #include <time_logger.hpp>
 
 
 #include <tuple>
 
+#include <threadsafe_object.hpp>
 
 
+//long unsigned count_xenomai_mode_switches = 0;
 
-long unsigned count_xenomai_mode_switches = 0;
 
+//// TODO: make sure that mode switcheds are actually detected
+//void action_upon_switch(int sig __attribute__((unused)))
+//{
+//  void *bt[32];
+//  int nentries;
 
-// TODO: make sure that mode switcheds are actually detected
-void action_upon_switch(int sig __attribute__((unused)))
-{
-  void *bt[32];
-  int nentries;
+//  // increment mode swich counter
+//  ++count_xenomai_mode_switches;
 
-  // increment mode swich counter
-  ++count_xenomai_mode_switches;
+//  rt_printf("MOOOOODE SWIIIIITCH\n");
+//  exit(-1);
+//}
 
-  rt_printf("MOOOOODE SWIIIIITCH\n");
-  exit(-1);
-}
-
-// GLOBALS
-// **************************************************************************
-std::vector<CAN_CanConnection_t> can_connections;
+//// GLOBALS
+//// **************************************************************************
+//std::vector<CAN_CanConnection_t> can_connections;
 
 
 // FUNCTIONS
 // **************************************************************************
-void cleanup_and_exit(int sig)
-{
-    rt_printf("Signal %d received\n", sig);
-    // Disable system before closing connection
+//void cleanup_and_exit(int sig)
+//{
+//    rt_printf("Signal %d received\n", sig);
+//    // Disable system before closing connection
 
-    for(int i = 0; i < can_connections.size(); i++)
-    {
-        BLMC_sendCommand(&can_connections[i], BLMC_CMD_ENABLE_SYS, BLMC_DISABLE);
-        CAN_closeCan(&can_connections[i]);
-    }
-    exit(0);
-}
+//    for(int i = 0; i < can_connections.size(); i++)
+//    {
+//        BLMC_sendCommand(&can_connections[i], BLMC_CMD_ENABLE_SYS, BLMC_DISABLE);
+//        CAN_closeCan(&can_connections[i]);
+//    }
+//    exit(0);
+//}
+
+
+
+
+
+
+
 
 
 // new class created to replace CAN_Frame_t,
@@ -117,37 +125,7 @@ public:
 };
 
 
-template<typename ...Types> class ThreadsafeObject
-{
-public:
-    ThreadsafeObject()
-    {
-        rt_mutex_create(&mutex_, NULL);
-    }
 
-    std::tuple<Types ...> get() const
-    {
-        rt_mutex_acquire(&mutex_, TM_INFINITE);
-        std::tuple<Types ...> content = content_;
-        rt_mutex_release(&mutex_);
-
-        return content;
-    }
-
-    void set(const std::tuple<Types ...>& content)
-    {
-        rt_mutex_acquire(&mutex_, TM_INFINITE);
-        content_ = content;
-        rt_mutex_release(&mutex_);
-    }
-
-private:
-
-    std::tuple<Types ...> content_;
-//    double time_stamp_;
-
-    mutable RT_MUTEX mutex_;
-};
 
 
 template<typename DataType> class StampedData
@@ -325,8 +303,8 @@ public:
     {
         // TODO: not sure if this is the right place for this
         mlockall(MCL_CURRENT | MCL_FUTURE);
-        signal(SIGTERM, cleanup_and_exit);
-        signal(SIGINT, cleanup_and_exit);
+//        signal(SIGTERM, cleanup_and_exit);
+//        signal(SIGINT, cleanup_and_exit);
 //        signal(SIGDEBUG, action_upon_switch);
         rt_print_auto_init(1);
 
@@ -789,8 +767,8 @@ public:
         // for memory management
         mlockall(MCL_CURRENT | MCL_FUTURE);
 
-        signal(SIGTERM, cleanup_and_exit);
-        signal(SIGINT, cleanup_and_exit);
+//        signal(SIGTERM, cleanup_and_exit);
+//        signal(SIGINT, cleanup_and_exit);
 
         // start real-time thread ------------------------------------------------------------------
         // for real time printing

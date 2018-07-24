@@ -56,6 +56,29 @@ if(Xenomai_FOUND)
         ${Xenomai_LIBRARY_NATIVE}
         ${Xenomai_LIBRARY_RTDM}
         )
+
+
+    ####################################################################################
+    #                       example of unit tests                                      #
+    ####################################################################################
+
+    # to compile and run:
+    # after calling catkin_make, source ./devel/setup.bash
+    # then after typing "catkin_make run_", you may press "tab" for autocompletion
+    # selecting "catkin_make run_tests" will results in all found tests to be compiled
+    # and run, but you may select specific test
+
+    catkin_add_gtest(blmc_can_tests
+      tests/main.cpp
+      tests/threadsafe_object_test.cpp
+      src/can.c ### i have no idea why, but without this it gives a linking error...
+    )
+    target_link_libraries(blmc_can_tests ${PROJECT_NAME})
+
+
+
+
+
     # Demo executable
     add_executable(blmc_can_demo
         demo/blmc_can_demo.c
@@ -102,22 +125,6 @@ if(Xenomai_FOUND)
 
 
 
-    ####################################################################################
-    #                       example of unit tests                                      #
-    ####################################################################################
-
-    # to compile and run:
-    # after calling catkin_make, source ./devel/setup.bash
-    # then after typing "catkin_make run_", you may press "tab" for autocompletion
-    # selecting "catkin_make run_tests" will results in all found tests to be compiled
-    # and run, but you may select specific test
-
-    catkin_add_gtest(blmc_can_tests
-      tests/main.cpp
-      tests/threadsafe_object_test.cpp
-    )
-    target_link_libraries(blmc_can_tests
-      ${PROJECT_NAME})
 
 
 
