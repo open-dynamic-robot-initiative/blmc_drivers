@@ -318,6 +318,8 @@ public:
         rt_task_start(&rt_task_, &XenomaiDevice::loop, this);
     }
 
+
+private:
     static void loop(void* instance_pointer)
     {
         ((XenomaiDevice*)(instance_pointer))->loop();
@@ -327,20 +329,49 @@ public:
 
 };
 
+// Design Pattern:
 
-
-class XenomaiMutex
+class DevicePattern
 {
-private:
-    RT_MUTEX rt_mutex_;
+    typedef int Torque;
+    typedef int Speed;
+    typedef int Distance;
+    typedef int Current;
 
-public:
-    XenomaiMutex()
+    // inputs ---------------------------------
+    void set_torque(Torque torque)
     {
-        rt_mutex_create(&rt_mutex_, NULL);
+
+    }
+    void set_speed(Speed speed)
+    {
+
+    }
+
+    // outputs --------------------------------
+    Distance get_latest_distance()
+    {
+
+    }
+    void wait_for_distance()
+    {
+
+    }
+
+    Current get_latest_current()
+    {
+
+    }
+    void wait_for_current()
+    {
+
+    }
+
+    void wait_for_any_output()
+    {
+
     }
 };
-
 
 
 #define FLOAT_TO_Q24(fval) ((int)(fval * (1 << 24)))
@@ -391,6 +422,8 @@ public:
         }
     }
 
+
+private:
     void loop()
     {
         TimeLogger<100> loop_time_logger("can bus loop", 4000);
@@ -410,8 +443,8 @@ public:
             loop_time_logger.end_and_start_interval();
         }
     }
-
-    unsigned wait_for_output()
+public:
+    unsigned wait_for_any_output()
     {
         rt_mutex_acquire(&output_mutex_, TM_INFINITE);
         size_t latest_count = output_.get_count();
@@ -547,7 +580,7 @@ public:
     {
         while(true)
         {
-            can_bus_->wait_for_output();
+            can_bus_->wait_for_any_output();
             auto stamped_can_frame = can_bus_->get_latest_output();
             consume_can_frame(stamped_can_frame.get_data());
         }

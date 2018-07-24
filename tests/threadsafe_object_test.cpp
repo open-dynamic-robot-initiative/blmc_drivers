@@ -115,7 +115,7 @@ RT_TASK start_thread(void (*function)(void *cookie))
 }
 
 
-TEST(threadsafe_object, general)
+TEST(threadsafe_object, single_input_multi_output)
 {
     // initialize inputs ------------------------------------------
     srand(0);
@@ -182,6 +182,5 @@ TEST(threadsafe_object, general)
     std::get<1>(input_tuple)[0](1,1) = 33.;
     EXPECT_FALSE(input_tuple == output_tuples[0]);
 }
-
 
 
