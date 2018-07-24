@@ -384,9 +384,12 @@ private:
 
     RT_MUTEX rt_task_mutex_;
 
-    StampedData<CanFrame> output_;
-    RT_COND output_condition_;
-    RT_MUTEX output_mutex_;
+//    StampedData<CanFrame> output_;
+//    RT_COND output_condition_;
+//    RT_MUTEX output_mutex_;
+
+
+    ThreadsafeObject<StampedData<CanFrame>> can_frame_;
 
 public: 
     CanBus(std::string can_interface_name)
@@ -394,8 +397,8 @@ public:
         rt_mutex_create(&can_connection_mutex_, NULL);
         rt_mutex_create(&rt_task_mutex_, NULL);
 
-        rt_mutex_create(&output_mutex_, NULL);
-        rt_cond_create(&output_condition_, NULL);
+//        rt_mutex_create(&output_mutex_, NULL);
+//        rt_cond_create(&output_condition_, NULL);
 
         // setup can connection ----------------------------------------------------------
         // \todo get rid of old format stuff
@@ -435,37 +438,53 @@ private:
             CanFrame frame = receive_frame();
             receive_time_logger.end_interval();
 
-            rt_mutex_acquire(&output_mutex_, TM_INFINITE);
-            output_ = StampedData<CanFrame>(frame, output_.get_count() + 1, TimeLogger<1>::current_time());
-            rt_mutex_release(&output_mutex_);
+            can_frame_.set<0>(StampedData<CanFrame>(frame, can_frame_.get<0>().get_count() + 1,
+                                                 TimeLogger<1>::current_time()));
 
-            rt_cond_broadcast(&output_condition_);
+//            rt_mutex_acquire(&output_mutex_, TM_INFINITE);
+//            output_ = StampedData<CanFrame>(frame, output_.get_count() + 1, TimeLogger<1>::current_time());
+//            rt_mutex_release(&output_mutex_);
+
+//            rt_cond_broadcast(&output_condition_);
+
             loop_time_logger.end_and_start_interval();
         }
     }
 public:
     unsigned wait_for_any_output()
     {
-        rt_mutex_acquire(&output_mutex_, TM_INFINITE);
-        size_t latest_count = output_.get_count();
+        return can_frame_.wait_for_datum();
 
-        while(output_.get_count() == latest_count)
-        {
-            rt_cond_wait(&output_condition_, &output_mutex_, TM_INFINITE);
-        }
 
-        rt_mutex_release(&output_mutex_);
+//        rt_mutex_acquire(&output_mutex_, TM_INFINITE);
+//        size_t latest_count = output_.get_count();
 
-        return 0;
+//        while(output_.get_count() == latest_count)
+//        {
+//            rt_cond_wait(&output_condition_, &output_mutex_, TM_INFINITE);
+//        }
+
+//        rt_mutex_release(&output_mutex_);
+
+//        return 0;
     }
+
+    void wait_for_can_frame_()
+    {
+        can_frame_.wait_for_datum(0);
+    }
+
+
 
     StampedData<CanFrame> get_latest_output()
     {
-        rt_mutex_acquire(&output_mutex_, TM_INFINITE);
-        StampedData<CanFrame> output = output_;
-        rt_mutex_release(&output_mutex_);
+//        rt_mutex_acquire(&output_mutex_, TM_INFINITE);
+//        StampedData<CanFrame> output = output_;
+//        rt_mutex_release(&output_mutex_);
 
-        return output;
+//        return output;
+
+        return can_frame_.get<0>();
     }
 
     void send_frame(uint32_t id, uint8_t *data, uint8_t dlc)
