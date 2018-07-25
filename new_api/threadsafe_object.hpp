@@ -93,9 +93,13 @@ public:
 
         if(initial_modification_count + 1 != modification_counts_[index])
         {
+            rt_printf("size: %d, \n other info: %s \n", SIZE, __PRETTY_FUNCTION__ );
+
             rt_printf("something went wrong, we missed a message.");
-            rt_printf("initial_modification_count: %d, current modification count: %d\n",
-                      initial_modification_count, modification_counts_[index]);
+            rt_printf(" SIZE: %d, initial_modification_count: %d, current modification count: %d\n",
+                      SIZE, initial_modification_count, modification_counts_[index]);
+
+
             exit(-1);
         }
 
@@ -116,6 +120,8 @@ public:
 
         if(initial_modification_count + 1 != total_modification_count_)
         {
+            rt_printf("size: %d, \n other info: %s \n", SIZE, __PRETTY_FUNCTION__ );
+
             rt_printf("something went wrong, we missed a message.");
             rt_printf("initial_modification_count: %d, current modification count: %d\n",
                       initial_modification_count, total_modification_count_);

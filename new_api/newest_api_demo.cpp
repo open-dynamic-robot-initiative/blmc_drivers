@@ -148,6 +148,7 @@ public:
         return data_;
     }
 
+    /// \todo: rename to get_id
     size_t get_count()
     {
         return count_;
@@ -156,6 +157,12 @@ public:
     double get_time_stamp()
     {
         return time_stamp_;
+    }
+
+
+    void set_data(DataType data)
+    {
+        data_ = data;
     }
 
 
@@ -330,9 +337,23 @@ private:
 };
 
 
+// Convertion of a byte array to a int32_t.
+#define BYTES_TO_INT32(bytes) (\
+    (int32_t) bytes[3] + \
+    ((int32_t)bytes[2] << 8) + \
+    ((int32_t)bytes[1] << 16) + \
+    ((int32_t)bytes[0] << 24) \
+    )
 
+// Conversion of Q24 value to float.
+#define Q24_TO_FLOAT(qval) ((float)qval / (1 << 24))
 
+// Conversion of float to Q24
 #define FLOAT_TO_Q24(fval) ((int)(fval * (1 << 24)))
+
+// Convertion of Q24 byte array to float.
+#define QBYTES_TO_FLOAT(qbytes) (\
+    Q24_TO_FLOAT( BYTES_TO_INT32(qbytes) ) )
 
 
 /// >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
@@ -544,49 +565,63 @@ class DevicePattern
 
 
 /// >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+
+
 class Board: public XenomaiDevice
 {
-    // public interface ========================================================
+    /// public interface =======================================================
 public:
-    double get_latest_current_measurement(unsigned motor_id)
-    {
-        rt_mutex_acquire(&data_mutex_, TM_INFINITE);
-        double current_measurement = data_.latest.current.value[id_to_index(motor_id)];
-        rt_mutex_release(&data_mutex_);
+    /// \todo: can we make this an enum class??
+    enum OutputNames {
+        CURRENTS,
+        POSITIONS,
+        VELOCITIES,
+        ANALOGS,
+        ENCODER0,
+        ENCODER1,
+        STATUS };
 
-        return current_measurement;
+    typedef ThreadsafeObject<
+    StampedData<Eigen::Vector2d>,
+    StampedData<Eigen::Vector2d>,
+    StampedData<Eigen::Vector2d>,
+    StampedData<Eigen::Vector2d>,
+    StampedData<double>,
+    StampedData<double>,
+    StampedData<_BLMC_StatusMsg_t_> > Output;
+
+    const Output& output()
+    {
+        return output_;
     }
-    double get_latest_position_measurement(unsigned motor_id)
-    {
-        rt_mutex_acquire(&data_mutex_, TM_INFINITE);
-        double position_measurement = data_.latest.position.value[id_to_index(motor_id)];
-        rt_mutex_release(&data_mutex_);
 
-        return position_measurement;
+    double get_latest_currents(unsigned motor_id)
+    {
+        return output_.get<CURRENTS>().get_data()[motor_id];
     }
-    double get_latest_velocity_measurement(unsigned motor_id)
+    double get_latest_positions(unsigned motor_id)
     {
-        rt_mutex_acquire(&data_mutex_, TM_INFINITE);
-        double velocity_measurement = data_.latest.velocity.value[id_to_index(motor_id)];
-        rt_mutex_release(&data_mutex_);
-
-        return velocity_measurement;
+        return output_.get<POSITIONS>().get_data()[motor_id];
     }
-    double get_latest_encoder_measurement(unsigned motor_id)
+    double get_latest_velocities(unsigned motor_id)
     {
         rt_mutex_acquire(&data_mutex_, TM_INFINITE);
-        double encoder_measurement = data_.encoder_index[id_to_index(motor_id)].value;
+        double velocities = data_.latest.velocity.value[id_to_index(motor_id)];
         rt_mutex_release(&data_mutex_);
 
-        return encoder_measurement;
+        return velocities;
     }
-    double get_latest_analog_measurement(unsigned adc_id)
+    double get_latest_encoders(unsigned motor_id)
     {
         rt_mutex_acquire(&data_mutex_, TM_INFINITE);
-        double analog_measurement = data_.latest.adc6.value[id_to_index(adc_id)];
+        double encoders = data_.encoder_index[id_to_index(motor_id)].value;
         rt_mutex_release(&data_mutex_);
 
-        return analog_measurement;
+        return encoders;
+    }
+    double get_latest_analogs(unsigned adc_id)
+    {
+        return output_.get<ANALOGS>().get_data()[adc_id];
     }
 
     void send_command(uint32_t cmd_id, int32_t value)
@@ -627,9 +662,16 @@ public:
         send_command(BLMC_CMD_ENABLE_MTR2, BLMC_ENABLE);
     }
 
-    // private members =========================================================
+    /// private members ========================================================
 private:
     std::shared_ptr<CanBus> can_bus_;
+
+
+
+
+    Output output_;
+
+
 
     BLMC_BoardData_t data_;
     RT_MUTEX data_mutex_;
@@ -638,7 +680,7 @@ private:
     Eigen::Vector2d current_targets_;
     RT_MUTEX current_targets_mutex_;
 
-    // constructor =============================================================
+    /// constructor ============================================================
 public:
     Board(std::shared_ptr<CanBus> can_bus): can_bus_(can_bus)
     {
@@ -648,9 +690,31 @@ public:
         // initialize members
         BLMC_initBoardData(&data_, BLMC_SYNC_ON_ADC6);
         current_targets_.setZero();
+
+        // initialize members ------------------------------------------------------
+        StampedData<Eigen::Vector2d>
+                stamped_default_measurement(Eigen::Vector2d::Zero(), -1, -1);
+        output_.set<CURRENTS>(stamped_default_measurement);
+        output_.set<POSITIONS>(stamped_default_measurement);
+        output_.set<VELOCITIES>(stamped_default_measurement);
+        output_.set<ANALOGS>(stamped_default_measurement);
+
+        output_.set<ENCODER0>(StampedData<double>(0, -1, -1));
+        output_.set<ENCODER1>(StampedData<double>(0, -1, -1));
+
+        _BLMC_StatusMsg_t_ default_status_message;
+        default_status_message.system_enabled = 0;
+        default_status_message.motor1_enabled = 0;
+        default_status_message.motor1_ready   = 0;
+        default_status_message.motor2_enabled = 0;
+        default_status_message.motor2_ready   = 0;
+        default_status_message.error_code     = 0;
+        output_.set<STATUS>(
+                    StampedData<_BLMC_StatusMsg_t_>(default_status_message,
+                                                    -1, -1));
     }
 
-    // private methods =========================================================
+    /// private methods ========================================================
 private:
     void send_current_targets(Eigen::Vector2d currents)
     {
@@ -683,36 +747,99 @@ private:
         return can_bus_->send_can_frame(BLMC_CAN_ID_IqRef, data, 8);
     }
 
+
     void loop()
     {
         while(true)
         {
+            // get latest can frame --------------------------------------------
+
             can_bus_->wait_for_any_output();
             auto stamped_can_frame = can_bus_->get_latest_can_frame();
-            consume_can_frame(stamped_can_frame.get_data());
+            auto can_frame = stamped_can_frame.get_data();
+
+            // convert to measurement ------------------------------------------
+            Eigen::Vector2d measurement;
+            measurement[0] = QBYTES_TO_FLOAT(can_frame.data.begin());
+            measurement[1] = QBYTES_TO_FLOAT((can_frame.data.begin() + 4));
+
+            StampedData<Eigen::Vector2d>
+                    stamped_measurement(measurement,
+                                        stamped_can_frame.get_count(),
+                                        stamped_can_frame.get_time_stamp());
+
+            switch(can_frame.id)
+            {
+            case BLMC_CAN_ID_Iq:
+                output_.set<CURRENTS>(stamped_measurement);
+                break;
+            case BLMC_CAN_ID_POS:
+                output_.set<POSITIONS>(stamped_measurement);
+                break;
+            case BLMC_CAN_ID_SPEED:
+                output_.set<VELOCITIES>(stamped_measurement);
+                break;
+            case BLMC_CAN_ID_ADC6:
+                output_.set<ANALOGS>(stamped_measurement);
+                break;
+            case BLMC_CAN_ID_ENC_INDEX:
+            {
+                uint8_t motor_index = can_frame.data[4];
+                StampedData<double> stamped_encoder(
+                            measurement[0],
+                        stamped_can_frame.get_count(),
+                        stamped_can_frame.get_time_stamp());
+                if(motor_index == 0)
+                {
+                    output_.set<ENCODER0>(stamped_encoder);
+                }
+                else if(motor_index == 1)
+                {
+                    output_.set<ENCODER1>(stamped_encoder);
+                }
+                else
+                {
+                    rt_printf("ERROR: Invalid motor number"
+                              "for encoder index: %d\n", motor_index);
+                    exit(-1);
+                }
+                break;
+            }
+            case BLMC_CAN_ID_STATUSMSG:
+            {
+                _BLMC_StatusMsg_t_ status;
+                uint8_t data = can_frame.data[0];
+                status.system_enabled = data >> 0;
+                status.motor1_enabled = data >> 1;
+                status.motor1_ready   = data >> 2;
+                status.motor2_enabled = data >> 3;
+                status.motor2_ready   = data >> 4;
+                status.error_code     = data >> 5;
+
+                StampedData<_BLMC_StatusMsg_t_>
+                        stamped_status(status,
+                                       stamped_can_frame.get_count(),
+                                       stamped_can_frame.get_time_stamp());
+
+                output_.set<STATUS>(stamped_status);
+                break;
+            }
+            }
+
+            static int count = 0;
+            if(count % 4000 == 0)
+            {
+                auto status = output_.get<STATUS>().get_data();
+                BLMC_printStatus(&status);
+//                BLMC_printSensorData(&bd->latest);
+//                BLMC_printEncoderIndex(bd->encoder_index);
+
+
+//                BLMC_printLatestBoardStatus(&data_);
+            }
+            count++;
+
         }
-    }
-
-    void consume_can_frame(CanFrame frame)
-    {
-        // \todo: this conversion is necessary now because the BLMC_processCanFrame
-        // function has not been updated yet to use new frame format.
-        CAN_Frame_t frame_old_format;
-        frame_old_format.data = frame.data.begin();
-        frame_old_format.dlc = frame.dlc;
-        frame_old_format.id = frame.id;
-        frame_old_format.timestamp = frame.timestamp;
-        frame_old_format.recv_ifindex = frame.recv_ifindex;
-
-        rt_mutex_acquire(&data_mutex_, TM_INFINITE);
-        BLMC_processCanFrame(&frame_old_format, &data_);
-
-        static int count = 0;
-        if(count % 4000 == 0)
-            BLMC_printLatestBoardStatus(&data_);
-        count++;
-
-        rt_mutex_release(&data_mutex_);
     }
 
     unsigned id_to_index(unsigned motor_id)
@@ -738,21 +865,21 @@ public:
 
     Motor(std::shared_ptr<Board> board, unsigned motor_id): board_(board), motor_id_(motor_id) { }
 
-    double get_latest_current_measurement()
+    double get_latest_currents()
     {
-        return board_->get_latest_current_measurement(motor_id_);
+        return board_->get_latest_currents(motor_id_);
     }
-    double get_latest_position_measurement()
+    double get_latest_positions()
     {
-        return board_->get_latest_position_measurement(motor_id_);
+        return board_->get_latest_positions(motor_id_);
     }
-    double get_latest_velocity_measurement()
+    double get_latest_velocities()
     {
-        return board_->get_latest_velocity_measurement(motor_id_);
+        return board_->get_latest_velocities(motor_id_);
     }
-    double get_latest_encoder_measurement()
+    double get_latest_encoders()
     {
-        return board_->get_latest_encoder_measurement(motor_id_);
+        return board_->get_latest_encoders(motor_id_);
     }
 
     void set_current_target(double current_target)
@@ -772,9 +899,9 @@ public:
 
     AnalogSensor(std::shared_ptr<Board> board, unsigned sensor_id): board_(board), sensor_id_(sensor_id) { }
 
-    double get_latest_analog_measurement()
+    double get_latest_analogs()
     {
-        board_->get_latest_analog_measurement(sensor_id_);
+        board_->get_latest_analogs(sensor_id_);
     }
 };
 
@@ -825,7 +952,7 @@ public:
         TimeLogger<10> time_logger("controller", 1000);
         while(true)
         {
-            double current_target = 2 * (analog_sensor_->get_latest_analog_measurement() - 0.5);
+            double current_target = 2 * (analog_sensor_->get_latest_analogs() - 0.5);
             motor_->set_current_target(current_target);
 
             // print --------------------------------------------------------------
