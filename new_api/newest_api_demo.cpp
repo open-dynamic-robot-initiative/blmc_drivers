@@ -133,13 +133,13 @@ template<typename DataType> class StampedData
 public:
     StampedData()
     {
-        count_ = 0;
+        id_ = 0;
         time_stamp_ = 0;
     }
-    StampedData(const DataType& data, const size_t& count, const double& time_stamp)
+    StampedData(const DataType& data, const size_t& id, const double& time_stamp)
     {
         data_ = data;
-        count_ = count;
+        id_ = id;
         time_stamp_ = time_stamp;
     }
 
@@ -149,9 +149,9 @@ public:
     }
 
     /// \todo: rename to get_id
-    size_t get_count()
+    size_t get_id()
     {
-        return count_;
+        return id_;
     }
 
     double get_time_stamp()
@@ -168,7 +168,7 @@ public:
 
 private:
     DataType data_;
-    size_t count_;
+    size_t id_;
     double time_stamp_;
 };
 
@@ -217,9 +217,9 @@ private:
 //    unsigned wait_for_output()
 //    {
 //        rt_mutex_acquire(&output_mutex_, TM_INFINITE);
-//        size_t latest_count = output_.get_count();
+//        size_t latest_count = output_.get_id();
 
-//        while(output_.get_count() == latest_count)
+//        while(output_.get_id() == latest_count)
 //        {
 //            rt_cond_wait(&output_condition_, &output_mutex_, TM_INFINITE);
 //        }
@@ -316,9 +316,11 @@ public:
         rt_print_auto_init(1);
 
         int priority = 10;
-        int return_task_create = rt_task_create(&rt_task_, NULL, 0, priority,  T_JOINABLE | T_FPU);
+        int return_task_create = rt_task_create(&rt_task_, NULL, 0,
+                                                priority,  T_JOINABLE | T_FPU);
         if (return_task_create) {
-            rt_fprintf(stderr, "rt_task_shadow: %s\n", strerror(-return_task_create));
+            rt_fprintf(stderr, "rt_task_shadow: %s\n",
+                       strerror(-return_task_create));
             exit(-1);
         }
 
@@ -462,7 +464,7 @@ private:
 
             can_frame_.set<0>(StampedData<CanFrame>(
                                   frame,
-                                  can_frame_.get<0>().get_count() + 1,
+                                  can_frame_.get<0>().get_id() + 1,
                                   TimeLogger<1>::current_time()));
 
             loop_time_logger.end_and_start_interval();
@@ -771,7 +773,7 @@ private:
 
             StampedData<Eigen::Vector2d>
                     stamped_measurement(measurement,
-                                        stamped_can_frame.get_count(),
+                                        stamped_can_frame.get_id(),
                                         stamped_can_frame.get_time_stamp());
 
             switch(can_frame.id)
@@ -793,7 +795,7 @@ private:
                 uint8_t motor_index = can_frame.data[4];
                 StampedData<double> stamped_encoder(
                             measurement[0],
-                        stamped_can_frame.get_count(),
+                        stamped_can_frame.get_id(),
                         stamped_can_frame.get_time_stamp());
                 if(motor_index == 0)
                 {
@@ -824,7 +826,7 @@ private:
 
                 StampedData<_BLMC_StatusMsg_t_>
                         stamped_status(status,
-                                       stamped_can_frame.get_count(),
+                                       stamped_can_frame.get_id(),
                                        stamped_can_frame.get_time_stamp());
 
                 output_.set<STATUS>(stamped_status);
@@ -869,7 +871,8 @@ class Motor
     unsigned motor_id_;
 public:
 
-    Motor(std::shared_ptr<Board> board, unsigned motor_id): board_(board), motor_id_(motor_id) { }
+    Motor(std::shared_ptr<Board> board, unsigned motor_id):
+        board_(board), motor_id_(motor_id) { }
 
     double get_latest_currents()
     {
@@ -903,7 +906,8 @@ class AnalogSensor
     unsigned sensor_id_;
 public:
 
-    AnalogSensor(std::shared_ptr<Board> board, unsigned sensor_id): board_(board), sensor_id_(sensor_id) { }
+    AnalogSensor(std::shared_ptr<Board> board, unsigned sensor_id):
+        board_(board), sensor_id_(sensor_id) { }
 
     double get_latest_analogs()
     {
