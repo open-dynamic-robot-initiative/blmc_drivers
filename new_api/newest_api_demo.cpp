@@ -454,6 +454,12 @@ private:
             CanFrame frame = receive_frame();
             receive_time_logger.end_interval();
 
+
+            // to give the client time to read the latest message
+            // we sleep for a microsecond --------------------------------------
+            rt_task_sleep(1000);
+
+
             can_frame_.set<0>(StampedData<CanFrame>(
                                   frame,
                                   can_frame_.get<0>().get_count() + 1,
