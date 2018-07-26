@@ -57,6 +57,9 @@
 
 #include <threadsafe_object.hpp>
 
+#include <string>
+#include <iostream>
+
 
 //long unsigned count_xenomai_mode_switches = 0;
 
@@ -579,6 +582,51 @@ class Board: public XenomaiDevice
 {
     /// public interface =======================================================
 public:
+    class Command
+    {
+    public:
+        Command(uint32_t id, int32_t content)
+        {
+            id_ = id;
+            content_ = content;
+        }
+
+        enum IDs
+        {
+            ENABLE_SYS = 1,
+            ENABLE_MTR1 = 2,
+            ENABLE_MTR2 = 3,
+            ENABLE_VSPRING1 = 4,
+            ENABLE_VSPRING2 = 5,
+            SEND_CURRENT = 12,
+            SEND_POSITION = 13,
+            SEND_VELOCITY = 14,
+            SEND_ADC6 = 15,
+            SEND_ENC_INDEX = 16,
+            SEND_ALL = 20,
+            SET_CAN_RECV_TIMEOUT = 30,
+            ENABLE_POS_ROLLOVER_ERROR = 31,
+        };
+
+        enum Contents
+        {
+            ENABLE = 1,
+            DISABLE = 0
+        };
+
+
+        uint32_t id_;
+        int32_t content_;
+    };
+
+    enum InputNames {
+        COMMAND
+    };
+
+    typedef ThreadsafeObject<
+    StampedData<Command>> Input;
+
+
     /// \todo: can we make this an enum class??
     enum OutputNames {
         CURRENTS,
@@ -598,55 +646,47 @@ public:
     StampedData<double>,
     StampedData<_BLMC_StatusMsg_t_> > Output;
 
-    const Output& output()
+    template <int TYPE_INDEX> Output::Type<TYPE_INDEX> get_latest_output()
     {
-        return output_;
+
+//        Output::Type<TYPE_INDEX> output = output_.get<TYPE_INDEX>();
+//        rt_printf("getting type: %d\n", TYPE_INDEX);
+//        std::stringstream output_string;
+//        output_string << output.get_data();
+//        rt_printf("received %s\n", output_string.str().c_str());
+
+        return output_.get<TYPE_INDEX>();
+    }
+    void wait_for_output(unsigned output_index)
+    {
+        output_.wait_for_datum(output_index);
+    }
+    unsigned wait_for_output()
+    {
+        return output_.wait_for_datum();
     }
 
-    double get_latest_currents(unsigned motor_id)
-    {
-        return output_.get<CURRENTS>().get_data()[motor_id];
-    }
-    double get_latest_positions(unsigned motor_id)
-    {
-        return output_.get<POSITIONS>().get_data()[motor_id];
-    }
-    double get_latest_velocities(unsigned motor_id)
-    {
-        rt_mutex_acquire(&data_mutex_, TM_INFINITE);
-        double velocities = data_.latest.velocity.value[id_to_index(motor_id)];
-        rt_mutex_release(&data_mutex_);
 
-        return velocities;
-    }
-    double get_latest_encoders(unsigned motor_id)
+    void send_command(Command command)
     {
-        rt_mutex_acquire(&data_mutex_, TM_INFINITE);
-        double encoders = data_.encoder_index[id_to_index(motor_id)].value;
-        rt_mutex_release(&data_mutex_);
 
-        return encoders;
-    }
-    double get_latest_analogs(unsigned adc_id)
-    {
-        return output_.get<ANALOGS>().get_data()[adc_id];
-    }
+        uint32_t id = command.id_;
+        int32_t content = command.content_;
 
-    void send_command(uint32_t cmd_id, int32_t value)
-    {
+
         uint8_t data[8];
 
-        // value
-        data[0] = (value >> 24) & 0xFF;
-        data[1] = (value >> 16) & 0xFF;
-        data[2] = (value >> 8) & 0xFF;
-        data[3] = value & 0xFF;
+        // content
+        data[0] = (content >> 24) & 0xFF;
+        data[1] = (content >> 16) & 0xFF;
+        data[2] = (content >> 8) & 0xFF;
+        data[3] = content & 0xFF;
 
         // command
-        data[4] = (cmd_id >> 24) & 0xFF;
-        data[5] = (cmd_id >> 16) & 0xFF;
-        data[6] = (cmd_id >> 8) & 0xFF;
-        data[7] = cmd_id & 0xFF;
+        data[4] = (id >> 24) & 0xFF;
+        data[5] = (id >> 16) & 0xFF;
+        data[6] = (id >> 8) & 0xFF;
+        data[7] = id & 0xFF;
 
         can_bus_->send_can_frame(BLMC_CAN_ID_COMMAND, data, 8);
     }
@@ -664,10 +704,14 @@ public:
     // todo: this should go away
     void enable()
     {
-        send_command(BLMC_CMD_ENABLE_SYS, BLMC_ENABLE);
-        send_command(BLMC_CMD_SEND_ALL, BLMC_ENABLE);
-        send_command(BLMC_CMD_ENABLE_MTR1, BLMC_ENABLE);
-        send_command(BLMC_CMD_ENABLE_MTR2, BLMC_ENABLE);
+        send_command(Command(Command::IDs::ENABLE_SYS,
+                             Command::Contents::ENABLE));
+        send_command(Command(Command::IDs::SEND_ALL,
+                             Command::Contents::ENABLE));
+        send_command(Command(Command::IDs::ENABLE_MTR1,
+                             Command::Contents::ENABLE));
+        send_command(Command(Command::IDs::ENABLE_MTR2,
+                             Command::Contents::ENABLE));
     }
 
     /// private members ========================================================
@@ -839,11 +883,11 @@ private:
             {
                 auto status = output_.get<STATUS>().get_data();
                 BLMC_printStatus(&status);
-//                BLMC_printSensorData(&bd->latest);
-//                BLMC_printEncoderIndex(bd->encoder_index);
+                //                BLMC_printSensorData(&bd->latest);
+                //                BLMC_printEncoderIndex(bd->encoder_index);
 
 
-//                BLMC_printLatestBoardStatus(&data_);
+                //                BLMC_printLatestBoardStatus(&data_);
             }
             count++;
 
@@ -876,19 +920,26 @@ public:
 
     double get_latest_currents()
     {
-        return board_->get_latest_currents(motor_id_);
+        return board_->get_latest_output<Board::CURRENTS>().get_data()(motor_id_);
     }
     double get_latest_positions()
     {
-        return board_->get_latest_positions(motor_id_);
+        return board_->get_latest_output<Board::POSITIONS>().get_data()(motor_id_);
     }
     double get_latest_velocities()
     {
-        return board_->get_latest_velocities(motor_id_);
+        return board_->get_latest_output<Board::VELOCITIES>().get_data()(motor_id_);
     }
     double get_latest_encoders()
     {
-        return board_->get_latest_encoders(motor_id_);
+        if(motor_id_ == 0)
+        {
+            return board_->get_latest_output<Board::ENCODER0>().get_data();
+        }
+        else
+        {
+            return board_->get_latest_output<Board::ENCODER1>().get_data();
+        }
     }
 
     void set_current_target(double current_target)
@@ -911,7 +962,7 @@ public:
 
     double get_latest_analogs()
     {
-        board_->get_latest_analogs(sensor_id_);
+        return board_->get_latest_output<Board::ANALOGS>().get_data()(sensor_id_);
     }
 };
 
@@ -994,6 +1045,7 @@ int main(int argc, char **argv)
     //    }
 
     //    exit(-1);
+    rt_print_auto_init(1);
 
 
     // create bus and boards -------------------------------------------------
