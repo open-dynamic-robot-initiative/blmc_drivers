@@ -16,11 +16,24 @@
 #include <array>
 #include <tuple>
 
+#include <memory>
 
 
 
 
 
+template<typename ThreadsafeInput, typename ThreadsafeOutput> class InputOutputObject
+{
+public:
+    InputOutputObject() { }
+    virtual ~InputOutputObject() { }
+
+    virtual std::shared_ptr<ThreadsafeInput> get_input() = 0;
+
+    virtual std::shared_ptr<const ThreadsafeInput> get_output() = 0;
+
+
+};
 
 
 
@@ -151,8 +164,5 @@ public:
         rt_mutex_release(&condition_mutex_);
         return modified_index;
     }
-
-
-private:
 
 };
