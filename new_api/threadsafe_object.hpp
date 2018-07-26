@@ -47,104 +47,121 @@ public:
 
 private:
 
-    std::tuple<Types ...> data_;
+    std::shared_ptr<std::tuple<Types ...> > data_;
 
-    mutable RT_COND condition_;
-    mutable RT_MUTEX condition_mutex_;
-    std::array<long unsigned, SIZE> modification_counts_;
-    long unsigned total_modification_count_;
+    mutable std::shared_ptr<RT_COND> condition_;
+    mutable std::shared_ptr<RT_MUTEX> condition_mutex_;
+    std::shared_ptr<std::array<long unsigned, SIZE>> modification_counts_;
+    std::shared_ptr<long unsigned> total_modification_count_;
 
-    std::array<RT_MUTEX, SIZE> data_mutexes_;
+    std::shared_ptr<std::array<RT_MUTEX, SIZE>> data_mutexes_;
 
 
 public:
     ThreadsafeObject()
     {
-        rt_cond_create(&condition_, NULL);
-        rt_mutex_create(&condition_mutex_, NULL);
+        // initialize shared pointers ------------------------------------------
+        data_ = std::make_shared<std::tuple<Types ...> >();
+        condition_ = std::make_shared<RT_COND>();
+        condition_mutex_ = std::make_shared<RT_MUTEX>();
+        modification_counts_ = std::make_shared<std::array<long unsigned, SIZE>>();
+        total_modification_count_ = std::make_shared<long unsigned>();
+        data_mutexes_ = std::make_shared<std::array<RT_MUTEX, SIZE>>();
+
+
+
+
+        // mutex and cond variable stuff ---------------------------------------
+        rt_cond_create(condition_.get(), NULL);
+        rt_mutex_create(condition_mutex_.get(), NULL);
 
         for(size_t i = 0; i < SIZE; i++)
         {
-            rt_mutex_create(&data_mutexes_[i], NULL);
-            modification_counts_[i] = 0;
+            rt_mutex_create(&(*data_mutexes_)[i], NULL);
+            (*modification_counts_)[i] = 0;
         }
-        total_modification_count_ = 0;
+        *total_modification_count_ = 0;
+
+
+
+
+
     }
 
     template<int INDEX> Type<INDEX> get()
     {
-        rt_mutex_acquire(&data_mutexes_[INDEX], TM_INFINITE);
-        Type<INDEX> datum = std::get<INDEX>(data_);
-        rt_mutex_release(&data_mutexes_[INDEX]);
+        rt_mutex_acquire(&(*data_mutexes_)[INDEX], TM_INFINITE);
+        Type<INDEX> datum = std::get<INDEX>(*data_);
+        rt_mutex_release(&(*data_mutexes_)[INDEX]);
 
         return datum;
     }
 
     template<int INDEX> void set(Type<INDEX> datum)
     {
-        rt_mutex_acquire(&data_mutexes_[INDEX], TM_INFINITE);
-        std::get<INDEX>(data_) = datum;
-        rt_mutex_release(&data_mutexes_[INDEX]);
+        rt_mutex_acquire(&(*data_mutexes_)[INDEX], TM_INFINITE);
+        std::get<INDEX>(*data_) = datum;
+        rt_mutex_release(&(*data_mutexes_)[INDEX]);
 
         // this is a bit suboptimal since we always broadcast on the same condition
-        rt_mutex_acquire(&condition_mutex_, TM_INFINITE);
-        modification_counts_[INDEX] += 1;
-        total_modification_count_ += 1;
-        rt_cond_broadcast(&condition_);
-        rt_mutex_release(&condition_mutex_);
+        rt_mutex_acquire(condition_mutex_.get(), TM_INFINITE);
+        (*modification_counts_)[INDEX] += 1;
+        *total_modification_count_ += 1;
+        rt_cond_broadcast(condition_.get());
+        rt_mutex_release(condition_mutex_.get());
     }
 
     void wait_for_datum(unsigned index)
     {
-        rt_mutex_acquire(&condition_mutex_, TM_INFINITE);
-        long unsigned initial_modification_count = modification_counts_[index];
+        rt_mutex_acquire(condition_mutex_.get(), TM_INFINITE);
+        long unsigned initial_modification_count = (*modification_counts_)[index];
 
-        while(initial_modification_count == modification_counts_[index])
+        while(initial_modification_count == (*modification_counts_)[index])
         {
-            rt_cond_wait(&condition_, &condition_mutex_, TM_INFINITE);
+            rt_cond_wait(condition_.get(), condition_mutex_.get(), TM_INFINITE);
         }
 
-        if(initial_modification_count + 1 != modification_counts_[index])
+        if(initial_modification_count + 1 != (*modification_counts_)[index])
         {
             rt_printf("size: %d, \n other info: %s \n", SIZE, __PRETTY_FUNCTION__ );
 
             rt_printf("something went wrong, we missed a message.");
             rt_printf(" SIZE: %d, initial_modification_count: %d, current modification count: %d\n",
-                      SIZE, initial_modification_count, modification_counts_[index]);
+                      SIZE, initial_modification_count, (*modification_counts_)[index]);
 
 
             exit(-1);
         }
 
-        rt_mutex_release(&condition_mutex_);
+        rt_mutex_release(condition_mutex_.get());
     }
 
     long unsigned wait_for_datum()
     {
-        rt_mutex_acquire(&condition_mutex_, TM_INFINITE);
+        rt_mutex_acquire(condition_mutex_.get(), TM_INFINITE);
 
-        std::array<long unsigned, SIZE> initial_modification_counts = modification_counts_;
-        long unsigned initial_modification_count = total_modification_count_;
+        std::array<long unsigned, SIZE> initial_modification_counts = *modification_counts_;
+        long unsigned initial_modification_count = *total_modification_count_;
 
-        while(initial_modification_count == total_modification_count_)
+        while(initial_modification_count == *total_modification_count_)
         {
-            rt_cond_wait(&condition_, &condition_mutex_, TM_INFINITE);
+            rt_cond_wait(condition_.get(), condition_mutex_.get(), TM_INFINITE);
         }
 
-        if(initial_modification_count + 1 != total_modification_count_)
+        if(initial_modification_count + 1 != *total_modification_count_)
         {
             rt_printf("size: %d, \n other info: %s \n", SIZE, __PRETTY_FUNCTION__ );
 
             rt_printf("something went wrong, we missed a message.");
             rt_printf("initial_modification_count: %d, current modification count: %d\n",
-                      initial_modification_count, total_modification_count_);
+                      initial_modification_count, *total_modification_count_);
             exit(-1);
         }
 
         int modified_index = -1;
         for(size_t i = 0; i < SIZE; i++)
         {
-            if(initial_modification_counts[i] + 1 == modification_counts_[i])
+            if(initial_modification_counts[i] + 1 == (*modification_counts_)[i])
             {
                 if(modified_index != -1)
                 {
@@ -154,14 +171,14 @@ public:
 
                 modified_index = i;
             }
-            else if(initial_modification_counts[i] != modification_counts_[i])
+            else if(initial_modification_counts[i] != (*modification_counts_)[i])
             {
                 rt_printf("something in the threadsafe object went horribly wrong\n");
                 exit(-1);
             }
         }
 
-        rt_mutex_release(&condition_mutex_);
+        rt_mutex_release(condition_mutex_.get());
         return modified_index;
     }
 
