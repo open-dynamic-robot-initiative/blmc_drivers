@@ -10,6 +10,10 @@
 #include <native/mutex.h>
 #include <native/cond.h>
 
+
+#include <mutex>
+#include <condition_variable>
+
 #include <rtdk.h>
 
 
@@ -17,6 +21,7 @@
 #include <tuple>
 
 #include <memory>
+
 
 
 
@@ -34,6 +39,71 @@ public:
 
 
 };
+
+
+
+namespace xenomai
+{
+class mutex
+{
+public:
+    RT_MUTEX rt_mutex_;
+
+
+public:
+
+    mutex()
+    {
+        rt_mutex_create(&rt_mutex_, NULL);
+    }
+
+    void lock()
+    {
+        rt_mutex_acquire(&rt_mutex_, TM_INFINITE);
+
+    }
+
+    void unlock()
+    {
+        rt_mutex_release(&rt_mutex_);
+    }
+
+};
+
+//template<typename Mutex> class unique_lock
+//{
+//    Mutex& mutex_;
+//public:
+//    unique_lock(Mutex& mutex)
+//    {
+//        mutex_ = mutex;
+//    }
+//    ~unique_lock()
+//    {
+//        std::unique_lock<mutex>(mutex_);
+//        mutex_.unlock();
+//    }
+//};
+
+
+
+class condition_variable
+{
+    RT_COND rt_condition_variable_;
+public:
+    condition_variable()
+    {
+        rt_cond_create(&rt_condition_variable_, NULL);
+    }
+
+    void wait(std::unique_lock<mutex>& lock )
+    {
+        lock.release();
+        rt_cond_wait(&rt_condition_variable_, &lock.mutex()->rt_mutex_, TM_INFINITE);
+    }
+};
+
+}
 
 
 
