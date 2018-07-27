@@ -49,9 +49,6 @@ class mutex
 public:
     RT_MUTEX rt_mutex_;
 
-
-public:
-
     mutex()
     {
         rt_mutex_create(&rt_mutex_, NULL);
@@ -89,8 +86,10 @@ public:
 
 class condition_variable
 {
-    RT_COND rt_condition_variable_;
 public:
+    RT_COND rt_condition_variable_;
+
+
     condition_variable()
     {
         rt_cond_create(&rt_condition_variable_, NULL);
@@ -100,6 +99,11 @@ public:
     {
         lock.release();
         rt_cond_wait(&rt_condition_variable_, &lock.mutex()->rt_mutex_, TM_INFINITE);
+    }
+
+    void notify_all()
+    {
+        rt_cond_broadcast(&rt_condition_variable_);
     }
 };
 
@@ -124,7 +128,7 @@ private:
     std::shared_ptr<std::array<long unsigned, SIZE>> modification_counts_;
     std::shared_ptr<long unsigned> total_modification_count_;
 
-    std::shared_ptr<std::array<RT_MUTEX, SIZE>> data_mutexes_;
+    std::shared_ptr<std::array<xenomai::mutex, SIZE>> data_mutexes_;
 
 
 public:
@@ -136,7 +140,7 @@ public:
         condition_mutex_ = std::make_shared<RT_MUTEX>();
         modification_counts_ = std::make_shared<std::array<long unsigned, SIZE>>();
         total_modification_count_ = std::make_shared<long unsigned>();
-        data_mutexes_ = std::make_shared<std::array<RT_MUTEX, SIZE>>();
+        data_mutexes_ = std::make_shared<std::array<xenomai::mutex, SIZE>>();
 
 
 
@@ -147,7 +151,6 @@ public:
 
         for(size_t i = 0; i < SIZE; i++)
         {
-            rt_mutex_create(&(*data_mutexes_)[i], NULL);
             (*modification_counts_)[i] = 0;
         }
         *total_modification_count_ = 0;
@@ -160,18 +163,26 @@ public:
 
     template<int INDEX> Type<INDEX> get()
     {
-        rt_mutex_acquire(&(*data_mutexes_)[INDEX], TM_INFINITE);
+//        std::unique_lock<xenomai::mutex> lock((*data_mutexes_)[INDEX]);
+        (*data_mutexes_)[INDEX].lock();
+//        rt_mutex_acquire(&(*data_mutexes_)[INDEX], TM_INFINITE);
         Type<INDEX> datum = std::get<INDEX>(*data_);
-        rt_mutex_release(&(*data_mutexes_)[INDEX]);
+//        rt_mutex_release(&(*data_mutexes_)[INDEX]);
+        (*data_mutexes_)[INDEX].unlock();
+
 
         return datum;
     }
 
     template<int INDEX> void set(Type<INDEX> datum)
     {
-        rt_mutex_acquire(&(*data_mutexes_)[INDEX], TM_INFINITE);
+        (*data_mutexes_)[INDEX].lock();
+
+//        rt_mutex_acquire(&(*data_mutexes_)[INDEX], TM_INFINITE);
         std::get<INDEX>(*data_) = datum;
-        rt_mutex_release(&(*data_mutexes_)[INDEX]);
+//        rt_mutex_release(&(*data_mutexes_)[INDEX]);
+        (*data_mutexes_)[INDEX].unlock();
+
 
         // this is a bit suboptimal since we always broadcast on the same condition
         rt_mutex_acquire(condition_mutex_.get(), TM_INFINITE);
