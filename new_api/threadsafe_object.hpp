@@ -41,7 +41,6 @@ public:
 };
 
 
-
 namespace xenomai
 {
 class mutex
@@ -67,22 +66,6 @@ public:
 
 };
 
-//template<typename Mutex> class unique_lock
-//{
-//    Mutex& mutex_;
-//public:
-//    unique_lock(Mutex& mutex)
-//    {
-//        mutex_ = mutex;
-//    }
-//    ~unique_lock()
-//    {
-//        std::unique_lock<mutex>(mutex_);
-//        mutex_.unlock();
-//    }
-//};
-
-
 
 class condition_variable
 {
@@ -97,7 +80,6 @@ public:
 
     void wait(std::unique_lock<mutex>& lock )
     {
-        //        lock.release();
         rt_cond_wait(&rt_condition_variable_, &lock.mutex()->rt_mutex_, TM_INFINITE);
     }
 
@@ -106,9 +88,7 @@ public:
         rt_cond_broadcast(&rt_condition_variable_);
     }
 };
-
 }
-
 
 
 template<typename ...Types> class ThreadsafeObject
@@ -119,16 +99,24 @@ public:
 
     static const std::size_t SIZE = sizeof...(Types);
 
+#ifdef __XENO__
+    typedef xenomai::mutex Mutex;
+    typedef xenomai::condition_variable ConditionVariable;
+#else
+    typedef std::mutex Mutex;
+    typedef std::condition_variable ConditionVariable;
+#endif
+
 private:
 
     std::shared_ptr<std::tuple<Types ...> > data_;
 
-    mutable std::shared_ptr<xenomai::condition_variable> condition_;
-    mutable std::shared_ptr<xenomai::mutex> condition_mutex_;
+    mutable std::shared_ptr<ConditionVariable> condition_;
+    mutable std::shared_ptr<Mutex> condition_mutex_;
     std::shared_ptr<std::array<long unsigned, SIZE>> modification_counts_;
     std::shared_ptr<long unsigned> total_modification_count_;
 
-    std::shared_ptr<std::array<xenomai::mutex, SIZE>> data_mutexes_;
+    std::shared_ptr<std::array<Mutex, SIZE>> data_mutexes_;
 
 
 public:
@@ -136,12 +124,12 @@ public:
     {
         // initialize shared pointers ------------------------------------------
         data_ = std::make_shared<std::tuple<Types ...> >();
-        condition_ = std::make_shared<xenomai::condition_variable>();
-        condition_mutex_ = std::make_shared<xenomai::mutex>();
+        condition_ = std::make_shared<ConditionVariable>();
+        condition_mutex_ = std::make_shared<Mutex>();
         modification_counts_ =
                 std::make_shared<std::array<long unsigned, SIZE>>();
         total_modification_count_ = std::make_shared<long unsigned>();
-        data_mutexes_ = std::make_shared<std::array<xenomai::mutex, SIZE>>();
+        data_mutexes_ = std::make_shared<std::array<Mutex, SIZE>>();
 
         // initialize counts ---------------------------------------------------
         for(size_t i = 0; i < SIZE; i++)
@@ -153,7 +141,7 @@ public:
 
     template<int INDEX> Type<INDEX> get()
     {
-        std::unique_lock<xenomai::mutex> lock((*data_mutexes_)[INDEX]);
+        std::unique_lock<Mutex> lock((*data_mutexes_)[INDEX]);
         return std::get<INDEX>(*data_);
     }
 
@@ -161,13 +149,13 @@ public:
     {
         // set datum in our data_ member ---------------------------------------
         {
-            std::unique_lock<xenomai::mutex> lock((*data_mutexes_)[INDEX]);
+            std::unique_lock<Mutex> lock((*data_mutexes_)[INDEX]);
             std::get<INDEX>(*data_) = datum;
         }
 
         // notify --------------------------------------------------------------
         {
-            std::unique_lock<xenomai::mutex> lock(*condition_mutex_);
+            std::unique_lock<Mutex> lock(*condition_mutex_);
             (*modification_counts_)[INDEX] += 1;
             *total_modification_count_ += 1;
             condition_->notify_all();
@@ -176,7 +164,7 @@ public:
 
     void wait_for_datum(unsigned index)
     {
-        std::unique_lock<xenomai::mutex> lock(*condition_mutex_);
+        std::unique_lock<Mutex> lock(*condition_mutex_);
 
         // wait until the datum with the right index is modified ---------------
         long unsigned initial_modification_count =
@@ -198,7 +186,7 @@ public:
 
     long unsigned wait_for_datum()
     {
-        std::unique_lock<xenomai::mutex> lock(*condition_mutex_);
+        std::unique_lock<Mutex> lock(*condition_mutex_);
 
         // wait until any datum is modified ------------------------------------
         std::array<long unsigned, SIZE>
