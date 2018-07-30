@@ -179,125 +179,6 @@ private:
 
 
 
-//template <typename...>
-//struct Device;
-
-//template <typename...InputTypes, typename...OutputTypes>
-//class Device< std::tuple<InputTypes...>, std::tuple<OutputTypes...> >
-//{
-//public:
-//    template<int I> using InputType = typename std::tuple_element<I, std::tuple<InputTypes...>>::type;
-//    template<int I> using OutputType = typename std::tuple_element<I, std::tuple<OutputTypes...>>::type;
-
-//    static const std::size_t input_size = sizeof...(InputTypes);
-//    static const std::size_t output_size = sizeof...(OutputTypes);
-
-//    typedef std::tuple<StampedData<InputTypes> ...> InputTuple;
-//    typedef std::tuple<StampedData<OutputTypes> ...> OutputTuple;
-
-//private:
-//    OutputTuple outputs_;
-
-//    std::array<RT_COND, output_size> output_conditions_;
-//    RT_COND output_global_condition_;
-
-//    std::array<RT_MUTEX, output_size> output_mutexes_;
-//    RT_MUTEX output_global_mutex_;
-
-//public:
-//    Device()
-//    {
-//        rt_mutex_create(&output_global_mutex_, NULL);
-//        rt_cond_create(&output_global_condition_, NULL);
-
-//        for(size_t i = 0; i < output_size; i++)
-//        {
-//            rt_mutex_create(&output_mutexes_[i], NULL);
-//            rt_cond_create(&output_conditions_[i], NULL);
-//        }
-//    }
-
-//    unsigned wait_for_output()
-//    {
-//        rt_mutex_acquire(&output_mutex_, TM_INFINITE);
-//        size_t latest_count = output_.get_id();
-
-//        while(output_.get_id() == latest_count)
-//        {
-//            rt_cond_wait(&output_condition_, &output_mutex_, TM_INFINITE);
-//        }
-
-//        rt_mutex_release(&output_mutex_);
-
-//        return 0;
-//    }
-
-//    StampedData<CanFrame> get_latest_output()
-//    {
-//        rt_mutex_acquire(&output_mutex_, TM_INFINITE);
-//        StampedData<CanFrame> output = output_;
-//        rt_mutex_release(&output_mutex_);
-
-//        return output;
-//    }
-
-
-
-
-//    virtual void set_input(InputTuple input_tuple) = 0;
-
-
-//    OutputTuple get_latest_output()
-//    {
-//        return output_;
-//    }
-
-//    template<int I> OutputType<I> get_latest_output()
-//    {
-//        return output_[I];
-//    }
-
-//    template<int I> void wait_for_output()
-//    {
-//        // return when next data of type index is received
-//        return;
-//    }
-
-//    unsigned wait_for_output()
-//    {
-//        // return when next data of type index is received
-//        return;
-//    }
-
-//    static void show_types()
-//    {
-//     std::cout << __PRETTY_FUNCTION__ << std::endl;
-//    }
-
-
-//protected:
-//    template<int I> void set_latest_output(OutputType<I> output)
-//    {
-
-//        rt_mutex_acquire(&output_mutexes_[I], TM_INFINITE);
-//        rt_mutex_acquire(&output_global_mutex_, TM_INFINITE);
-//        outputs_[I] = output;
-//        rt_cond_broadcast(&output_conditions_[I]);
-//        rt_cond_broadcast(&output_global_condition_);
-
-//        rt_mutex_release(&output_global_mutex_);
-//        rt_mutex_release(&output_mutexes_[I]);
-
-//        output_conditions_
-
-//        rt_cond_broadcast(&output_global_condition_);
-
-//    }
-
-//};
-
-
-
 
 
 
@@ -361,6 +242,43 @@ private:
     Q24_TO_FLOAT( BYTES_TO_INT32(qbytes) ) )
 
 
+
+//class XenomaiCanbusInput: public ThreadsafeObject
+//{
+//    // constructor and destructor ==============================================
+//public:
+//    CanBus(std::string can_interface_name)
+//    {
+//        rt_mutex_create(&can_connection_mutex_, NULL);
+
+//        // setup can connection --------------------------------
+//        // \todo get rid of old format stuff
+//        CAN_CanConnection_t can_connection_old_format;
+//        int ret = CAN_setupCan(&can_connection_old_format,
+//                               can_interface_name.c_str(), 0);
+//        if (ret < 0)
+//        {
+//            rt_printf("Couldn't setup CAN connection. Exit.");
+//            exit(-1);
+//        }
+
+//        // \todo:how do we make sure that can connection is closed when we close
+//        //        can_connections.push_back(can_connection_old_format);
+//        can_connection_.send_addr = can_connection_old_format.send_addr;
+//        can_connection_.socket = can_connection_old_format.socket;
+//    }
+//    virtual ~CanBus()
+//    {
+//        int ret = rt_dev_close(can_connection_.socket);
+//        if (ret)
+//        {
+//            rt_fprintf(stderr, "rt_dev_close: %s\n", strerror(-ret));
+//            exit(-1);
+//        }
+//    }
+
+//};
+
 /// >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 class CanBus: public XenomaiDevice
 {
@@ -368,7 +286,7 @@ private:
     CanConnection can_connection_;
     RT_MUTEX can_connection_mutex_;
 
-    ThreadsafeObject<StampedData<CanFrame>> can_frame_;
+    OldThreadsafeObject<StampedData<CanFrame>> can_frame_;
 
     // send and get ============================================================
 public:
@@ -378,11 +296,11 @@ public:
     }
     void wait_for_can_frame_()
     {
-        can_frame_.wait_for_datum(0);
+        can_frame_.wait_for_update(0);
     }
     unsigned wait_for_any_output()
     {
-        return can_frame_.wait_for_datum();
+        return can_frame_.wait_for_update();
     }
 
     void send_can_frame(uint32_t id, uint8_t *data, uint8_t dlc)
@@ -531,49 +449,13 @@ private:
 
 
 
-/// Design Pattern >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-class DevicePattern
-{
-    typedef int Torque;
-    typedef int Speed;
-    typedef int Distance;
-    typedef int Current;
 
-    // inputs ---------------------------------
-    void send_torque(Torque torque)
-    {
 
-    }
-    void send_speed(Speed speed)
-    {
 
-    }
+//class XenomaiCanMotorboardInput: public ThreadsafeObject
+//{
 
-    // outputs --------------------------------
-    Distance get_latest_distance()
-    {
-
-    }
-    void wait_for_distance()
-    {
-
-    }
-
-    Current get_latest_current()
-    {
-
-    }
-    void wait_for_current()
-    {
-
-    }
-
-    void wait_for_any_output()
-    {
-
-    }
-};
-
+//};
 
 /// >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
@@ -623,7 +505,7 @@ public:
         COMMAND
     };
 
-    typedef ThreadsafeObject<
+    typedef OldThreadsafeObject<
     StampedData<Command>> Input;
 
 
@@ -637,7 +519,7 @@ public:
         ENCODER1,
         STATUS };
 
-    typedef ThreadsafeObject<
+    typedef OldThreadsafeObject<
     StampedData<Eigen::Vector2d>,
     StampedData<Eigen::Vector2d>,
     StampedData<Eigen::Vector2d>,
@@ -659,11 +541,11 @@ public:
     }
     void wait_for_output(unsigned output_index)
     {
-        output_.wait_for_datum(output_index);
+        output_.wait_for_update(output_index);
     }
     unsigned wait_for_output()
     {
-        return output_.wait_for_datum();
+        return output_.wait_for_update();
     }
 
 

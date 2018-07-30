@@ -33,7 +33,7 @@ std::array<Type3, DATA_LENGTH>
 DataTuple input_tuple;
 std::array< DataTuple, OUTPUT_COUNT> output_tuples;
 
-ThreadsafeObject<Type0, Type1, Type2, Type3> threadsafe_object;
+ThreadsafeObjects<Type0, Type1, Type2, Type3> threadsafe_object;
 
 template <int INDEX> void input_function(void * bla)
 {
@@ -58,7 +58,7 @@ template <int DATA_INDEX, int OUTPUT_INDEX> void output_function(void * trash)
 
     for(size_t i = 0; i < DATA_LENGTH; i++)
     {
-        threadsafe_object.wait_for_datum(DATA_INDEX);
+        threadsafe_object.wait_for_update<DATA_INDEX>();
         std::get<DATA_INDEX>(output_tuples[OUTPUT_INDEX])[i] = threadsafe_object.get<DATA_INDEX>();
         logger.end_and_start_interval();
     }
@@ -75,7 +75,7 @@ template <int OUTPUT_INDEX> void complete_output_function(void * trash)
     int i_0, i_1, i_2, i_3 = 0;
     for(size_t i = 0; i < 4 * DATA_LENGTH; i++)
     {
-        unsigned data_index = threadsafe_object.wait_for_datum();
+        unsigned data_index = threadsafe_object.wait_for_update();
         switch(data_index)
         {
         case 0:
@@ -113,6 +113,60 @@ RT_TASK start_thread(void (*function)(void *cookie))
 
     return trash;
 }
+
+void print(double value)
+{
+    std::cout << value << std::endl;
+}
+
+
+class bla
+{
+    double value_;
+
+public:
+    bla()
+    {
+        value_ = 0;
+    }
+
+    void set(double value)
+    {
+        value_ = value;
+    }
+
+    void print()
+    {
+        std::cout << value_ << std::endl;
+    }
+};
+
+
+//TEST(threadsafe_object, tuple_for_each)
+//{
+//    std::vector<double> digger {1, 2, 3};
+
+
+
+
+//    typedef std::tuple<bla, bla, bla> T;
+//     T t;
+
+//     tuple_for_each(t, [](bla value)->void{value.print();});
+
+
+//     std::tuple<ThreadsafeSingleton<double>, ThreadsafeSingleton<int>> tuple;
+//     auto condition_variable = std::make_shared<ThreadsafeSingletonInterface::ConditionVariable>();
+
+//     tuple_for_each(tuple, [condition_variable]
+//                    (ThreadsafeSingletonInterface& value)->void
+//     {
+//         value.add_condition_variable(condition_variable);
+//     });
+
+//}
+
+
 
 
 TEST(threadsafe_object, single_input_multi_output)
