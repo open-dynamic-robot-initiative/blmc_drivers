@@ -264,6 +264,7 @@ public:
         std::get<INDEX>(*data_).wait_for_update();
     }
 
+
     size_t get_modification_count()
     {
         size_t total_modification_count = 0;
@@ -502,3 +503,4 @@ public:
 
 
 };
+

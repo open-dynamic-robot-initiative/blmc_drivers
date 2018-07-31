@@ -70,7 +70,7 @@ void output_function(void * void_ptr)
 
     for(size_t i = 0; i < DATA_LENGTH; i++)
     {
-        threadsafe_object_ptr->wait_for_update(DATA_INDEX);
+        threadsafe_object_ptr->template wait_for_update<DATA_INDEX>();
         std::get<DATA_INDEX>(output_data[OUTPUT_INDEX])[i] =
                 threadsafe_object_ptr->template get<DATA_INDEX>();
         logger.end_and_start_interval();
@@ -186,14 +186,8 @@ void print(double value)
 
 //}
 
-
-
-
-TEST(threadsafe_object, single_input_multi_output)
+void initialize_data_randomly()
 {
-    typedef OldThreadsafeObject<Type0, Type1, Type2, Type3> TestType1;
-    TestType1 test_object_1;
-
     // initialize inputs ------------------------------------------
     srand(0);
     for(size_t i = 0; i < DATA_LENGTH; i++)
@@ -203,6 +197,16 @@ TEST(threadsafe_object, single_input_multi_output)
         std::get<2>(input_data)[i] = rand() / 1223232.0;
         std::get<3>(input_data)[i] = Type3::Random();
     }
+
+}
+
+
+TEST(threadsafe_object, single_input_multi_output)
+{
+    typedef OldThreadsafeObject<Type0, Type1, Type2, Type3> TestType1;
+    TestType1 test_object_1;
+
+    initialize_data_randomly();
 
     // start a thread for each output and input function ----------
     mlockall(MCL_CURRENT | MCL_FUTURE);
@@ -229,6 +233,71 @@ TEST(threadsafe_object, single_input_multi_output)
     start_thread(output_function<3,3,TestType1>, &test_object_1);
 
     start_thread(complete_output_function<4, TestType1>, &test_object_1);
+
+
+    usleep(1000);
+
+    auto task_1 = start_thread(input_function<0, TestType1>, &test_object_1);
+    auto task_2 = start_thread(input_function<1, TestType1>, &test_object_1);
+    auto task_3 = start_thread(input_function<2, TestType1>, &test_object_1);
+    auto task_4 = start_thread(input_function<3, TestType1>, &test_object_1);
+
+    rt_task_join(&task_1);
+    rt_task_join(&task_2);
+    rt_task_join(&task_3);
+    rt_task_join(&task_4);
+
+    usleep(1000000);
+
+    // check that the outputs written by the individual threads
+    // correspond to the input.
+    EXPECT_TRUE(input_data == output_data[0]);
+    EXPECT_TRUE(input_data == output_data[1]);
+    EXPECT_TRUE(input_data == output_data[2]);
+    EXPECT_TRUE(input_data == output_data[3]);
+    EXPECT_TRUE(input_data == output_data[4]);
+
+
+
+    // sanity check
+    std::get<1>(input_data)[0](1,1) = 33.;
+    EXPECT_FALSE(input_data == output_data[0]);
+}
+
+
+
+TEST(new_threadsafe_object, singleton)
+{
+    typedef ThreadsafeObjects<Type0, Type1, Type2, Type3> TestType1;
+    TestType1 test_object_1;
+
+    initialize_data_randomly();
+
+    // start a thread for each output and input function ----------
+    mlockall(MCL_CURRENT | MCL_FUTURE);
+    rt_print_auto_init(1);
+
+    start_thread(output_function<0,0,TestType1>, &test_object_1);
+    start_thread(output_function<0,1,TestType1>, &test_object_1);
+    start_thread(output_function<0,2,TestType1>, &test_object_1);
+    start_thread(output_function<0,3,TestType1>, &test_object_1);
+
+    start_thread(output_function<1,0,TestType1>, &test_object_1);
+    start_thread(output_function<1,1,TestType1>, &test_object_1);
+    start_thread(output_function<1,2,TestType1>, &test_object_1);
+    start_thread(output_function<1,3,TestType1>, &test_object_1);
+
+    start_thread(output_function<2,0,TestType1>, &test_object_1);
+    start_thread(output_function<2,1,TestType1>, &test_object_1);
+    start_thread(output_function<2,2,TestType1>, &test_object_1);
+    start_thread(output_function<2,3,TestType1>, &test_object_1);
+
+    start_thread(output_function<3,0,TestType1>, &test_object_1);
+    start_thread(output_function<3,1,TestType1>, &test_object_1);
+    start_thread(output_function<3,2,TestType1>, &test_object_1);
+    start_thread(output_function<3,3,TestType1>, &test_object_1);
+
+//    start_thread(complete_output_function<4, TestType1>, &test_object_1);
 
 
     usleep(1000);

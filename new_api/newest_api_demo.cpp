@@ -279,8 +279,11 @@ private:
 
 //};
 
+
+
+
 /// >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-class CanBus: public XenomaiDevice
+class XenomaiCanBus: public XenomaiDevice
 {
 private:
     CanConnection can_connection_;
@@ -290,21 +293,23 @@ private:
 
     // send and get ============================================================
 public:
-    StampedData<CanFrame> get_latest_can_frame()
+    StampedData<CanFrame> output_get_can_frame()
     {
         return can_frame_.get<0>();
     }
-    void wait_for_can_frame_()
+    void output_wait_for_can_frame()
     {
         can_frame_.wait_for_update(0);
     }
-    unsigned wait_for_any_output()
+    unsigned output_wait_for_any()
     {
         return can_frame_.wait_for_update();
     }
 
-    void send_can_frame(uint32_t id, uint8_t *data, uint8_t dlc)
+    void input_send_can_frame(CanFrame new_can_frame)
     {
+
+
         // get address ---------------------------------------------------------
         rt_mutex_acquire(&can_connection_mutex_, TM_INFINITE);
         int socket = can_connection_.socket;
@@ -313,9 +318,9 @@ public:
 
         // put data into can frame ---------------------------------------------
         can_frame_t can_frame;
-        can_frame.can_id = id;
-        can_frame.can_dlc = dlc;
-        memcpy(can_frame.data, data, dlc);
+        can_frame.can_id = new_can_frame.id;
+        can_frame.can_dlc = new_can_frame.dlc;
+        memcpy(can_frame.data, new_can_frame.data.begin(), new_can_frame.dlc);
 
         // send ----------------------------------------------------------------
         int ret = rt_dev_sendto(socket,
@@ -334,7 +339,7 @@ public:
 
     // constructor and destructor ==============================================
 public: 
-    CanBus(std::string can_interface_name)
+    XenomaiCanBus(std::string can_interface_name)
     {
         rt_mutex_create(&can_connection_mutex_, NULL);
 
@@ -354,7 +359,7 @@ public:
         can_connection_.send_addr = can_connection_old_format.send_addr;
         can_connection_.socket = can_connection_old_format.socket;
     }
-    virtual ~CanBus()
+    virtual ~XenomaiCanBus()
     {
         int ret = rt_dev_close(can_connection_.socket);
         if (ret)
@@ -570,7 +575,15 @@ public:
         data[6] = (id >> 8) & 0xFF;
         data[7] = id & 0xFF;
 
-        can_bus_->send_can_frame(BLMC_CAN_ID_COMMAND, data, 8);
+        CanFrame can_frame;
+        can_frame.id = BLMC_CAN_ID_COMMAND;
+        for(size_t i = 0; i < 7; i++)
+        {
+            can_frame.data[i] = data[i];
+        }
+        can_frame.dlc = 8;
+
+        can_bus_->input_send_can_frame(can_frame);
     }
 
     void send_current_target(double current, unsigned motor_id)
@@ -598,7 +611,7 @@ public:
 
     /// private members ========================================================
 private:
-    std::shared_ptr<CanBus> can_bus_;
+    std::shared_ptr<XenomaiCanBus> can_bus_;
 
 
 
@@ -616,7 +629,7 @@ private:
 
     /// constructor ============================================================
 public:
-    Board(std::shared_ptr<CanBus> can_bus): can_bus_(can_bus)
+    Board(std::shared_ptr<XenomaiCanBus> can_bus): can_bus_(can_bus)
     {
         rt_mutex_create(&data_mutex_, NULL);
         rt_mutex_create(&current_targets_mutex_, NULL);
@@ -678,7 +691,15 @@ private:
         data[6] = (q_current2 >> 8) & 0xFF;
         data[7] =  q_current2 & 0xFF;
 
-        return can_bus_->send_can_frame(BLMC_CAN_ID_IqRef, data, 8);
+        CanFrame can_frame;
+        can_frame.id = BLMC_CAN_ID_IqRef;
+        for(size_t i = 0; i < 7; i++)
+        {
+            can_frame.data[i] = data[i];
+        }
+        can_frame.dlc = 8;
+
+        return can_bus_->input_send_can_frame(can_frame);
     }
 
 
@@ -688,8 +709,8 @@ private:
         {
             // get latest can frame --------------------------------------------
 
-            can_bus_->wait_for_any_output();
-            auto stamped_can_frame = can_bus_->get_latest_can_frame();
+            can_bus_->output_wait_for_any();
+            auto stamped_can_frame = can_bus_->output_get_can_frame();
             auto can_frame = stamped_can_frame.get_data();
 
             // convert to measurement ------------------------------------------
@@ -931,8 +952,8 @@ int main(int argc, char **argv)
 
 
     // create bus and boards -------------------------------------------------
-    auto can_bus1 = std::make_shared<CanBus>("rtcan0");
-    auto can_bus2 = std::make_shared<CanBus>("rtcan1");
+    auto can_bus1 = std::make_shared<XenomaiCanBus>("rtcan0");
+    auto can_bus2 = std::make_shared<XenomaiCanBus>("rtcan1");
     auto board1 = std::make_shared<Board>(can_bus1);
     auto board2 = std::make_shared<Board>(can_bus2);
 
