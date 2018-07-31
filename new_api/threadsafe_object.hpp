@@ -446,6 +446,11 @@ public:
         }
     }
 
+    template< unsigned INDEX> void wait_for_update()
+    {
+        wait_for_update(INDEX);
+    }
+
     size_t wait_for_update()
     {
         std::unique_lock<Mutex> lock(*condition_mutex_);

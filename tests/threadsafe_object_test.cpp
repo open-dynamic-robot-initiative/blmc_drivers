@@ -28,27 +28,27 @@ std::array<Type0, DATA_LENGTH>,
 std::array<Type1, DATA_LENGTH>,
 std::array<Type2, DATA_LENGTH>,
 std::array<Type3, DATA_LENGTH>
-> Data1;
+> DataType;
 
-Data1 input_1;
-std::array< Data1, OUTPUT_COUNT> output_1;
+DataType input_data;
+std::array< DataType, OUTPUT_COUNT> output_data;
 
-typedef OldThreadsafeObject<Type0, Type1, Type2, Type3> TestType1;
 
-TestType1 test_object_1;
 
-template <int INDEX, typename ThreadsafeObjectType> void input_function(void* void_ptr)
+template <int INDEX, typename ThreadsafeObjectType>
+void input_function(void* void_ptr)
 {
+    ThreadsafeObjectType* threadsafe_object_ptr =
+            static_cast<ThreadsafeObjectType*>(void_ptr);
+
     TimeLogger<100> logger("input " + std::to_string(INDEX));
 
     for(size_t i = 0; i < DATA_LENGTH; i++)
     {
         rt_task_sleep(int(RATE_MS * 1000000.));
-        ThreadsafeObjectType* threadsafe_object_ptr =
-                static_cast<ThreadsafeObjectType*>(void_ptr);
 
         threadsafe_object_ptr->template set<INDEX>(
-                    std::get<INDEX>(input_1)[i]);
+                    std::get<INDEX>(input_data)[i]);
         logger.end_and_start_interval();
     }
 
@@ -58,8 +58,11 @@ template <int INDEX, typename ThreadsafeObjectType> void input_function(void* vo
 
 
 
-template <int DATA_INDEX, int OUTPUT_INDEX> void output_function(void * void_ptr)
+template <int DATA_INDEX, int OUTPUT_INDEX, typename ThreadsafeObjectType>
+void output_function(void * void_ptr)
 {
+    ThreadsafeObjectType* threadsafe_object_ptr =
+            static_cast<ThreadsafeObjectType*>(void_ptr);
 
     TimeLogger<100> logger("output " + std::to_string(DATA_INDEX) +
                            ", " + std::to_string(OUTPUT_INDEX));
@@ -67,9 +70,9 @@ template <int DATA_INDEX, int OUTPUT_INDEX> void output_function(void * void_ptr
 
     for(size_t i = 0; i < DATA_LENGTH; i++)
     {
-        test_object_1.wait_for_update(DATA_INDEX);
-        std::get<DATA_INDEX>(output_1[OUTPUT_INDEX])[i] =
-                test_object_1.get<DATA_INDEX>();
+        threadsafe_object_ptr->wait_for_update(DATA_INDEX);
+        std::get<DATA_INDEX>(output_data[OUTPUT_INDEX])[i] =
+                threadsafe_object_ptr->template get<DATA_INDEX>();
         logger.end_and_start_interval();
     }
 
@@ -77,28 +80,35 @@ template <int DATA_INDEX, int OUTPUT_INDEX> void output_function(void * void_ptr
 }
 
 
-template <int OUTPUT_INDEX> void complete_output_function(void * trash)
+template <int OUTPUT_INDEX, typename ThreadsafeObjectType>
+void complete_output_function(void * void_ptr)
 {
+    ThreadsafeObjectType* threadsafe_object_ptr =
+            static_cast<ThreadsafeObjectType*>(void_ptr);
 
     TimeLogger<100> logger("complete output " + std::to_string(OUTPUT_INDEX));
 
     int i_0, i_1, i_2, i_3 = 0;
     for(size_t i = 0; i < 4 * DATA_LENGTH; i++)
     {
-        unsigned data_index = test_object_1.wait_for_update();
+        unsigned data_index = threadsafe_object_ptr->wait_for_update();
         switch(data_index)
         {
         case 0:
-            std::get<0>(output_1[OUTPUT_INDEX])[i_0++] = test_object_1.get<0>();
+            std::get<0>(output_data[OUTPUT_INDEX])[i_0++] =
+                    threadsafe_object_ptr-> template get<0>();
             break;
         case 1:
-            std::get<1>(output_1[OUTPUT_INDEX])[i_1++] = test_object_1.get<1>();
+            std::get<1>(output_data[OUTPUT_INDEX])[i_1++] =
+                    threadsafe_object_ptr-> template get<1>();
             break;
         case 2:
-            std::get<2>(output_1[OUTPUT_INDEX])[i_2++] = test_object_1.get<2>();
+            std::get<2>(output_data[OUTPUT_INDEX])[i_2++] =
+                    threadsafe_object_ptr-> template get<2>();
             break;
         case 3:
-            std::get<3>(output_1[OUTPUT_INDEX])[i_3++] = test_object_1.get<3>();
+            std::get<3>(output_data[OUTPUT_INDEX])[i_3++] =
+                    threadsafe_object_ptr-> template get<3>();
             break;
         }
         logger.end_and_start_interval();
@@ -181,41 +191,44 @@ void print(double value)
 
 TEST(threadsafe_object, single_input_multi_output)
 {
+    typedef OldThreadsafeObject<Type0, Type1, Type2, Type3> TestType1;
+    TestType1 test_object_1;
+
     // initialize inputs ------------------------------------------
     srand(0);
     for(size_t i = 0; i < DATA_LENGTH; i++)
     {
-        std::get<0>(input_1)[i] = rand();
-        std::get<1>(input_1)[i] = Type1::Random();
-        std::get<2>(input_1)[i] = rand() / 1223232.0;
-        std::get<3>(input_1)[i] = Type3::Random();
+        std::get<0>(input_data)[i] = rand();
+        std::get<1>(input_data)[i] = Type1::Random();
+        std::get<2>(input_data)[i] = rand() / 1223232.0;
+        std::get<3>(input_data)[i] = Type3::Random();
     }
 
     // start a thread for each output and input function ----------
     mlockall(MCL_CURRENT | MCL_FUTURE);
     rt_print_auto_init(1);
 
-    start_thread(output_function<0,0>);
-    start_thread(output_function<0,1>);
-    start_thread(output_function<0,2>);
-    start_thread(output_function<0,3>);
+    start_thread(output_function<0,0,TestType1>, &test_object_1);
+    start_thread(output_function<0,1,TestType1>, &test_object_1);
+    start_thread(output_function<0,2,TestType1>, &test_object_1);
+    start_thread(output_function<0,3,TestType1>, &test_object_1);
 
-    start_thread(output_function<1,0>);
-    start_thread(output_function<1,1>);
-    start_thread(output_function<1,2>);
-    start_thread(output_function<1,3>);
+    start_thread(output_function<1,0,TestType1>, &test_object_1);
+    start_thread(output_function<1,1,TestType1>, &test_object_1);
+    start_thread(output_function<1,2,TestType1>, &test_object_1);
+    start_thread(output_function<1,3,TestType1>, &test_object_1);
 
-    start_thread(output_function<2,0>);
-    start_thread(output_function<2,1>);
-    start_thread(output_function<2,2>);
-    start_thread(output_function<2,3>);
+    start_thread(output_function<2,0,TestType1>, &test_object_1);
+    start_thread(output_function<2,1,TestType1>, &test_object_1);
+    start_thread(output_function<2,2,TestType1>, &test_object_1);
+    start_thread(output_function<2,3,TestType1>, &test_object_1);
 
-    start_thread(output_function<3,0>);
-    start_thread(output_function<3,1>);
-    start_thread(output_function<3,2>);
-    start_thread(output_function<3,3>);
+    start_thread(output_function<3,0,TestType1>, &test_object_1);
+    start_thread(output_function<3,1,TestType1>, &test_object_1);
+    start_thread(output_function<3,2,TestType1>, &test_object_1);
+    start_thread(output_function<3,3,TestType1>, &test_object_1);
 
-    start_thread(complete_output_function<4>);
+    start_thread(complete_output_function<4, TestType1>, &test_object_1);
 
 
     usleep(1000);
@@ -234,17 +247,17 @@ TEST(threadsafe_object, single_input_multi_output)
 
     // check that the outputs written by the individual threads
     // correspond to the input.
-    EXPECT_TRUE(input_1 == output_1[0]);
-    EXPECT_TRUE(input_1 == output_1[1]);
-    EXPECT_TRUE(input_1 == output_1[2]);
-    EXPECT_TRUE(input_1 == output_1[3]);
-    EXPECT_TRUE(input_1 == output_1[4]);
+    EXPECT_TRUE(input_data == output_data[0]);
+    EXPECT_TRUE(input_data == output_data[1]);
+    EXPECT_TRUE(input_data == output_data[2]);
+    EXPECT_TRUE(input_data == output_data[3]);
+    EXPECT_TRUE(input_data == output_data[4]);
 
 
 
     // sanity check
-    std::get<1>(input_1)[0](1,1) = 33.;
-    EXPECT_FALSE(input_1 == output_1[0]);
+    std::get<1>(input_data)[0](1,1) = 33.;
+    EXPECT_FALSE(input_data == output_data[0]);
 }
 
 
