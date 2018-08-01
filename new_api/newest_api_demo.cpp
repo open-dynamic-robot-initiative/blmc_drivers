@@ -459,6 +459,12 @@ public:
     class Command
     {
     public:
+
+        Command()
+        {
+
+        }
+
         Command(uint32_t id, int32_t content)
         {
             id_ = id;
@@ -494,10 +500,12 @@ public:
     };
 
     enum InputNames {
+        CURRENT_TARGETS,
         COMMAND
     };
 
     typedef OldThreadsafeObject<
+    StampedData<Eigen::Vector2d>,
     StampedData<Command>> Input;
 
 
@@ -519,6 +527,39 @@ public:
     StampedData<double>,
     StampedData<double>,
     StampedData<_BLMC_StatusMsg_t_> > Output;
+
+
+
+    Output::Type<CURRENTS> output_get_currents()
+    {
+        return output_.get<CURRENTS>();
+    }
+    Output::Type<POSITIONS> output_get_positions()
+    {
+        return output_.get<POSITIONS>();
+    }
+    Output::Type<VELOCITIES> output_get_velocities()
+    {
+        return output_.get<VELOCITIES>();
+    }
+    Output::Type<ANALOGS> output_get_analogs()
+    {
+        return output_.get<ANALOGS>();
+    }
+    Output::Type<ENCODER0> output_get_encoder_0()
+    {
+        return output_.get<ENCODER0>();
+    }
+    Output::Type<ENCODER1> output_get_encoder_1()
+    {
+        return output_.get<ENCODER1>();
+    }
+    Output::Type<STATUS> output_get_status()
+    {
+        return output_.get<STATUS>();
+    }
+
+
 
     template <int TYPE_INDEX> Output::Type<TYPE_INDEX> get_latest_output()
     {
@@ -615,6 +656,8 @@ private:
 
 
     RT_TASK rt_task_;
+
+    Input input_;
 
     Output output_;
 
@@ -837,25 +880,25 @@ public:
 
     double get_latest_currents()
     {
-        return board_->get_latest_output<TICanMotorBoard::CURRENTS>().get_data()(motor_id_);
+        return board_->output_get_currents().get_data()(motor_id_);
     }
     double get_latest_positions()
     {
-        return board_->get_latest_output<TICanMotorBoard::POSITIONS>().get_data()(motor_id_);
+        return board_->output_get_currents().get_data()(motor_id_);
     }
     double get_latest_velocities()
     {
-        return board_->get_latest_output<TICanMotorBoard::VELOCITIES>().get_data()(motor_id_);
+        return board_->output_get_currents().get_data()(motor_id_);
     }
     double get_latest_encoders()
     {
         if(motor_id_ == 0)
         {
-            return board_->get_latest_output<TICanMotorBoard::ENCODER0>().get_data();
+            return board_->output_get_encoder_0().get_data();
         }
         else
         {
-            return board_->get_latest_output<TICanMotorBoard::ENCODER1>().get_data();
+            return board_->output_get_encoder_1().get_data();
         }
     }
 
@@ -879,7 +922,7 @@ public:
 
     double get_latest_analogs()
     {
-        return board_->get_latest_output<TICanMotorBoard::ANALOGS>().get_data()(sensor_id_);
+        return board_->output_get_analogs().get_data()(sensor_id_);
     }
 };
 
