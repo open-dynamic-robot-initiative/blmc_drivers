@@ -320,6 +320,8 @@ public:
         can_frame_t can_frame;
         can_frame.can_id = new_can_frame.id;
         can_frame.can_dlc = new_can_frame.dlc;
+
+
         memcpy(can_frame.data, new_can_frame.data.begin(), new_can_frame.dlc);
 
         // send ----------------------------------------------------------------
@@ -577,7 +579,7 @@ public:
 
         CanFrame can_frame;
         can_frame.id = BLMC_CAN_ID_COMMAND;
-        for(size_t i = 0; i < 7; i++)
+        for(size_t i = 0; i < 8; i++)
         {
             can_frame.data[i] = data[i];
         }
