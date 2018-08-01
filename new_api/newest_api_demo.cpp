@@ -223,7 +223,12 @@ RT_TASK start_thread(void (*function)(void *cookie), void *argument=NULL)
 
 
 
-
+/// a device has to
+///  - keep output object up to data
+///  - keep input object up to data
+///  - implement send functions
+///  we can split it up into an input and an output device, and then derive from both for Input Output objects
+///  send(bla, input_id)
 
 
 /// >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
@@ -235,31 +240,50 @@ private:
     CanConnection can_connection_;
     RT_MUTEX can_connection_mutex_;
 
-    OldThreadsafeObject<StampedData<CanFrame>> output_can_frame_;
+    typedef OldThreadsafeObject<StampedData<CanFrame>> Output;
+    typedef OldThreadsafeObject<StampedData<CanFrame>> Input;
 
 
-    OldThreadsafeObject<StampedData<CanFrame>> input_can_frame_;
+    Output output_;
+    Input input_;
 
 
     // send and get ============================================================
 public:
 
-
+    // get output data ---------------------------------------------------------
     StampedData<CanFrame> output_get_can_frame()
     {
-        return output_can_frame_.get();
+        return output_.get();
     }
     void output_wait_for_can_frame()
     {
-        output_can_frame_.wait_for_update();
+        output_.wait_for_update();
     }
     size_t output_wait_for_any()
     {
-        return output_can_frame_.wait_for_update();
+        return output_.wait_for_update();
     }
 
-    void input_send_can_frame(StampedData<CanFrame> stamped_can_frame)
+    // get input data ----------------------------------------------------------
+    StampedData<CanFrame> input_get_can_frame()
     {
+        return input_.get();
+    }
+    void input_wait_for_can_frame()
+    {
+        input_.wait_for_update();
+    }
+    size_t input_wait_for_any()
+    {
+        return input_.wait_for_update();
+    }
+
+    // send data ---------------------------------------------------------------
+    void send_can_frame(StampedData<CanFrame> stamped_can_frame)
+    {
+        input_.set(stamped_can_frame);
+
         // get address ---------------------------------------------------------
         rt_mutex_acquire(&can_connection_mutex_, TM_INFINITE);
         int socket = can_connection_.socket;
@@ -351,9 +375,9 @@ private:
             rt_task_sleep(1000);
 
 
-            output_can_frame_.set<0>(StampedData<CanFrame>(
+            output_.set<0>(StampedData<CanFrame>(
                                   frame,
-                                  output_can_frame_.get<0>().get_id() + 1,
+                                  output_.get<0>().get_id() + 1,
                                   TimeLogger<1>::current_time()));
 
             loop_time_logger.end_and_start_interval();
@@ -428,7 +452,7 @@ private:
 /// >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
 
-class Board
+class TICanMotorBoard
 {
     /// public interface =======================================================
 public:
@@ -559,7 +583,7 @@ public:
         }
         can_frame.dlc = 8;
 
-        can_bus_->input_send_can_frame(StampedData<CanFrame>(can_frame, -1, -1));
+        can_bus_->send_can_frame(StampedData<CanFrame>(can_frame, -1, -1));
     }
 
     void send_current_target(double current, unsigned motor_id)
@@ -605,7 +629,7 @@ private:
 
     /// constructor ============================================================
 public:
-    Board(std::shared_ptr<XenomaiCanBus> can_bus): can_bus_(can_bus)
+    TICanMotorBoard(std::shared_ptr<XenomaiCanBus> can_bus): can_bus_(can_bus)
     {
         rt_mutex_create(&data_mutex_, NULL);
         rt_mutex_create(&current_targets_mutex_, NULL);
@@ -637,7 +661,7 @@ public:
                                                     -1, -1));
 
 
-        rt_task_ = start_thread(&Board::loop, this);
+        rt_task_ = start_thread(&TICanMotorBoard::loop, this);
     }
 
     /// private methods ========================================================
@@ -678,12 +702,12 @@ private:
         }
         can_frame.dlc = 8;
 
-        return can_bus_->input_send_can_frame(StampedData<CanFrame>(can_frame, -1, -1));
+        return can_bus_->send_can_frame(StampedData<CanFrame>(can_frame, -1, -1));
     }
 
     static void loop(void* instance_pointer)
     {
-        ((Board*)(instance_pointer))->loop();
+        ((TICanMotorBoard*)(instance_pointer))->loop();
     }
 
     void loop()
@@ -804,34 +828,34 @@ private:
 class Motor
 {
     // \todo: should probably make this a shared pointer
-    std::shared_ptr<Board> board_;
+    std::shared_ptr<TICanMotorBoard> board_;
     unsigned motor_id_;
 public:
 
-    Motor(std::shared_ptr<Board> board, unsigned motor_id):
+    Motor(std::shared_ptr<TICanMotorBoard> board, unsigned motor_id):
         board_(board), motor_id_(motor_id) { }
 
     double get_latest_currents()
     {
-        return board_->get_latest_output<Board::CURRENTS>().get_data()(motor_id_);
+        return board_->get_latest_output<TICanMotorBoard::CURRENTS>().get_data()(motor_id_);
     }
     double get_latest_positions()
     {
-        return board_->get_latest_output<Board::POSITIONS>().get_data()(motor_id_);
+        return board_->get_latest_output<TICanMotorBoard::POSITIONS>().get_data()(motor_id_);
     }
     double get_latest_velocities()
     {
-        return board_->get_latest_output<Board::VELOCITIES>().get_data()(motor_id_);
+        return board_->get_latest_output<TICanMotorBoard::VELOCITIES>().get_data()(motor_id_);
     }
     double get_latest_encoders()
     {
         if(motor_id_ == 0)
         {
-            return board_->get_latest_output<Board::ENCODER0>().get_data();
+            return board_->get_latest_output<TICanMotorBoard::ENCODER0>().get_data();
         }
         else
         {
-            return board_->get_latest_output<Board::ENCODER1>().get_data();
+            return board_->get_latest_output<TICanMotorBoard::ENCODER1>().get_data();
         }
     }
 
@@ -846,16 +870,16 @@ public:
 
 class AnalogSensor
 {
-    std::shared_ptr<Board> board_;
+    std::shared_ptr<TICanMotorBoard> board_;
     unsigned sensor_id_;
 public:
 
-    AnalogSensor(std::shared_ptr<Board> board, unsigned sensor_id):
+    AnalogSensor(std::shared_ptr<TICanMotorBoard> board, unsigned sensor_id):
         board_(board), sensor_id_(sensor_id) { }
 
     double get_latest_analogs()
     {
-        return board_->get_latest_output<Board::ANALOGS>().get_data()(sensor_id_);
+        return board_->get_latest_output<TICanMotorBoard::ANALOGS>().get_data()(sensor_id_);
     }
 };
 
@@ -944,8 +968,8 @@ int main(int argc, char **argv)
     // create bus and boards -------------------------------------------------
     auto can_bus1 = std::make_shared<XenomaiCanBus>("rtcan0");
     auto can_bus2 = std::make_shared<XenomaiCanBus>("rtcan1");
-    auto board1 = std::make_shared<Board>(can_bus1);
-    auto board2 = std::make_shared<Board>(can_bus2);
+    auto board1 = std::make_shared<TICanMotorBoard>(can_bus1);
+    auto board2 = std::make_shared<TICanMotorBoard>(can_bus2);
 
     // create motors and sensors ---------------------------------------------
     auto motor_1 = std::make_shared<Motor>(board1, BLMC_MTR1);
