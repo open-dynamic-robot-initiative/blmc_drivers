@@ -402,13 +402,13 @@ public:
         *total_modification_count_ = 0;
     }
 
-    template<int INDEX> Type<INDEX> get()
+    template<int INDEX=0> Type<INDEX> get()
     {
         std::unique_lock<Mutex> lock((*data_mutexes_)[INDEX]);
         return std::get<INDEX>(*data_);
     }
 
-    template<int INDEX> void set(Type<INDEX> datum)
+    template<int INDEX=0> void set(Type<INDEX> datum)
     {
         // set datum in our data_ member ---------------------------------------
         {
@@ -447,7 +447,7 @@ public:
         }
     }
 
-    template< unsigned INDEX> void wait_for_update()
+    template< unsigned INDEX=0> void wait_for_update()
     {
         wait_for_update(INDEX);
     }

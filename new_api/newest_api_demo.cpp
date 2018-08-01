@@ -235,7 +235,11 @@ private:
     CanConnection can_connection_;
     RT_MUTEX can_connection_mutex_;
 
-    OldThreadsafeObject<StampedData<CanFrame>> can_frame_;
+    OldThreadsafeObject<StampedData<CanFrame>> output_can_frame_;
+
+
+    OldThreadsafeObject<StampedData<CanFrame>> input_can_frame_;
+
 
     // send and get ============================================================
 public:
@@ -243,18 +247,18 @@ public:
 
     StampedData<CanFrame> output_get_can_frame()
     {
-        return can_frame_.get<0>();
+        return output_can_frame_.get();
     }
     void output_wait_for_can_frame()
     {
-        can_frame_.wait_for_update(0);
+        output_can_frame_.wait_for_update();
     }
-    unsigned output_wait_for_any()
+    size_t output_wait_for_any()
     {
-        return can_frame_.wait_for_update();
+        return output_can_frame_.wait_for_update();
     }
 
-    void input_send_can_frame(CanFrame new_can_frame)
+    void input_send_can_frame(StampedData<CanFrame> stamped_can_frame)
     {
         // get address ---------------------------------------------------------
         rt_mutex_acquire(&can_connection_mutex_, TM_INFINITE);
@@ -262,13 +266,15 @@ public:
         struct sockaddr_can address = can_connection_.send_addr;
         rt_mutex_release(&can_connection_mutex_);
 
+
+        auto unstamped_can_frame = stamped_can_frame.get_data();
         // put data into can frame ---------------------------------------------
         can_frame_t can_frame;
-        can_frame.can_id = new_can_frame.id;
-        can_frame.can_dlc = new_can_frame.dlc;
+        can_frame.can_id = unstamped_can_frame.id;
+        can_frame.can_dlc = unstamped_can_frame.dlc;
 
 
-        memcpy(can_frame.data, new_can_frame.data.begin(), new_can_frame.dlc);
+        memcpy(can_frame.data, unstamped_can_frame.data.begin(), unstamped_can_frame.dlc);
 
         // send ----------------------------------------------------------------
         int ret = rt_dev_sendto(socket,
@@ -345,9 +351,9 @@ private:
             rt_task_sleep(1000);
 
 
-            can_frame_.set<0>(StampedData<CanFrame>(
+            output_can_frame_.set<0>(StampedData<CanFrame>(
                                   frame,
-                                  can_frame_.get<0>().get_id() + 1,
+                                  output_can_frame_.get<0>().get_id() + 1,
                                   TimeLogger<1>::current_time()));
 
             loop_time_logger.end_and_start_interval();
@@ -553,7 +559,7 @@ public:
         }
         can_frame.dlc = 8;
 
-        can_bus_->input_send_can_frame(can_frame);
+        can_bus_->input_send_can_frame(StampedData<CanFrame>(can_frame, -1, -1));
     }
 
     void send_current_target(double current, unsigned motor_id)
@@ -672,7 +678,7 @@ private:
         }
         can_frame.dlc = 8;
 
-        return can_bus_->input_send_can_frame(can_frame);
+        return can_bus_->input_send_can_frame(StampedData<CanFrame>(can_frame, -1, -1));
     }
 
     static void loop(void* instance_pointer)
