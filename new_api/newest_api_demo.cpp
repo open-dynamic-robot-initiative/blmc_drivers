@@ -178,49 +178,29 @@ private:
 
 
 
-
-
-
-
-
-
-class XenomaiDevice
+RT_TASK start_thread(void (*function)(void *cookie), void *argument=NULL)
 {
-protected:
-    RT_TASK rt_task_;
+    // TODO: not sure if this is the right place for this
+    mlockall(MCL_CURRENT | MCL_FUTURE);
+    //        signal(SIGTERM, cleanup_and_exit);
+    //        signal(SIGINT, cleanup_and_exit);
+    //        signal(SIGDEBUG, action_upon_switch);
+    rt_print_auto_init(1);
 
-public:
-    XenomaiDevice()
-    {
-        // TODO: not sure if this is the right place for this
-        mlockall(MCL_CURRENT | MCL_FUTURE);
-        //        signal(SIGTERM, cleanup_and_exit);
-        //        signal(SIGINT, cleanup_and_exit);
-        //        signal(SIGDEBUG, action_upon_switch);
-        rt_print_auto_init(1);
+    RT_TASK rt_task;
+    int priority = 10;
 
-        int priority = 10;
-        int return_task_create = rt_task_create(&rt_task_, NULL, 0,
-                                                priority,  T_JOINABLE | T_FPU);
-        if (return_task_create) {
-            rt_fprintf(stderr, "rt_task_shadow: %s\n",
-                       strerror(-return_task_create));
-            exit(-1);
-        }
-
-        rt_task_start(&rt_task_, &XenomaiDevice::loop, this);
+    int return_task_create = rt_task_create(&rt_task, NULL, 0, priority,  T_JOINABLE | T_FPU);
+    if (return_task_create) {
+        rt_fprintf(stderr, "controller: %s\n", strerror(-return_task_create));
+        exit(-1);
     }
+    rt_task_start(&rt_task, function, argument);
+
+    return rt_task;
+}
 
 
-private:
-    static void loop(void* instance_pointer)
-    {
-        ((XenomaiDevice*)(instance_pointer))->loop();
-    }
-
-    virtual void loop() = 0;
-
-};
 
 
 // Convertion of a byte array to a int32_t.
@@ -243,49 +223,15 @@ private:
 
 
 
-//class XenomaiCanbusInput: public ThreadsafeObject
-//{
-//    // constructor and destructor ==============================================
-//public:
-//    CanBus(std::string can_interface_name)
-//    {
-//        rt_mutex_create(&can_connection_mutex_, NULL);
-
-//        // setup can connection --------------------------------
-//        // \todo get rid of old format stuff
-//        CAN_CanConnection_t can_connection_old_format;
-//        int ret = CAN_setupCan(&can_connection_old_format,
-//                               can_interface_name.c_str(), 0);
-//        if (ret < 0)
-//        {
-//            rt_printf("Couldn't setup CAN connection. Exit.");
-//            exit(-1);
-//        }
-
-//        // \todo:how do we make sure that can connection is closed when we close
-//        //        can_connections.push_back(can_connection_old_format);
-//        can_connection_.send_addr = can_connection_old_format.send_addr;
-//        can_connection_.socket = can_connection_old_format.socket;
-//    }
-//    virtual ~CanBus()
-//    {
-//        int ret = rt_dev_close(can_connection_.socket);
-//        if (ret)
-//        {
-//            rt_fprintf(stderr, "rt_dev_close: %s\n", strerror(-ret));
-//            exit(-1);
-//        }
-//    }
-
-//};
-
 
 
 
 /// >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-class XenomaiCanBus: public XenomaiDevice
+class XenomaiCanBus
 {
 private:
+    RT_TASK rt_task_;
+
     CanConnection can_connection_;
     RT_MUTEX can_connection_mutex_;
 
@@ -293,6 +239,8 @@ private:
 
     // send and get ============================================================
 public:
+
+
     StampedData<CanFrame> output_get_can_frame()
     {
         return can_frame_.get<0>();
@@ -308,8 +256,6 @@ public:
 
     void input_send_can_frame(CanFrame new_can_frame)
     {
-
-
         // get address ---------------------------------------------------------
         rt_mutex_acquire(&can_connection_mutex_, TM_INFINITE);
         int socket = can_connection_.socket;
@@ -360,6 +306,9 @@ public:
         //        can_connections.push_back(can_connection_old_format);
         can_connection_.send_addr = can_connection_old_format.send_addr;
         can_connection_.socket = can_connection_old_format.socket;
+
+
+        rt_task_ = start_thread(&XenomaiCanBus::loop, this);
     }
     virtual ~XenomaiCanBus()
     {
@@ -373,8 +322,14 @@ public:
 
     // private =================================================================
 private:
+    static void loop(void* instance_pointer)
+    {
+        ((XenomaiCanBus*)(instance_pointer))->loop();
+    }
+
     void loop()
     {
+
         TimeLogger<100> loop_time_logger("can bus loop", 4000);
         TimeLogger<100> receive_time_logger("receive", 4000);
 
@@ -467,7 +422,7 @@ private:
 /// >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
 
-class Board: public XenomaiDevice
+class Board
 {
     /// public interface =======================================================
 public:
@@ -544,6 +499,19 @@ public:
 //        output_string << output.get_data();
 //        rt_printf("received %s\n", output_string.str().c_str());
 
+
+        auto output = output_.get<TYPE_INDEX>().get_data();
+
+        std::stringstream bla;
+        bla << output;
+
+        static int count = 0;
+        count++;
+        if(TYPE_INDEX == ANALOGS && count%1000 == 0)
+        {
+            rt_printf("returning output: %s\n", bla.str().c_str());
+        }
+
         return output_.get<TYPE_INDEX>();
     }
     void wait_for_output(unsigned output_index)
@@ -616,7 +584,7 @@ private:
     std::shared_ptr<XenomaiCanBus> can_bus_;
 
 
-
+    RT_TASK rt_task_;
 
     Output output_;
 
@@ -646,7 +614,7 @@ public:
         output_.set<CURRENTS>(stamped_default_measurement);
         output_.set<POSITIONS>(stamped_default_measurement);
         output_.set<VELOCITIES>(stamped_default_measurement);
-        output_.set<ANALOGS>(stamped_default_measurement);
+        output_.set<ANALOGS>(StampedData<Eigen::Vector2d>(Eigen::Vector2d(0.5, 0.5), -1, -1));
 
         output_.set<ENCODER0>(StampedData<double>(0, -1, -1));
         output_.set<ENCODER1>(StampedData<double>(0, -1, -1));
@@ -661,6 +629,9 @@ public:
         output_.set<STATUS>(
                     StampedData<_BLMC_StatusMsg_t_>(default_status_message,
                                                     -1, -1));
+
+
+        rt_task_ = start_thread(&Board::loop, this);
     }
 
     /// private methods ========================================================
@@ -704,14 +675,25 @@ private:
         return can_bus_->input_send_can_frame(can_frame);
     }
 
+    static void loop(void* instance_pointer)
+    {
+        ((Board*)(instance_pointer))->loop();
+    }
 
     void loop()
     {
+
         while(true)
         {
+
+
             // get latest can frame --------------------------------------------
 
             can_bus_->output_wait_for_any();
+
+
+
+
             auto stamped_can_frame = can_bus_->output_get_can_frame();
             auto can_frame = stamped_can_frame.get_data();
 
