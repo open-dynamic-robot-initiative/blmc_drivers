@@ -365,9 +365,9 @@ public:
     /// private attributes and methods =============================================
 private:
     // attributes --------------------------------------------------------------
-    OldThreadsafeObject<CanConnection> connection_info_;
-    OldThreadsafeObject<StampedFrame> output_;
-    OldThreadsafeObject<StampedFrame> input_;
+    ThreadsafeObject<CanConnection> connection_info_;
+    ThreadsafeObject<StampedFrame> output_;
+    ThreadsafeObject<StampedFrame> input_;
 
     // methods -----------------------------------------------------------------
     static void loop(void* instance_pointer)
@@ -377,8 +377,8 @@ private:
 
     void loop()
     {
-        TimeLogger<100> loop_time_logger("can bus loop", 4000);
-        TimeLogger<100> receive_time_logger("receive", 4000);
+        Timer<100> loop_time_logger("can bus loop", 4000);
+        Timer<100> receive_time_logger("receive", 4000);
 
         while (true)
         {
@@ -395,7 +395,7 @@ private:
             output_.set<0>(StampedData<CanFrame>(
                                frame,
                                output_.get<0>().get_id() + 1,
-                               TimeLogger<1>::current_time_ms()));
+                               Timer<1>::current_time_ms()));
 
             loop_time_logger.end_and_start_interval();
         }
@@ -526,7 +526,7 @@ public:
         COMMAND
     };
 
-    typedef OldThreadsafeObject<
+    typedef ThreadsafeObject<
     StampedData<Eigen::Vector2d>,
     StampedData<MotorboardCommand>> Input;
 
@@ -541,7 +541,7 @@ public:
         ENCODER1,
         STATUS };
 
-    typedef OldThreadsafeObject<
+    typedef ThreadsafeObject<
     StampedVector,
     StampedData<Eigen::Vector2d>,
     StampedData<Eigen::Vector2d>,
@@ -1044,7 +1044,7 @@ public:
 
     void loop()
     {
-        TimeLogger<10> time_logger("controller", 1000);
+        Timer<10> time_logger("controller", 1000);
         while(true)
         {
             double current_target = 2 * (analog_sensor_->get_latest_analogs() - 0.5);

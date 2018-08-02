@@ -184,8 +184,8 @@ public:
 
     void loop()
     {
-        TimeLogger<100> loop_time_logger("can bus loop", 4000);
-        TimeLogger<100> receive_time_logger("receive", 4000);
+        Timer<100> loop_time_logger("can bus loop", 4000);
+        Timer<100> receive_time_logger("receive", 4000);
 
 
         while (true) {
@@ -613,7 +613,7 @@ public:
 
     void loop()
     {
-        TimeLogger<10> time_logger("controller", 1000);
+        Timer<10> time_logger("controller", 1000);
         while(true)
         {
             double current_target = 2 * (analog_sensor_->get_analog_measurement() - 0.5);

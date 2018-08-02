@@ -14,7 +14,7 @@ const int DATA_LENGTH = 10000;
 
 const int OUTPUT_COUNT = 5;
 
-const double RATE_MS = 0.01;
+const double RATE_MS = 0.000001;
 
 
 typedef int Type0;
@@ -41,11 +41,12 @@ void input_function(void* void_ptr)
     ThreadsafeObjectType* threadsafe_object_ptr =
             static_cast<ThreadsafeObjectType*>(void_ptr);
 
-    TimeLogger<100> logger("input " + std::to_string(INDEX));
+    Timer<100> logger("input " + std::to_string(INDEX));
 
     for(size_t i = 0; i < DATA_LENGTH; i++)
     {
-        rt_task_sleep(int(RATE_MS * 1000000.));
+//        Timer<>::sleep_ms(RATE_MS);
+//        rt_task_sleep(int(RATE_MS * 1000000.));
 
         threadsafe_object_ptr->template set<INDEX>(
                     std::get<INDEX>(input_data)[i]);
@@ -64,7 +65,7 @@ void output_function(void * void_ptr)
     ThreadsafeObjectType* threadsafe_object_ptr =
             static_cast<ThreadsafeObjectType*>(void_ptr);
 
-    TimeLogger<100> logger("output " + std::to_string(DATA_INDEX) +
+    Timer<100> logger("output " + std::to_string(DATA_INDEX) +
                            ", " + std::to_string(OUTPUT_INDEX));
 
 
@@ -86,7 +87,7 @@ void complete_output_function(void * void_ptr)
     ThreadsafeObjectType* threadsafe_object_ptr =
             static_cast<ThreadsafeObjectType*>(void_ptr);
 
-    TimeLogger<100> logger("complete output " + std::to_string(OUTPUT_INDEX));
+    Timer<100> logger("complete output " + std::to_string(OUTPUT_INDEX));
 
     int i_0, i_1, i_2, i_3 = 0;
     for(size_t i = 0; i < 4 * DATA_LENGTH; i++)
@@ -203,7 +204,7 @@ void initialize_data_randomly()
 
 TEST(threadsafe_object, single_input_multi_output)
 {
-    typedef OldThreadsafeObject<Type0, Type1, Type2, Type3> TestType1;
+    typedef ThreadsafeObject<Type0, Type1, Type2, Type3> TestType1;
     TestType1 test_object_1;
 
     initialize_data_randomly();
@@ -264,69 +265,5 @@ TEST(threadsafe_object, single_input_multi_output)
     EXPECT_FALSE(input_data == output_data[0]);
 }
 
-
-
-TEST(new_threadsafe_object, singleton)
-{
-    typedef ThreadsafeObjects<Type0, Type1, Type2, Type3> TestType1;
-    TestType1 test_object_1;
-
-    initialize_data_randomly();
-
-    // start a thread for each output and input function ----------
-    mlockall(MCL_CURRENT | MCL_FUTURE);
-    rt_print_auto_init(1);
-
-    start_thread(output_function<0,0,TestType1>, &test_object_1);
-    start_thread(output_function<0,1,TestType1>, &test_object_1);
-    start_thread(output_function<0,2,TestType1>, &test_object_1);
-    start_thread(output_function<0,3,TestType1>, &test_object_1);
-
-    start_thread(output_function<1,0,TestType1>, &test_object_1);
-    start_thread(output_function<1,1,TestType1>, &test_object_1);
-    start_thread(output_function<1,2,TestType1>, &test_object_1);
-    start_thread(output_function<1,3,TestType1>, &test_object_1);
-
-    start_thread(output_function<2,0,TestType1>, &test_object_1);
-    start_thread(output_function<2,1,TestType1>, &test_object_1);
-    start_thread(output_function<2,2,TestType1>, &test_object_1);
-    start_thread(output_function<2,3,TestType1>, &test_object_1);
-
-    start_thread(output_function<3,0,TestType1>, &test_object_1);
-    start_thread(output_function<3,1,TestType1>, &test_object_1);
-    start_thread(output_function<3,2,TestType1>, &test_object_1);
-    start_thread(output_function<3,3,TestType1>, &test_object_1);
-
-//    start_thread(complete_output_function<4, TestType1>, &test_object_1);
-
-
-    usleep(1000);
-
-    auto task_1 = start_thread(input_function<0, TestType1>, &test_object_1);
-    auto task_2 = start_thread(input_function<1, TestType1>, &test_object_1);
-    auto task_3 = start_thread(input_function<2, TestType1>, &test_object_1);
-    auto task_4 = start_thread(input_function<3, TestType1>, &test_object_1);
-
-    rt_task_join(&task_1);
-    rt_task_join(&task_2);
-    rt_task_join(&task_3);
-    rt_task_join(&task_4);
-
-    usleep(1000000);
-
-    // check that the outputs written by the individual threads
-    // correspond to the input.
-    EXPECT_TRUE(input_data == output_data[0]);
-    EXPECT_TRUE(input_data == output_data[1]);
-    EXPECT_TRUE(input_data == output_data[2]);
-    EXPECT_TRUE(input_data == output_data[3]);
-    EXPECT_TRUE(input_data == output_data[4]);
-
-
-
-    // sanity check
-    std::get<1>(input_data)[0](1,1) = 33.;
-    EXPECT_FALSE(input_data == output_data[0]);
-}
 
 

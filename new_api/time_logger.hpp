@@ -9,7 +9,7 @@
 
 
 
-template<unsigned LENGTH> class TimeLogger
+template<unsigned LENGTH=1> class Timer
 {
 private:
     double min_interval_;
@@ -26,7 +26,7 @@ private:
     std::string name_;
 
 public:
-    TimeLogger(std::string name = "time logger", long unsigned print_period = 0)
+    Timer(std::string name = "time logger", long unsigned print_period = 0)
     {
         min_interval_ = std::numeric_limits<double>::max();
         max_interval_ = std::numeric_limits<double>::min();
@@ -121,6 +121,11 @@ public:
     static double current_time_ms()
     {
         return double(rt_timer_read()) / 1000000.;
+    }
+
+    static void sleep_ms(const double& sleep_time_ms)
+    {
+        rt_task_sleep(int(sleep_time_ms * 1000000.));
     }
 
 private:
