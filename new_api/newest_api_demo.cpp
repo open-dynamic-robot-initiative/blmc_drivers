@@ -113,9 +113,6 @@ public:
     std::array<uint8_t, 8> data;
     uint8_t dlc;
     can_id_t id;
-    nanosecs_abs_t timestamp;
-    // \todo: do we need this?
-    int recv_ifindex;
 };
 
 // new class created to replace _CAN_CanConnection_t_,
@@ -133,42 +130,42 @@ public:
 
 template<typename DataType> class StampedData
 {
+    /// public interface ===========================================================
 public:
+    // getters -----------------------------------------------------------------
+    const DataType& get_data() const
+    {
+        return data_;
+    }
+    const size_t& get_id() const
+    {
+        return id_;
+    }
+    const double& get_time_stamp() const
+    {
+        return time_stamp_;
+    }
+
+    // setter ------------------------------------------------------------------
+    void set_data(const DataType& data)
+    {
+        data_ = data;
+    }
+
+    // constructors ------------------------------------------------------------
     StampedData()
     {
         id_ = 0;
         time_stamp_ = 0;
     }
-    StampedData(const DataType& data, const size_t& id, const double& time_stamp)
-    {
-        data_ = data;
-        id_ = id;
-        time_stamp_ = time_stamp;
-    }
+    StampedData(const DataType& data,
+                const size_t& id,
+                const double& time_stamp):
+        data_(data),
+        id_(id),
+        time_stamp_(time_stamp) {  }
 
-    DataType get_data()
-    {
-        return data_;
-    }
-
-    /// \todo: rename to get_id
-    size_t get_id()
-    {
-        return id_;
-    }
-
-    double get_time_stamp()
-    {
-        return time_stamp_;
-    }
-
-
-    void set_data(DataType data)
-    {
-        data_ = data;
-    }
-
-
+    /// private data ===============================================================
 private:
     DataType data_;
     size_t id_;
@@ -231,64 +228,76 @@ RT_TASK start_thread(void (*function)(void *cookie), void *argument=NULL)
 ///  send(bla, input_id)
 
 
-/// >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-class XenomaiCanBus
+
+
+// This interface allows to communicate with the can bus. It has one input
+// (can_frame) and one output (can_frame).
+class CanbusInterface
 {
-private:
-    RT_TASK rt_task_;
-
-    CanConnection can_connection_;
-    RT_MUTEX can_connection_mutex_;
-
-    typedef OldThreadsafeObject<StampedData<CanFrame>> Output;
-    typedef OldThreadsafeObject<StampedData<CanFrame>> Input;
-
-
-    Output output_;
-    Input input_;
-
-
-    // send and get ============================================================
+    /// public interface ===========================================================
 public:
+    typedef StampedData<CanFrame> StampedFrame;
 
     // get output data ---------------------------------------------------------
-    StampedData<CanFrame> output_get_can_frame()
+    virtual StampedFrame output_get_can_frame() const = 0;
+    virtual void output_wait_for_can_frame() const = 0;
+    virtual size_t output_wait_for_any() const = 0;
+
+    // get input data ----------------------------------------------------------
+    virtual StampedFrame input_get_can_frame() const = 0;
+    virtual void input_wait_for_can_frame() const = 0;
+    virtual size_t input_wait_for_any() const = 0;
+
+    // send input data ---------------------------------------------------------
+    virtual void input_send_can_frame(const StampedFrame& stamped_can_frame) = 0;
+};
+
+
+
+class XenomaiCanbus: public CanbusInterface
+{
+    /// public interface ===========================================================
+public:
+    typedef StampedData<CanFrame> StampedFrame;
+
+    // get output data ---------------------------------------------------------
+    StampedFrame output_get_can_frame() const
     {
         return output_.get();
     }
-    void output_wait_for_can_frame()
+    void output_wait_for_can_frame() const
     {
         output_.wait_for_update();
     }
-    size_t output_wait_for_any()
+
+    size_t output_wait_for_any() const
     {
         return output_.wait_for_update();
     }
 
     // get input data ----------------------------------------------------------
-    StampedData<CanFrame> input_get_can_frame()
+    StampedFrame input_get_can_frame() const
     {
         return input_.get();
     }
-    void input_wait_for_can_frame()
+    void input_wait_for_can_frame() const
     {
         input_.wait_for_update();
     }
-    size_t input_wait_for_any()
+
+    size_t input_wait_for_any() const
     {
         return input_.wait_for_update();
     }
 
-    // send data ---------------------------------------------------------------
-    void send_can_frame(StampedData<CanFrame> stamped_can_frame)
+    // send input data ---------------------------------------------------------
+    void input_send_can_frame(const StampedFrame& stamped_can_frame)
     {
         input_.set(stamped_can_frame);
 
         // get address ---------------------------------------------------------
-        rt_mutex_acquire(&can_connection_mutex_, TM_INFINITE);
-        int socket = can_connection_.socket;
-        struct sockaddr_can address = can_connection_.send_addr;
-        rt_mutex_release(&can_connection_mutex_);
+        int socket = connection_info_.get().socket;
+        struct sockaddr_can address = connection_info_.get().send_addr;
 
 
         auto unstamped_can_frame = stamped_can_frame.get_data();
@@ -315,11 +324,9 @@ public:
         }
     }
 
-    // constructor and destructor ==============================================
-public: 
-    XenomaiCanBus(std::string can_interface_name)
+    // constructor and destructor ----------------------------------------------
+    XenomaiCanbus(std::string can_interface_name)
     {
-        rt_mutex_create(&can_connection_mutex_, NULL);
 
         // setup can connection --------------------------------
         // \todo get rid of old format stuff
@@ -334,15 +341,20 @@ public:
 
         // \todo:how do we make sure that can connection is closed when we close
         //        can_connections.push_back(can_connection_old_format);
-        can_connection_.send_addr = can_connection_old_format.send_addr;
-        can_connection_.socket = can_connection_old_format.socket;
+
+        CanConnection can_connection;
+
+        can_connection.send_addr = can_connection_old_format.send_addr;
+        can_connection.socket = can_connection_old_format.socket;
+
+        connection_info_.set(can_connection);
 
 
-        rt_task_ = start_thread(&XenomaiCanBus::loop, this);
+        start_thread(&XenomaiCanbus::loop, this);
     }
-    virtual ~XenomaiCanBus()
+    virtual ~XenomaiCanbus()
     {
-        int ret = rt_dev_close(can_connection_.socket);
+        int ret = rt_dev_close(connection_info_.get().socket);
         if (ret)
         {
             rt_fprintf(stderr, "rt_dev_close: %s\n", strerror(-ret));
@@ -350,16 +362,21 @@ public:
         }
     }
 
-    // private =================================================================
+    /// private attributes and methods =============================================
 private:
+    // attributes --------------------------------------------------------------
+    OldThreadsafeObject<CanConnection> connection_info_;
+    OldThreadsafeObject<StampedFrame> output_;
+    OldThreadsafeObject<StampedFrame> input_;
+
+    // methods -----------------------------------------------------------------
     static void loop(void* instance_pointer)
     {
-        ((XenomaiCanBus*)(instance_pointer))->loop();
+        ((XenomaiCanbus*)(instance_pointer))->loop();
     }
 
     void loop()
     {
-
         TimeLogger<100> loop_time_logger("can bus loop", 4000);
         TimeLogger<100> receive_time_logger("receive", 4000);
 
@@ -376,9 +393,9 @@ private:
 
 
             output_.set<0>(StampedData<CanFrame>(
-                                  frame,
-                                  output_.get<0>().get_id() + 1,
-                                  TimeLogger<1>::current_time()));
+                               frame,
+                               output_.get<0>().get_id() + 1,
+                               TimeLogger<1>::current_time_ms()));
 
             loop_time_logger.end_and_start_interval();
         }
@@ -386,9 +403,7 @@ private:
 
     CanFrame receive_frame()
     {
-        rt_mutex_acquire(&can_connection_mutex_, TM_INFINITE);
-        int socket = can_connection_.socket;
-        rt_mutex_release(&can_connection_mutex_);
+        int socket = connection_info_.get().socket;
 
         // data we want to obtain ----------------------------------------------
         can_frame_t can_frame;
@@ -432,8 +447,6 @@ private:
         {
             out_frame.data[i] = can_frame.data[i];
         }
-        out_frame.timestamp = timestamp;
-        out_frame.recv_ifindex = message_address.can_ifindex;
 
         return out_frame;
     }
@@ -455,11 +468,11 @@ private:
 class MotorboardCommand
 {
 public:
-
     MotorboardCommand()
     {
 
     }
+
 
     MotorboardCommand(uint32_t id, int32_t content)
     {
@@ -529,7 +542,7 @@ public:
         STATUS };
 
     typedef OldThreadsafeObject<
-    StampedData<Eigen::Vector2d>,
+    StampedVector,
     StampedData<Eigen::Vector2d>,
     StampedData<Eigen::Vector2d>,
     StampedData<Eigen::Vector2d>,
@@ -539,6 +552,7 @@ public:
 
 
 public:
+    // input functions ---------------------------------------------------------
     StampedVector input_get_current_targets()
     {
         return input_.get<CURRENT_TARGETS>();
@@ -562,7 +576,7 @@ public:
         return input_.wait_for_update();
     }
 
-
+    // output functions --------------------------------------------------------
     StampedVector output_get_currents()
     {
         return output_.get<CURRENTS>();
@@ -580,6 +594,15 @@ public:
         return output_.get<ANALOGS>();
     }
 
+    StampedVector output_get_encoders()
+    {
+        Eigen::Vector2d encoder_values(output_.get<ENCODER0>().get_data(),
+                                       output_.get<ENCODER1>().get_data());
+
+        return StampedVector(encoder_values,
+                             output_.get<ENCODER0>().get_time_stamp(),
+                             output_.get<ENCODER0>().get_id());
+    }
 
     StampedScalar output_get_encoder_0()
     {
@@ -611,6 +634,19 @@ public:
     {
         output_.wait_for_update(ANALOGS);
     }
+    void output_wait_for_encoders()
+    {
+        bool updated_0 = false;
+        bool updated_1 = false;
+
+        do
+        {
+            size_t updated_index = output_.wait_for_update();
+            if(updated_index == ENCODER0) updated_0 = true;
+            if(updated_index == ENCODER1) updated_1 = true;
+        }
+        while(!(updated_0 && updated_1));
+    }
     void output_wait_for_encoder_0()
     {
         output_.wait_for_update(ENCODER0);
@@ -633,11 +669,11 @@ public:
 
 
 
-    void send_command(MotorboardCommand command)
+    void input_send_command(const StampedCommand& command)
     {
 
-        uint32_t id = command.id_;
-        int32_t content = command.content_;
+        uint32_t id = command.get_data().id_;
+        int32_t content = command.get_data().content_;
 
 
         uint8_t data[8];
@@ -662,35 +698,35 @@ public:
         }
         can_frame.dlc = 8;
 
-        can_bus_->send_can_frame(StampedData<CanFrame>(can_frame, -1, -1));
+        can_bus_->input_send_can_frame(StampedData<CanFrame>(can_frame, -1, -1));
     }
 
-    void send_current_target(double current, unsigned motor_id)
+    void input_send_current_target(double current, unsigned motor_id)
     {
         rt_mutex_acquire(&current_targets_mutex_, TM_INFINITE);
         Eigen::Vector2d current_targets = current_targets_;
         rt_mutex_release(&current_targets_mutex_);
 
         current_targets[id_to_index(motor_id)] = current;
-        send_current_targets(current_targets);
+        input_send_current_targets(current_targets);
     }
 
     // todo: this should go away
     void enable()
     {
-        send_command(MotorboardCommand(MotorboardCommand::IDs::ENABLE_SYS,
-                             MotorboardCommand::Contents::ENABLE));
-        send_command(MotorboardCommand(MotorboardCommand::IDs::SEND_ALL,
-                             MotorboardCommand::Contents::ENABLE));
-        send_command(MotorboardCommand(MotorboardCommand::IDs::ENABLE_MTR1,
-                             MotorboardCommand::Contents::ENABLE));
-        send_command(MotorboardCommand(MotorboardCommand::IDs::ENABLE_MTR2,
-                             MotorboardCommand::Contents::ENABLE));
+        input_send_command(StampedCommand(MotorboardCommand(MotorboardCommand::IDs::ENABLE_SYS,
+                                                            MotorboardCommand::Contents::ENABLE),-1,-1));
+        input_send_command(StampedCommand(MotorboardCommand(MotorboardCommand::IDs::SEND_ALL,
+                                                            MotorboardCommand::Contents::ENABLE),-1,-1));
+        input_send_command(StampedCommand(MotorboardCommand(MotorboardCommand::IDs::ENABLE_MTR1,
+                                                            MotorboardCommand::Contents::ENABLE),-1,-1));
+        input_send_command(StampedCommand(MotorboardCommand(MotorboardCommand::IDs::ENABLE_MTR2,
+                                                            MotorboardCommand::Contents::ENABLE),-1,-1));
     }
 
     /// private members ========================================================
 private:
-    std::shared_ptr<XenomaiCanBus> can_bus_;
+    std::shared_ptr<XenomaiCanbus> can_bus_;
 
 
     RT_TASK rt_task_;
@@ -710,7 +746,7 @@ private:
 
     /// constructor ============================================================
 public:
-    XenomaiCanMotorboard(std::shared_ptr<XenomaiCanBus> can_bus): can_bus_(can_bus)
+    XenomaiCanMotorboard(std::shared_ptr<XenomaiCanbus> can_bus): can_bus_(can_bus)
     {
         rt_mutex_create(&data_mutex_, NULL);
         rt_mutex_create(&current_targets_mutex_, NULL);
@@ -747,7 +783,7 @@ public:
 
     /// private methods ========================================================
 private:
-    void send_current_targets(Eigen::Vector2d currents)
+    void input_send_current_targets(Eigen::Vector2d currents)
     {
         rt_mutex_acquire(&current_targets_mutex_, TM_INFINITE);
         current_targets_ = currents;
@@ -783,7 +819,7 @@ private:
         }
         can_frame.dlc = 8;
 
-        return can_bus_->send_can_frame(StampedData<CanFrame>(can_frame, -1, -1));
+        return can_bus_->input_send_can_frame(StampedData<CanFrame>(can_frame, -1, -1));
     }
 
     static void loop(void* instance_pointer)
@@ -942,7 +978,7 @@ public:
 
     void set_current_target(double current_target)
     {
-        board_->send_current_target(current_target, motor_id_);
+        board_->input_send_current_target(current_target, motor_id_);
     }
 };
 
@@ -1047,8 +1083,8 @@ int main(int argc, char **argv)
 
 
     // create bus and boards -------------------------------------------------
-    auto can_bus1 = std::make_shared<XenomaiCanBus>("rtcan0");
-    auto can_bus2 = std::make_shared<XenomaiCanBus>("rtcan1");
+    auto can_bus1 = std::make_shared<XenomaiCanbus>("rtcan0");
+    auto can_bus2 = std::make_shared<XenomaiCanbus>("rtcan1");
     auto board1 = std::make_shared<XenomaiCanMotorboard>(can_bus1);
     auto board2 = std::make_shared<XenomaiCanMotorboard>(can_bus2);
 

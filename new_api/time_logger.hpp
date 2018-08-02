@@ -41,13 +41,14 @@ public:
         name_ = name;
     }
 
+    // timing functionality ----------------------------------------------------
     void start_interval(double interval_start)
     {
         interval_start_ = interval_start;
     }
     void start_interval()
     {
-        start_interval(current_time());
+        start_interval(current_time_ms());
     }
 
     void end_interval(double interval_end)
@@ -64,22 +65,17 @@ public:
     }
     void end_interval()
     {
-        end_interval(current_time());
+        end_interval(current_time_ms());
     }
 
     void end_and_start_interval()
     {
-        double time = current_time();
+        double time = current_time_ms();
         end_interval(time);
         start_interval(time);
     }
 
-    // getters ----------------------------------------------------------
-    static double current_time()
-    {
-        return double(rt_timer_read()) / 1000000.;
-    }
-
+    // getters -----------------------------------------------------------------
     double max_interval() const
     {
         if(count_ < LENGTH)
@@ -89,7 +85,6 @@ public:
 
         return max_interval_;
     }
-
     double min_interval() const
     {
         if(count_ < LENGTH)
@@ -99,7 +94,6 @@ public:
 
         return min_interval_;
     }
-
     double avg_interval() const
     {
         if(count_ < LENGTH)
@@ -109,7 +103,12 @@ public:
 
         return total_interval_ / double(LENGTH);
     }
+    long unsigned count() const
+    {
+        return count_;
+    }
 
+    // operating system specific functions -------------------------------------
     void print_status() const
     {
         rt_printf("%s --------------------------------\n", name_.c_str());
@@ -119,9 +118,9 @@ public:
 
     }
 
-    long unsigned count() const
+    static double current_time_ms()
     {
-        return count_;
+        return double(rt_timer_read()) / 1000000.;
     }
 
 private:

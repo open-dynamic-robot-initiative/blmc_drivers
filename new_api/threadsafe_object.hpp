@@ -402,7 +402,7 @@ public:
         *total_modification_count_ = 0;
     }
 
-    template<int INDEX=0> Type<INDEX> get()
+    template<int INDEX=0> Type<INDEX> get() const
     {
         std::unique_lock<Mutex> lock((*data_mutexes_)[INDEX]);
         return std::get<INDEX>(*data_);
@@ -410,6 +410,8 @@ public:
 
     template<int INDEX=0> void set(Type<INDEX> datum)
     {
+        //// \todo: we should probably add a very small wait here, to avoid the possiblity
+        /// of missing messages.
         // set datum in our data_ member ---------------------------------------
         {
             std::unique_lock<Mutex> lock((*data_mutexes_)[INDEX]);
@@ -425,7 +427,7 @@ public:
         }
     }
 
-    void wait_for_update(unsigned index)
+    void wait_for_update(unsigned index) const
     {
         std::unique_lock<Mutex> lock(*condition_mutex_);
 
@@ -447,12 +449,12 @@ public:
         }
     }
 
-    template< unsigned INDEX=0> void wait_for_update()
+    template< unsigned INDEX=0> void wait_for_update() const
     {
         wait_for_update(INDEX);
     }
 
-    size_t wait_for_update()
+    size_t wait_for_update() const
     {
         std::unique_lock<Mutex> lock(*condition_mutex_);
 
