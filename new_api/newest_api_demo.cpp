@@ -234,7 +234,6 @@ RT_TASK start_thread(void (*function)(void *cookie), void *argument=NULL)
 // (can_frame) and one output (can_frame).
 class CanbusInterface
 {
-    /// public interface ===========================================================
 public:
     typedef StampedData<CanFrame> StampedFrame;
 
@@ -250,6 +249,8 @@ public:
 
     // send input data ---------------------------------------------------------
     virtual void input_send_can_frame(const StampedFrame& stamped_can_frame) = 0;
+
+    virtual ~CanbusInterface() {}
 };
 
 
@@ -510,128 +511,231 @@ public:
 
 
 
-class XenomaiCanMotorboard
+
+class MotorboardInterface
 {
-    /// public interface =======================================================
 public:
-    typedef StampedData<Eigen::Vector2d> StampedVector;
     typedef StampedData<double> StampedScalar;
     typedef StampedData<MotorboardCommand> StampedCommand;
     typedef StampedData<_BLMC_StatusMsg_t_> StampedStatus;
 
-
-
     enum InputNames {
-        CURRENT_TARGETS,
+        CURRENT_TARGET_A,
+        CURRENT_TARGET_B,
         COMMAND
     };
 
-    typedef ThreadsafeObject<
-    StampedVector,
-    StampedCommand> Input;
-
-
     enum OutputNames {
-        CURRENTS,
-        POSITIONS,
-        VELOCITIES,
-        ANALOGS,
-        ENCODERS,
-        STATUS };
-
-    typedef ThreadsafeObject<
-    StampedVector,
-    StampedVector,
-    StampedVector,
-    StampedVector,
-    StampedVector,
-    StampedStatus > Output;
-
+        CURRENT_A,
+        CURRENT_B,
+        POSITION_A,
+        POSITION_B,
+        VELOCITY_A,
+        VELOCITY_B,
+        ANALOG_A,
+        ANALOG_B,
+        ENCODER_A,
+        ENCODER_B,
+        STATUS};
 
 public:
-    // input functions ---------------------------------------------------------
-    StampedVector input_get_current_targets()
-    {
-        return input_.get<CURRENT_TARGETS>();
-    }
-    StampedCommand input_get_command()
-    {
-        return input_.get<COMMAND>();
-    }
+    // get output data ---------------------------------------------------------
+    virtual StampedScalar output_get_current_a() const = 0;
+    virtual StampedScalar output_get_current_b() const = 0;
+    virtual StampedScalar output_get_position_a() const = 0;
+    virtual StampedScalar output_get_position_b() const = 0;
+    virtual StampedScalar output_get_velocity_a() const = 0;
+    virtual StampedScalar output_get_velocity_b() const = 0;
+    virtual StampedScalar output_get_analog_a() const = 0;
+    virtual StampedScalar output_get_analog_b() const = 0;
+    virtual StampedScalar output_get_encoder_a() const = 0;
+    virtual StampedScalar output_get_encoder_b() const = 0;
+    virtual StampedStatus output_get_status() const = 0;
 
-    void input_wait_for_current_targets()
-    {
-        input_.wait_for_update(CURRENT_TARGETS);
-    }
-    void input_wait_for_command()
-    {
-        input_.wait_for_update(COMMAND);
-    }
+    virtual void output_wait_for_current_a() const = 0;
+    virtual void output_wait_for_current_b() const = 0;
+    virtual void output_wait_for_position_a() const = 0;
+    virtual void output_wait_for_position_b() const = 0;
+    virtual void output_wait_for_velocity_a() const = 0;
+    virtual void output_wait_for_velocity_b() const = 0;
+    virtual void output_wait_for_analog_a() const = 0;
+    virtual void output_wait_for_analog_b() const = 0;
+    virtual void output_wait_for_encoder_a() const = 0;
+    virtual void output_wait_for_encoder_b() const = 0;
+    virtual void output_wait_for_status() const = 0;
 
-    size_t input_wait_for_any()
-    {
-        return input_.wait_for_update();
-    }
+    virtual size_t output_wait_for_any() const = 0;
 
-    // output functions --------------------------------------------------------
-    StampedVector output_get_currents()
+    // get input data ----------------------------------------------------------
+    virtual StampedScalar input_get_current_target_a() const = 0;
+    virtual StampedScalar input_get_current_target_b() const = 0;
+    virtual StampedCommand input_get_command() const = 0;
+
+    virtual void input_wait_for_current_target_a() const = 0;
+    virtual void input_wait_for_current_target_b() const = 0;
+    virtual void input_wait_for_command() const = 0;
+
+    virtual size_t input_wait_for_any() const = 0;
+
+    // send input data ---------------------------------------------------------
+    virtual void input_send_current_target_a(StampedScalar current_target) = 0;
+    virtual void input_send_current_target_b(StampedScalar current_target) = 0;
+    virtual void input_send_command(const StampedCommand& command) = 0;
+
+    virtual ~MotorboardInterface() {}
+};
+
+
+
+
+
+
+
+
+
+
+class XenomaiCanMotorboard: public MotorboardInterface
+{
+    /// public interface =======================================================
+public:
+    // get output data ---------------------------------------------------------
+    StampedScalar output_get_current_a() const
     {
-        return output_.get<CURRENTS>();
+        return output_.get<CURRENT_A>();
     }
-    StampedVector output_get_positions()
+    StampedScalar output_get_current_b() const
     {
-        return output_.get<POSITIONS>();
+        return output_.get<CURRENT_B>();
     }
-    StampedVector output_get_velocities()
+    StampedScalar output_get_position_a() const
     {
-        return output_.get<VELOCITIES>();
+        return output_.get<POSITION_A>();
     }
-    StampedVector output_get_analogs()
+    StampedScalar output_get_position_b() const
     {
-        return output_.get<ANALOGS>();
+        return output_.get<POSITION_B>();
     }
-    StampedVector output_get_encoders()
+    StampedScalar output_get_velocity_a() const
     {
-        return output_.get<ENCODERS>();
+        return output_.get<VELOCITY_A>();
     }
-    StampedStatus output_get_status()
+    StampedScalar output_get_velocity_b() const
+    {
+        return output_.get<VELOCITY_B>();
+    }
+    StampedScalar output_get_analog_a() const
+    {
+        return output_.get<ANALOG_A>();
+    }
+    StampedScalar output_get_analog_b() const
+    {
+        return output_.get<ANALOG_B>();
+    }
+    StampedScalar output_get_encoder_a() const
+    {
+        return output_.get<ENCODER_A>();
+    }
+    StampedScalar output_get_encoder_b() const
+    {
+        return output_.get<ENCODER_B>();
+    }
+    StampedStatus output_get_status() const
     {
         return output_.get<STATUS>();
     }
 
-
-    void output_wait_for_currents()
+    void output_wait_for_current_a() const
     {
-        output_.wait_for_update(CURRENTS);
+        output_.wait_for_update(CURRENT_A);
     }
-    void output_wait_for_positions()
+    void output_wait_for_current_b() const
     {
-        output_.wait_for_update(POSITIONS);
+        output_.wait_for_update(CURRENT_B);
     }
-    void output_wait_for_velocities()
+    void output_wait_for_position_a() const
     {
-        output_.wait_for_update(VELOCITIES);
+        output_.wait_for_update(POSITION_A);
     }
-    void output_wait_for_analogs()
+    void output_wait_for_position_b() const
     {
-        output_.wait_for_update(ANALOGS);
+        output_.wait_for_update(POSITION_B);
     }
-    void output_wait_for_encoders()
+    void output_wait_for_velocity_a() const
     {
-        output_.wait_for_update(ENCODERS);
+        output_.wait_for_update(VELOCITY_A);
     }
-    void output_wait_for_status()
+    void output_wait_for_velocity_b() const
+    {
+        output_.wait_for_update(VELOCITY_B);
+    }
+    void output_wait_for_analog_a() const
+    {
+        output_.wait_for_update(ANALOG_A);
+    }
+    void output_wait_for_analog_b() const
+    {
+        output_.wait_for_update(ANALOG_B);
+    }
+    void output_wait_for_encoder_a() const
+    {
+        output_.wait_for_update(ENCODER_A);
+    }
+    void output_wait_for_encoder_b() const
+    {
+        output_.wait_for_update(ENCODER_B);
+    }
+    void output_wait_for_status() const
     {
         output_.wait_for_update(STATUS);
     }
 
-    size_t output_wait_for_any()
+    size_t output_wait_for_any() const
     {
         return output_.wait_for_update();
     }
 
+    // get input data ----------------------------------------------------------
+    StampedScalar input_get_current_target_a() const
+    {
+        return input_.get<CURRENT_TARGET_A>();
+    }
+    StampedScalar input_get_current_target_b() const
+    {
+        return input_.get<CURRENT_TARGET_B>();
+    }
+    StampedCommand input_get_command() const
+    {
+        return input_.get<COMMAND>();
+    }
 
+    void input_wait_for_current_target_a() const
+    {
+        input_.wait_for_update(CURRENT_TARGET_A);
+    }
+    void input_wait_for_current_target_b() const
+    {
+        input_.wait_for_update(CURRENT_TARGET_B);
+    }
+    void input_wait_for_command() const
+    {
+        input_.wait_for_update(COMMAND);
+    }
 
+    size_t input_wait_for_any() const
+    {
+        return input_.wait_for_update();
+    }
+
+    // send input data ---------------------------------------------------------
+    void input_send_current_target_a(StampedScalar current_target)
+    {
+        input_send_current_target(current_target.get_data(), 0);
+    }
+
+    void input_send_current_target_b(StampedScalar current_target)
+    {
+        input_send_current_target(current_target.get_data(), 1);
+    }
 
 
     void input_send_command(const StampedCommand& command)
@@ -663,17 +767,8 @@ public:
         }
         can_frame.dlc = 8;
 
-        can_bus_->input_send_can_frame(StampedData<CanFrame>(can_frame, -1, -1));
-    }
-
-    void input_send_current_target(double current, unsigned motor_id)
-    {
-        rt_mutex_acquire(&current_targets_mutex_, TM_INFINITE);
-        Eigen::Vector2d current_targets = current_targets_;
-        rt_mutex_release(&current_targets_mutex_);
-
-        current_targets[id_to_index(motor_id)] = current;
-        input_send_current_targets(current_targets);
+        can_bus_->input_send_can_frame(StampedData<CanFrame>(can_frame,
+                                                             -1, -1));
     }
 
     // todo: this should go away
@@ -696,9 +791,23 @@ private:
 
     RT_TASK rt_task_;
 
-    Input input_;
+    ThreadsafeObject<
+        StampedScalar,
+        StampedScalar,
+        StampedCommand> input_;
 
-    Output output_;
+    ThreadsafeObject<
+    StampedScalar,
+    StampedScalar,
+    StampedScalar,
+    StampedScalar,
+    StampedScalar,
+    StampedScalar,
+    StampedScalar,
+    StampedScalar,
+    StampedScalar,
+    StampedScalar,
+    StampedStatus > output_;
 
 
 
@@ -721,13 +830,17 @@ public:
         current_targets_.setZero();
 
         // initialize members ------------------------------------------------------
-        StampedData<Eigen::Vector2d>
-                stamped_default_measurement(Eigen::Vector2d::Zero(), -1, -1);
-        output_.set<CURRENTS>(stamped_default_measurement);
-        output_.set<POSITIONS>(stamped_default_measurement);
-        output_.set<VELOCITIES>(stamped_default_measurement);
-        output_.set<ANALOGS>(StampedData<Eigen::Vector2d>(Eigen::Vector2d(0.5, 0.5), -1, -1));
-        output_.set<ENCODERS>(stamped_default_measurement);
+        StampedScalar stamped_default_measurement(0, -1, -1);
+        output_.set<CURRENT_A>(stamped_default_measurement);
+        output_.set<CURRENT_B>(stamped_default_measurement);
+        output_.set<POSITION_A>(stamped_default_measurement);
+        output_.set<POSITION_B>(stamped_default_measurement);
+        output_.set<VELOCITY_A>(stamped_default_measurement);
+        output_.set<VELOCITY_B>(stamped_default_measurement);
+        output_.set<ANALOG_A>(StampedScalar(0.5, -1, -1));
+        output_.set<ANALOG_B>(StampedScalar(0.5, -1, -1));
+        output_.set<ENCODER_A>(stamped_default_measurement);
+        output_.set<ENCODER_B>(stamped_default_measurement);
 
 
         _BLMC_StatusMsg_t_ default_status_message;
@@ -747,6 +860,17 @@ public:
 
     /// private methods ========================================================
 private:
+
+    void input_send_current_target(double current, unsigned motor_id)
+    {
+        rt_mutex_acquire(&current_targets_mutex_, TM_INFINITE);
+        Eigen::Vector2d current_targets = current_targets_;
+        rt_mutex_release(&current_targets_mutex_);
+
+        current_targets[id_to_index(motor_id)] = current;
+        input_send_current_targets(current_targets);
+    }
+
     void input_send_current_targets(Eigen::Vector2d currents)
     {
         rt_mutex_acquire(&current_targets_mutex_, TM_INFINITE);
@@ -810,45 +934,60 @@ private:
 
             // convert to measurement ------------------------------------------
             Eigen::Vector2d measurement;
-            measurement[0] = QBYTES_TO_FLOAT(can_frame.data.begin());
-            measurement[1] = QBYTES_TO_FLOAT((can_frame.data.begin() + 4));
+            double measurement_a = QBYTES_TO_FLOAT(can_frame.data.begin());
+            double measurement_b =
+                    QBYTES_TO_FLOAT((can_frame.data.begin() + 4));
 
-            StampedData<Eigen::Vector2d>
-                    stamped_measurement(measurement,
-                                        stamped_can_frame.get_id(),
-                                        stamped_can_frame.get_time_stamp());
+            StampedScalar
+                    stamped_measurement_a(measurement_a,
+                                          stamped_can_frame.get_id(),
+                                          stamped_can_frame.get_time_stamp());
+            StampedScalar
+                    stamped_measurement_b(measurement_b,
+                                          stamped_can_frame.get_id(),
+                                          stamped_can_frame.get_time_stamp());
+
+
 
             switch(can_frame.id)
             {
             case BLMC_CAN_ID_Iq:
-                output_.set<CURRENTS>(stamped_measurement);
+                output_.set<CURRENT_A>(stamped_measurement_a);
+                output_.set<CURRENT_B>(stamped_measurement_b);
                 break;
             case BLMC_CAN_ID_POS:
-                output_.set<POSITIONS>(stamped_measurement);
+                output_.set<POSITION_A>(stamped_measurement_a);
+                output_.set<POSITION_B>(stamped_measurement_b);
                 break;
             case BLMC_CAN_ID_SPEED:
-                output_.set<VELOCITIES>(stamped_measurement);
+                output_.set<VELOCITY_A>(stamped_measurement_a);
+                output_.set<VELOCITY_B>(stamped_measurement_b);
                 break;
             case BLMC_CAN_ID_ADC6:
-                output_.set<ANALOGS>(stamped_measurement);
+                output_.set<ANALOG_A>(stamped_measurement_a);
+                output_.set<ANALOG_B>(stamped_measurement_b);
                 break;
             case BLMC_CAN_ID_ENC_INDEX:
             {
-                Eigen::Vector2d encoder_values =
-                        output_.get<ENCODERS>().get_data();
-
+                // here the interpretation of the message is different,
+                // we get a motor index and a measurement
                 uint8_t motor_index = can_frame.data[4];
-                if(!(motor_index == 0 || motor_index == 1))
+                StampedScalar measurement = stamped_measurement_a;
+                if(motor_index == 0)
+                {
+                    output_.set<ENCODER_A>(measurement);
+                }
+                else if(motor_index == 1)
+                {
+                    output_.set<ENCODER_B>(measurement);
+                }
+
+                else
                 {
                     rt_printf("ERROR: Invalid motor number"
                               "for encoder index: %d\n", motor_index);
                     exit(-1);
                 }
-                double new_encoder_value = measurement[0];
-                encoder_values[motor_index] = new_encoder_value;
-
-                stamped_measurement.set_data(encoder_values);
-                output_.set<ENCODERS>(stamped_measurement);
                 break;
             }
             case BLMC_CAN_ID_STATUSMSG:
@@ -897,11 +1036,11 @@ private:
         rt_printf("status: time_stamp = %f, id = %d ---------------\n", status.get_time_stamp(), status.get_id());
         BLMC_printStatus(&status.get_data());
 
-        auto encoders = output_.get<ENCODERS>();
-        rt_printf("encoders: time_stamp = %f, id = %d ---------------\n", encoders.get_time_stamp(), encoders.get_id());
-        std::stringstream output_string;
-        output_string << encoders.get_data().transpose();
-        rt_printf("%s\n", output_string.str().c_str());
+//        auto encoders = output_.get<ENCODERS>();
+//        rt_printf("encoders: time_stamp = %f, id = %d ---------------\n", encoders.get_time_stamp(), encoders.get_id());
+//        std::stringstream output_string;
+//        output_string << encoders.get_data().transpose();
+//        rt_printf("%s\n", output_string.str().c_str());
     }
 
     unsigned id_to_index(unsigned motor_id)
@@ -922,7 +1061,7 @@ class Motor
 {
     // \todo: should probably make this a shared pointer
     std::shared_ptr<XenomaiCanMotorboard> board_;
-    unsigned motor_id_;
+    bool motor_id_;
 public:
 
     Motor(std::shared_ptr<XenomaiCanMotorboard> board, unsigned motor_id):
@@ -930,24 +1069,39 @@ public:
 
     double get_latest_currents()
     {
-        return board_->output_get_currents().get_data()(motor_id_);
+        if(motor_id_ == 0)
+            return board_->output_get_current_a().get_data();
+        else
+            return board_->output_get_current_b().get_data();
     }
     double get_latest_positions()
     {
-        return board_->output_get_currents().get_data()(motor_id_);
+        if(motor_id_ == 0)
+            return board_->output_get_position_a().get_data();
+        else
+            return board_->output_get_position_b().get_data();
     }
     double get_latest_velocities()
     {
-        return board_->output_get_currents().get_data()(motor_id_);
+        if(motor_id_ == 0)
+            return board_->output_get_velocity_a().get_data();
+        else
+            return board_->output_get_velocity_b().get_data();
     }
     double get_latest_encoders()
     {
-        return board_->output_get_encoders().get_data()(motor_id_);
+        if(motor_id_ == 0)
+            return board_->output_get_encoder_a().get_data();
+        else
+            return board_->output_get_encoder_b().get_data();
     }
 
     void set_current_target(double current_target)
     {
-        board_->input_send_current_target(current_target, motor_id_);
+        if(motor_id_ == 0)
+            return board_->input_send_current_target_a(StampedData<double>(current_target, -1, -1));
+        else
+            return board_->input_send_current_target_b(StampedData<double>(current_target, -1, -1));
     }
 };
 
@@ -957,7 +1111,7 @@ public:
 class AnalogSensor
 {
     std::shared_ptr<XenomaiCanMotorboard> board_;
-    unsigned sensor_id_;
+    bool sensor_id_;
 public:
 
     AnalogSensor(std::shared_ptr<XenomaiCanMotorboard> board, unsigned sensor_id):
@@ -965,7 +1119,10 @@ public:
 
     double get_latest_analogs()
     {
-        return board_->output_get_analogs().get_data()(sensor_id_);
+        if(sensor_id_ == 0)
+            return board_->output_get_analog_a().get_data();
+        else
+            return board_->output_get_analog_b().get_data();
     }
 };
 
