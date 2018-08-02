@@ -530,6 +530,30 @@ public:
 
 
 
+    Input::Type<CURRENT_TARGETS> input_get_current_targets()
+    {
+        return input_.get<CURRENT_TARGETS>();
+    }
+    Input::Type<COMMAND> input_get_command()
+    {
+        return input_.get<COMMAND>();
+    }
+
+    void input_wait_for_current_targets()
+    {
+        input_.wait_for_update(CURRENT_TARGETS);
+    }
+    void input_wait_for_command()
+    {
+        input_.wait_for_update(COMMAND);
+    }
+
+    size_t input_wait_for_any()
+    {
+        return input_.wait_for_update();
+    }
+
+
     Output::Type<CURRENTS> output_get_currents()
     {
         return output_.get<CURRENTS>();
@@ -560,39 +584,42 @@ public:
     }
 
 
-
-    template <int TYPE_INDEX> Output::Type<TYPE_INDEX> get_latest_output()
+    void output_wait_for_currents()
     {
-
-//        Output::Type<TYPE_INDEX> output = output_.get<TYPE_INDEX>();
-//        rt_printf("getting type: %d\n", TYPE_INDEX);
-//        std::stringstream output_string;
-//        output_string << output.get_data();
-//        rt_printf("received %s\n", output_string.str().c_str());
-
-
-        auto output = output_.get<TYPE_INDEX>().get_data();
-
-        std::stringstream bla;
-        bla << output;
-
-        static int count = 0;
-        count++;
-        if(TYPE_INDEX == ANALOGS && count%1000 == 0)
-        {
-            rt_printf("returning output: %s\n", bla.str().c_str());
-        }
-
-        return output_.get<TYPE_INDEX>();
+        output_.wait_for_update(CURRENTS);
     }
-    void wait_for_output(unsigned output_index)
+    void output_wait_for_positions()
     {
-        output_.wait_for_update(output_index);
+        output_.wait_for_update(POSITIONS);
     }
-    unsigned wait_for_output()
+    void output_wait_for_velocities()
+    {
+        output_.wait_for_update(VELOCITIES);
+    }
+    void output_wait_for_analogs()
+    {
+        output_.wait_for_update(ANALOGS);
+    }
+    void output_wait_for_encoder_0()
+    {
+        output_.wait_for_update(ENCODER0);
+    }
+    void output_wait_for_encoder_1()
+    {
+        output_.wait_for_update(ENCODER1);
+    }
+    void output_wait_for_status()
+    {
+        output_.wait_for_update(STATUS);
+    }
+
+    size_t output_wait_for_any()
     {
         return output_.wait_for_update();
     }
+
+
+
 
 
     void send_command(Command command)
