@@ -452,52 +452,61 @@ private:
 /// >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
 
-class TICanMotorBoard
+class MotorboardCommand
+{
+public:
+
+    MotorboardCommand()
+    {
+
+    }
+
+    MotorboardCommand(uint32_t id, int32_t content)
+    {
+        id_ = id;
+        content_ = content;
+    }
+
+    enum IDs
+    {
+        ENABLE_SYS = 1,
+        ENABLE_MTR1 = 2,
+        ENABLE_MTR2 = 3,
+        ENABLE_VSPRING1 = 4,
+        ENABLE_VSPRING2 = 5,
+        SEND_CURRENT = 12,
+        SEND_POSITION = 13,
+        SEND_VELOCITY = 14,
+        SEND_ADC6 = 15,
+        SEND_ENC_INDEX = 16,
+        SEND_ALL = 20,
+        SET_CAN_RECV_TIMEOUT = 30,
+        ENABLE_POS_ROLLOVER_ERROR = 31,
+    };
+
+    enum Contents
+    {
+        ENABLE = 1,
+        DISABLE = 0
+    };
+
+
+    uint32_t id_;
+    int32_t content_;
+};
+
+
+
+class XenomaiCanMotorboard
 {
     /// public interface =======================================================
 public:
-    class Command
-    {
-    public:
-
-        Command()
-        {
-
-        }
-
-        Command(uint32_t id, int32_t content)
-        {
-            id_ = id;
-            content_ = content;
-        }
-
-        enum IDs
-        {
-            ENABLE_SYS = 1,
-            ENABLE_MTR1 = 2,
-            ENABLE_MTR2 = 3,
-            ENABLE_VSPRING1 = 4,
-            ENABLE_VSPRING2 = 5,
-            SEND_CURRENT = 12,
-            SEND_POSITION = 13,
-            SEND_VELOCITY = 14,
-            SEND_ADC6 = 15,
-            SEND_ENC_INDEX = 16,
-            SEND_ALL = 20,
-            SET_CAN_RECV_TIMEOUT = 30,
-            ENABLE_POS_ROLLOVER_ERROR = 31,
-        };
-
-        enum Contents
-        {
-            ENABLE = 1,
-            DISABLE = 0
-        };
+    typedef StampedData<Eigen::Vector2d> StampedVector;
+    typedef StampedData<double> StampedScalar;
+    typedef StampedData<MotorboardCommand> StampedCommand;
+    typedef StampedData<_BLMC_StatusMsg_t_> StampedStatus;
 
 
-        uint32_t id_;
-        int32_t content_;
-    };
 
     enum InputNames {
         CURRENT_TARGETS,
@@ -506,7 +515,7 @@ public:
 
     typedef OldThreadsafeObject<
     StampedData<Eigen::Vector2d>,
-    StampedData<Command>> Input;
+    StampedData<MotorboardCommand>> Input;
 
 
     /// \todo: can we make this an enum class??
@@ -529,12 +538,12 @@ public:
     StampedData<_BLMC_StatusMsg_t_> > Output;
 
 
-
-    Input::Type<CURRENT_TARGETS> input_get_current_targets()
+public:
+    StampedVector input_get_current_targets()
     {
         return input_.get<CURRENT_TARGETS>();
     }
-    Input::Type<COMMAND> input_get_command()
+    StampedCommand input_get_command()
     {
         return input_.get<COMMAND>();
     }
@@ -554,31 +563,33 @@ public:
     }
 
 
-    Output::Type<CURRENTS> output_get_currents()
+    StampedVector output_get_currents()
     {
         return output_.get<CURRENTS>();
     }
-    Output::Type<POSITIONS> output_get_positions()
+    StampedVector output_get_positions()
     {
         return output_.get<POSITIONS>();
     }
-    Output::Type<VELOCITIES> output_get_velocities()
+    StampedVector output_get_velocities()
     {
         return output_.get<VELOCITIES>();
     }
-    Output::Type<ANALOGS> output_get_analogs()
+    StampedVector output_get_analogs()
     {
         return output_.get<ANALOGS>();
     }
-    Output::Type<ENCODER0> output_get_encoder_0()
+
+
+    StampedScalar output_get_encoder_0()
     {
         return output_.get<ENCODER0>();
     }
-    Output::Type<ENCODER1> output_get_encoder_1()
+    StampedScalar output_get_encoder_1()
     {
         return output_.get<ENCODER1>();
     }
-    Output::Type<STATUS> output_get_status()
+    StampedStatus output_get_status()
     {
         return output_.get<STATUS>();
     }
@@ -622,7 +633,7 @@ public:
 
 
 
-    void send_command(Command command)
+    void send_command(MotorboardCommand command)
     {
 
         uint32_t id = command.id_;
@@ -667,14 +678,14 @@ public:
     // todo: this should go away
     void enable()
     {
-        send_command(Command(Command::IDs::ENABLE_SYS,
-                             Command::Contents::ENABLE));
-        send_command(Command(Command::IDs::SEND_ALL,
-                             Command::Contents::ENABLE));
-        send_command(Command(Command::IDs::ENABLE_MTR1,
-                             Command::Contents::ENABLE));
-        send_command(Command(Command::IDs::ENABLE_MTR2,
-                             Command::Contents::ENABLE));
+        send_command(MotorboardCommand(MotorboardCommand::IDs::ENABLE_SYS,
+                             MotorboardCommand::Contents::ENABLE));
+        send_command(MotorboardCommand(MotorboardCommand::IDs::SEND_ALL,
+                             MotorboardCommand::Contents::ENABLE));
+        send_command(MotorboardCommand(MotorboardCommand::IDs::ENABLE_MTR1,
+                             MotorboardCommand::Contents::ENABLE));
+        send_command(MotorboardCommand(MotorboardCommand::IDs::ENABLE_MTR2,
+                             MotorboardCommand::Contents::ENABLE));
     }
 
     /// private members ========================================================
@@ -699,7 +710,7 @@ private:
 
     /// constructor ============================================================
 public:
-    TICanMotorBoard(std::shared_ptr<XenomaiCanBus> can_bus): can_bus_(can_bus)
+    XenomaiCanMotorboard(std::shared_ptr<XenomaiCanBus> can_bus): can_bus_(can_bus)
     {
         rt_mutex_create(&data_mutex_, NULL);
         rt_mutex_create(&current_targets_mutex_, NULL);
@@ -731,7 +742,7 @@ public:
                                                     -1, -1));
 
 
-        rt_task_ = start_thread(&TICanMotorBoard::loop, this);
+        rt_task_ = start_thread(&XenomaiCanMotorboard::loop, this);
     }
 
     /// private methods ========================================================
@@ -777,7 +788,7 @@ private:
 
     static void loop(void* instance_pointer)
     {
-        ((TICanMotorBoard*)(instance_pointer))->loop();
+        ((XenomaiCanMotorboard*)(instance_pointer))->loop();
     }
 
     void loop()
@@ -898,11 +909,11 @@ private:
 class Motor
 {
     // \todo: should probably make this a shared pointer
-    std::shared_ptr<TICanMotorBoard> board_;
+    std::shared_ptr<XenomaiCanMotorboard> board_;
     unsigned motor_id_;
 public:
 
-    Motor(std::shared_ptr<TICanMotorBoard> board, unsigned motor_id):
+    Motor(std::shared_ptr<XenomaiCanMotorboard> board, unsigned motor_id):
         board_(board), motor_id_(motor_id) { }
 
     double get_latest_currents()
@@ -940,11 +951,11 @@ public:
 
 class AnalogSensor
 {
-    std::shared_ptr<TICanMotorBoard> board_;
+    std::shared_ptr<XenomaiCanMotorboard> board_;
     unsigned sensor_id_;
 public:
 
-    AnalogSensor(std::shared_ptr<TICanMotorBoard> board, unsigned sensor_id):
+    AnalogSensor(std::shared_ptr<XenomaiCanMotorboard> board, unsigned sensor_id):
         board_(board), sensor_id_(sensor_id) { }
 
     double get_latest_analogs()
@@ -1038,8 +1049,8 @@ int main(int argc, char **argv)
     // create bus and boards -------------------------------------------------
     auto can_bus1 = std::make_shared<XenomaiCanBus>("rtcan0");
     auto can_bus2 = std::make_shared<XenomaiCanBus>("rtcan1");
-    auto board1 = std::make_shared<TICanMotorBoard>(can_bus1);
-    auto board2 = std::make_shared<TICanMotorBoard>(can_bus2);
+    auto board1 = std::make_shared<XenomaiCanMotorboard>(can_bus1);
+    auto board2 = std::make_shared<XenomaiCanMotorboard>(can_bus2);
 
     // create motors and sensors ---------------------------------------------
     auto motor_1 = std::make_shared<Motor>(board1, BLMC_MTR1);
