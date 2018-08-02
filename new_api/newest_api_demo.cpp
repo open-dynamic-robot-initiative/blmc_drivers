@@ -527,28 +527,25 @@ public:
     };
 
     typedef ThreadsafeObject<
-    StampedData<Eigen::Vector2d>,
-    StampedData<MotorboardCommand>> Input;
+    StampedVector,
+    StampedCommand> Input;
 
 
-    /// \todo: can we make this an enum class??
     enum OutputNames {
         CURRENTS,
         POSITIONS,
         VELOCITIES,
         ANALOGS,
-        ENCODER0,
-        ENCODER1,
+        ENCODERS,
         STATUS };
 
     typedef ThreadsafeObject<
     StampedVector,
-    StampedData<Eigen::Vector2d>,
-    StampedData<Eigen::Vector2d>,
-    StampedData<Eigen::Vector2d>,
-    StampedData<double>,
-    StampedData<double>,
-    StampedData<_BLMC_StatusMsg_t_> > Output;
+    StampedVector,
+    StampedVector,
+    StampedVector,
+    StampedVector,
+    StampedStatus > Output;
 
 
 public:
@@ -593,24 +590,9 @@ public:
     {
         return output_.get<ANALOGS>();
     }
-
     StampedVector output_get_encoders()
     {
-        Eigen::Vector2d encoder_values(output_.get<ENCODER0>().get_data(),
-                                       output_.get<ENCODER1>().get_data());
-
-        return StampedVector(encoder_values,
-                             output_.get<ENCODER0>().get_time_stamp(),
-                             output_.get<ENCODER0>().get_id());
-    }
-
-    StampedScalar output_get_encoder_0()
-    {
-        return output_.get<ENCODER0>();
-    }
-    StampedScalar output_get_encoder_1()
-    {
-        return output_.get<ENCODER1>();
+        return output_.get<ENCODERS>();
     }
     StampedStatus output_get_status()
     {
@@ -636,24 +618,7 @@ public:
     }
     void output_wait_for_encoders()
     {
-        bool updated_0 = false;
-        bool updated_1 = false;
-
-        do
-        {
-            size_t updated_index = output_.wait_for_update();
-            if(updated_index == ENCODER0) updated_0 = true;
-            if(updated_index == ENCODER1) updated_1 = true;
-        }
-        while(!(updated_0 && updated_1));
-    }
-    void output_wait_for_encoder_0()
-    {
-        output_.wait_for_update(ENCODER0);
-    }
-    void output_wait_for_encoder_1()
-    {
-        output_.wait_for_update(ENCODER1);
+        output_.wait_for_update(ENCODERS);
     }
     void output_wait_for_status()
     {
@@ -762,9 +727,8 @@ public:
         output_.set<POSITIONS>(stamped_default_measurement);
         output_.set<VELOCITIES>(stamped_default_measurement);
         output_.set<ANALOGS>(StampedData<Eigen::Vector2d>(Eigen::Vector2d(0.5, 0.5), -1, -1));
+        output_.set<ENCODERS>(stamped_default_measurement);
 
-        output_.set<ENCODER0>(StampedData<double>(0, -1, -1));
-        output_.set<ENCODER1>(StampedData<double>(0, -1, -1));
 
         _BLMC_StatusMsg_t_ default_status_message;
         default_status_message.system_enabled = 0;
@@ -870,25 +834,21 @@ private:
                 break;
             case BLMC_CAN_ID_ENC_INDEX:
             {
+                Eigen::Vector2d encoder_values =
+                        output_.get<ENCODERS>().get_data();
+
                 uint8_t motor_index = can_frame.data[4];
-                StampedData<double> stamped_encoder(
-                            measurement[0],
-                        stamped_can_frame.get_id(),
-                        stamped_can_frame.get_time_stamp());
-                if(motor_index == 0)
-                {
-                    output_.set<ENCODER0>(stamped_encoder);
-                }
-                else if(motor_index == 1)
-                {
-                    output_.set<ENCODER1>(stamped_encoder);
-                }
-                else
+                if(!(motor_index == 0 || motor_index == 1))
                 {
                     rt_printf("ERROR: Invalid motor number"
                               "for encoder index: %d\n", motor_index);
                     exit(-1);
                 }
+                double new_encoder_value = measurement[0];
+                encoder_values[motor_index] = new_encoder_value;
+
+                stamped_measurement.set_data(encoder_values);
+                output_.set<ENCODERS>(stamped_measurement);
                 break;
             }
             case BLMC_CAN_ID_STATUSMSG:
@@ -915,8 +875,10 @@ private:
             static int count = 0;
             if(count % 4000 == 0)
             {
-                auto status = output_.get<STATUS>().get_data();
-                BLMC_printStatus(&status);
+                print_everything();
+
+
+
                 //                BLMC_printSensorData(&bd->latest);
                 //                BLMC_printEncoderIndex(bd->encoder_index);
 
@@ -926,6 +888,20 @@ private:
             count++;
 
         }
+    }
+
+
+    void print_everything()
+    {
+        auto status = output_.get<STATUS>();
+        rt_printf("status: time_stamp = %f, id = %d ---------------\n", status.get_time_stamp(), status.get_id());
+        BLMC_printStatus(&status.get_data());
+
+        auto encoders = output_.get<ENCODERS>();
+        rt_printf("encoders: time_stamp = %f, id = %d ---------------\n", encoders.get_time_stamp(), encoders.get_id());
+        std::stringstream output_string;
+        output_string << encoders.get_data().transpose();
+        rt_printf("%s\n", output_string.str().c_str());
     }
 
     unsigned id_to_index(unsigned motor_id)
@@ -966,14 +942,7 @@ public:
     }
     double get_latest_encoders()
     {
-        if(motor_id_ == 0)
-        {
-            return board_->output_get_encoder_0().get_data();
-        }
-        else
-        {
-            return board_->output_get_encoder_1().get_data();
-        }
+        return board_->output_get_encoders().get_data()(motor_id_);
     }
 
     void set_current_target(double current_target)

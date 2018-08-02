@@ -11,11 +11,7 @@
 
 
 const int DATA_LENGTH = 10000;
-
 const int OUTPUT_COUNT = 5;
-
-const double RATE_MS = 0.000001;
-
 
 typedef int Type0;
 typedef Eigen::Matrix3d Type1;
@@ -45,9 +41,6 @@ void input_function(void* void_ptr)
 
     for(size_t i = 0; i < DATA_LENGTH; i++)
     {
-//        Timer<>::sleep_ms(RATE_MS);
-//        rt_task_sleep(int(RATE_MS * 1000000.));
-
         threadsafe_object_ptr->template set<INDEX>(
                     std::get<INDEX>(input_data)[i]);
         logger.end_and_start_interval();
@@ -139,53 +132,6 @@ void print(double value)
 {
     std::cout << value << std::endl;
 }
-
-
-//class bla
-//{
-//    double value_;
-
-//public:
-//    bla()
-//    {
-//        value_ = 0;
-//    }
-
-//    void set(double value)
-//    {
-//        value_ = value;
-//    }
-
-//    void print()
-//    {
-//        std::cout << value_ << std::endl;
-//    }
-//};
-
-
-//TEST(threadsafe_object, tuple_for_each)
-//{
-//    std::vector<double> digger {1, 2, 3};
-
-
-
-
-//    typedef std::tuple<bla, bla, bla> T;
-//     T t;
-
-//     tuple_for_each(t, [](bla value)->void{value.print();});
-
-
-//     std::tuple<ThreadsafeSingleton<double>, ThreadsafeSingleton<int>> tuple;
-//     auto condition_variable = std::make_shared<ThreadsafeSingletonInterface::ConditionVariable>();
-
-//     tuple_for_each(tuple, [condition_variable]
-//                    (ThreadsafeSingletonInterface& value)->void
-//     {
-//         value.add_condition_variable(condition_variable);
-//     });
-
-//}
 
 void initialize_data_randomly()
 {
