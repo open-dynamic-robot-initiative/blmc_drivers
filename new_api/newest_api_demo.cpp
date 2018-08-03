@@ -128,6 +128,18 @@ void close_can_device(int socket)
     }
 }
 
+void receive_message_from_can_device(int fd, struct msghdr *msg, int flags)
+{
+    int ret = rt_dev_recvmsg(fd, msg, flags);
+    if (ret < 0)
+    {
+        print_to_screen("something went wrong with receiving "
+                  "CAN frame, error code: %d\n", ret);
+        exit(-1);
+    }
+
+}
+
 
 RT_TASK start_thread(void (*function)(void *cookie), void *argument=NULL)
 {
@@ -151,6 +163,11 @@ RT_TASK start_thread(void (*function)(void *cookie), void *argument=NULL)
     return rt_task;
 }
 
+void initialize_realtime_printing()
+{
+    rt_print_auto_init(1);
+}
+
 
 void sleep_ms(const double& sleep_time_ms)
 {
@@ -160,6 +177,14 @@ void sleep_ms(const double& sleep_time_ms)
 double get_current_time_ms()
 {
     return double(rt_timer_read()) / 1000000.;
+}
+
+
+
+
+void make_this_thread_realtime()
+{
+    rt_task_shadow(NULL, NULL, 0, 0);
 }
 
 
@@ -411,15 +436,9 @@ public:
     virtual ~XenomaiCanbus()
     {
         close_can_device(connection_info_.get().socket);
-//        int ret = rt_dev_close(connection_info_.get().socket);
-//        if (ret)
-//        {
-//            rt_fprintf(stderr, "rt_dev_close: %s\n", strerror(-ret));
-//            exit(-1);
-//        }
     }
 
-    /// private attributes and methods =============================================
+    /// private attributes and methods =========================================
 private:
     // attributes --------------------------------------------------------------
     ThreadsafeObject<CanConnection> connection_info_;
@@ -442,12 +461,6 @@ private:
             receive_time_logger.start_interval();
             CanFrame frame = receive_frame();
             receive_time_logger.end_interval();
-
-
-            // to give the client time to read the latest message
-            // we sleep for a microsecond --------------------------------------
-            rt_task_sleep(1000);
-
 
             output_.set<0>(StampedData<CanFrame>(
                                frame,
@@ -481,13 +494,7 @@ private:
         message_header.msg_controllen = sizeof(nanosecs_abs_t);
 
         // receive message from can bus ----------------------------------------
-        int ret = rt_dev_recvmsg(socket, &message_header, 0);
-        if (ret < 0)
-        {
-            print_to_screen("something went wrong with receiving "
-                      "CAN frame, error code: %d\n", ret);
-            exit(-1);
-        }
+        receive_message_from_can_device(socket, &message_header, 0);
 
         // process received data and put into felix widmaier's format ----------
         if (message_header.msg_controllen == 0)
@@ -1205,8 +1212,8 @@ public:
 
 
 int main(int argc, char **argv)
-{
-    rt_print_auto_init(1);
+{  
+    initialize_realtime_printing();
 
     // create bus and boards -------------------------------------------------
     auto can_bus1 = std::make_shared<XenomaiCanbus>("rtcan0");
@@ -1227,9 +1234,8 @@ int main(int argc, char **argv)
     Controller controller2(motor_2, analog_sensor_2);
     Controller controller3(motor_3, analog_sensor_3);
 
-
-
-    rt_task_shadow(NULL, "shibuya", 0, 0);
+    // somehow this is necessary to be able to use some of the functionality
+    make_this_thread_realtime();
     board1->enable();
     board2->enable();
 
@@ -1239,7 +1245,7 @@ int main(int argc, char **argv)
 
     while(true)
     {
-        rt_task_sleep(1000000);
+        Timer<>::sleep_ms(10);
     }
 
     return 0;
