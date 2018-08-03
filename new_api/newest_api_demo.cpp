@@ -98,8 +98,69 @@
 //}
 
 
+template<typename ...Ts>
+    void print_to_screen(Ts... args)
+{
+    rt_printf(args...);
+}
+
+void send_to_can_device(int fd, const void *buf, size_t len,
+                       int flags, const struct sockaddr *to,
+                       socklen_t tolen)
+{
+    int ret = rt_dev_sendto(fd, buf, len, flags, to, tolen);
+
+    if (ret < 0)
+    {
+        print_to_screen("something went wrong with "
+                  "sending CAN frame, error code: %d\n", ret);
+        exit(-1);
+    }
+}
+
+void close_can_device(int socket)
+{
+    int ret = rt_dev_close(socket);
+    if (ret)
+    {
+        rt_fprintf(stderr, "rt_dev_close: %s\n", strerror(-ret));
+        exit(-1);
+    }
+}
 
 
+RT_TASK start_thread(void (*function)(void *cookie), void *argument=NULL)
+{
+    // TODO: not sure if this is the right place for this
+    mlockall(MCL_CURRENT | MCL_FUTURE);
+    //        signal(SIGTERM, cleanup_and_exit);
+    //        signal(SIGINT, cleanup_and_exit);
+    //        signal(SIGDEBUG, action_upon_switch);
+    rt_print_auto_init(1);
+
+    RT_TASK rt_task;
+    int priority = 10;
+
+    int return_task_create = rt_task_create(&rt_task, NULL, 0, priority,  T_JOINABLE | T_FPU);
+    if (return_task_create) {
+        rt_fprintf(stderr, "controller: %s\n", strerror(-return_task_create));
+        exit(-1);
+    }
+    rt_task_start(&rt_task, function, argument);
+
+    return rt_task;
+}
+
+
+void sleep_ms(const double& sleep_time_ms)
+{
+    rt_task_sleep(int(sleep_time_ms * 1000000.));
+}
+
+double get_current_time_ms()
+{
+    return double(rt_timer_read()) / 1000000.;
+}
 
 
 
@@ -194,27 +255,7 @@ private:
 
 
 
-RT_TASK start_thread(void (*function)(void *cookie), void *argument=NULL)
-{
-    // TODO: not sure if this is the right place for this
-    mlockall(MCL_CURRENT | MCL_FUTURE);
-    //        signal(SIGTERM, cleanup_and_exit);
-    //        signal(SIGINT, cleanup_and_exit);
-    //        signal(SIGDEBUG, action_upon_switch);
-    rt_print_auto_init(1);
 
-    RT_TASK rt_task;
-    int priority = 10;
-
-    int return_task_create = rt_task_create(&rt_task, NULL, 0, priority,  T_JOINABLE | T_FPU);
-    if (return_task_create) {
-        rt_fprintf(stderr, "controller: %s\n", strerror(-return_task_create));
-        exit(-1);
-    }
-    rt_task_start(&rt_task, function, argument);
-
-    return rt_task;
-}
 
 
 
@@ -330,18 +371,13 @@ public:
         memcpy(can_frame.data, unstamped_can_frame.data.begin(), unstamped_can_frame.dlc);
 
         // send ----------------------------------------------------------------
-        int ret = rt_dev_sendto(socket,
+        send_to_can_device(socket,
                                 (void *)&can_frame,
                                 sizeof(can_frame_t),
                                 0,
                                 (struct sockaddr *)&address,
                                 sizeof(address));
-        if (ret < 0)
-        {
-            rt_printf("something went wrong with "
-                      "sending CAN frame, error code: %d\n", ret);
-            exit(-1);
-        }
+
     }
 
     // constructor and destructor ----------------------------------------------
@@ -355,7 +391,7 @@ public:
                                can_interface_name.c_str(), 0);
         if (ret < 0)
         {
-            rt_printf("Couldn't setup CAN connection. Exit.");
+            print_to_screen("Couldn't setup CAN connection. Exit.");
             exit(-1);
         }
 
@@ -374,12 +410,13 @@ public:
     }
     virtual ~XenomaiCanbus()
     {
-        int ret = rt_dev_close(connection_info_.get().socket);
-        if (ret)
-        {
-            rt_fprintf(stderr, "rt_dev_close: %s\n", strerror(-ret));
-            exit(-1);
-        }
+        close_can_device(connection_info_.get().socket);
+//        int ret = rt_dev_close(connection_info_.get().socket);
+//        if (ret)
+//        {
+//            rt_fprintf(stderr, "rt_dev_close: %s\n", strerror(-ret));
+//            exit(-1);
+//        }
     }
 
     /// private attributes and methods =============================================
@@ -447,7 +484,7 @@ private:
         int ret = rt_dev_recvmsg(socket, &message_header, 0);
         if (ret < 0)
         {
-            rt_printf("something went wrong with receiving "
+            print_to_screen("something went wrong with receiving "
                       "CAN frame, error code: %d\n", ret);
             exit(-1);
         }
@@ -979,7 +1016,7 @@ private:
 
                 else
                 {
-                    rt_printf("ERROR: Invalid motor number"
+                    print_to_screen("ERROR: Invalid motor number"
                               "for encoder index: %d\n", motor_index);
                     exit(-1);
                 }
@@ -1028,14 +1065,14 @@ private:
     void print_everything()
     {
         auto status = output_.get<STATUS>();
-        rt_printf("status: time_stamp = %f, id = %d ---------------\n", status.get_time_stamp(), status.get_id());
+        print_to_screen("status: time_stamp = %f, id = %d ---------------\n", status.get_time_stamp(), status.get_id());
         BLMC_printStatus(&status.get_data());
 
         //        auto encoders = output_.get<ENCODERS>();
-        //        rt_printf("encoders: time_stamp = %f, id = %d ---------------\n", encoders.get_time_stamp(), encoders.get_id());
+        //        print_to_screen("encoders: time_stamp = %f, id = %d ---------------\n", encoders.get_time_stamp(), encoders.get_id());
         //        std::stringstream output_string;
         //        output_string << encoders.get_data().transpose();
-        //        rt_printf("%s\n", output_string.str().c_str());
+        //        print_to_screen("%s\n", output_string.str().c_str());
     }
 
     unsigned id_to_index(unsigned motor_id)
@@ -1045,7 +1082,7 @@ private:
         else if(motor_id == BLMC_MTR2)
             return 1;
 
-        rt_printf("unknown motor id: %d", motor_id);
+        print_to_screen("unknown motor id: %d", motor_id);
         exit(-1);
     }
 };
@@ -1126,59 +1163,39 @@ public:
 class Controller
 {
 private:
-    RT_TASK rt_task_;
-
-    // \todo: should probably make this a shared pointer
     std::shared_ptr<Motor> motor_;
     std::shared_ptr<AnalogSensor> analog_sensor_;
 
 public:
-    Controller(std::shared_ptr<Motor> motor, std::shared_ptr<AnalogSensor> analog_sensor):
+    Controller(std::shared_ptr<Motor> motor,
+               std::shared_ptr<AnalogSensor> analog_sensor):
         motor_(motor), analog_sensor_(analog_sensor) { }
 
     void start_loop()
     {
-//        // for memory management
-//        mlockall(MCL_CURRENT | MCL_FUTURE);
-
-//        //        signal(SIGTERM, cleanup_and_exit);
-//        //        signal(SIGINT, cleanup_and_exit);
-
-//        // start real-time thread ------------------------------------------------------------------
-//        // for real time printing
-//        rt_print_auto_init(1);
-//        int priority = 10;
-//        int return_task_create = rt_task_create(&rt_task_, NULL, 0, priority,  T_JOINABLE | T_FPU);
-//        if (return_task_create) {
-//            rt_fprintf(stderr, "controller: %s\n", strerror(-return_task_create));
-//            exit(-1);
-//        }
-//        rt_task_start(&rt_task_, &Controller::loop, this);
-
         start_thread(&Controller::loop, this);
     }
-
 
     static void loop(void* instance_pointer)
     {
         ((Controller*)(instance_pointer))->loop();
     }
 
-
     void loop()
     {
         Timer<10> time_logger("controller", 1000);
         while(true)
         {
-            double current_target = 2 * (analog_sensor_->get_latest_analogs() - 0.5);
+            double current_target =
+                    2 * (analog_sensor_->get_latest_analogs() - 0.5);
             motor_->set_current_target(current_target);
 
-            // print --------------------------------------------------------------
+            // print -----------------------------------------------------------
             Timer<>::sleep_ms(1);
             time_logger.end_and_start_interval();
             if ((time_logger.count() % 1000) == 0)
             {
-                rt_printf("sending current: %f\n", current_target);
+                print_to_screen("sending current: %f\n", current_target);
             }
         }
     }
@@ -1189,15 +1206,7 @@ public:
 
 int main(int argc, char **argv)
 {
-
-    //    {
-    //     Device<std::tuple<int>, std::tuple<float, int, int, double, bool>> device;
-    //     device.show_types();
-    //    }
-
-    //    exit(-1);
     rt_print_auto_init(1);
-
 
     // create bus and boards -------------------------------------------------
     auto can_bus1 = std::make_shared<XenomaiCanbus>("rtcan0");
