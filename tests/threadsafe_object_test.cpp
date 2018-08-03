@@ -112,22 +112,6 @@ void complete_output_function(void * void_ptr)
 }
 
 
-//RT_TASK start_thread(void (*function)(void *cookie), void *argument=NULL)
-//{
-
-//    RT_TASK trash;
-//    int priority = 10;
-
-//    int return_task_create = rt_task_create(&trash, NULL, 0, priority,  T_JOINABLE | T_FPU);
-//    if (return_task_create) {
-//        rt_fprintf(stderr, "controller: %s\n", strerror(-return_task_create));
-//        exit(-1);
-//    }
-//    rt_task_start(&trash, function, argument);
-
-//    return trash;
-//}
-
 void print(double value)
 {
     std::cout << value << std::endl;
@@ -135,7 +119,7 @@ void print(double value)
 
 void initialize_data_randomly()
 {
-    // initialize inputs ------------------------------------------
+    // initialize inputs -------------------------------------------------------
     srand(0);
     for(size_t i = 0; i < DATA_LENGTH; i++)
     {
@@ -155,10 +139,12 @@ TEST(threadsafe_object, single_input_multi_output)
 
     initialize_data_randomly();
 
-    // start a thread for each output and input function ----------
+
+
     mlockall(MCL_CURRENT | MCL_FUTURE);
     rt_print_auto_init(1);
 
+    // start a thread for each output and input function -----------------------
     start_thread(output_function<0,0,TestType1>, &test_object_1);
     start_thread(output_function<0,1,TestType1>, &test_object_1);
     start_thread(output_function<0,2,TestType1>, &test_object_1);
@@ -181,18 +167,12 @@ TEST(threadsafe_object, single_input_multi_output)
 
     start_thread(complete_output_function<4, TestType1>, &test_object_1);
 
-
     usleep(1000);
 
     auto task_1 = start_thread(input_function<0, TestType1>, &test_object_1);
     auto task_2 = start_thread(input_function<1, TestType1>, &test_object_1);
     auto task_3 = start_thread(input_function<2, TestType1>, &test_object_1);
     auto task_4 = start_thread(input_function<3, TestType1>, &test_object_1);
-
-    rt_task_join(&task_1);
-    rt_task_join(&task_2);
-    rt_task_join(&task_3);
-    rt_task_join(&task_4);
 
     usleep(1000000);
 
