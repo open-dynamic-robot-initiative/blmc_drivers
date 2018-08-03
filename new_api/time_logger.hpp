@@ -6,6 +6,8 @@
 #include <limits>
 #include <eigen3/Eigen/Core>
 
+#include <os_interface.hpp>
+
 
 
 
@@ -108,24 +110,23 @@ public:
         return count_;
     }
 
-    // operating system specific functions -------------------------------------
     void print_status() const
     {
-        rt_printf("%s --------------------------------\n", name_.c_str());
-        rt_printf("count: %d\n min_interval: %f\n max_interval: %f\n avg_interval: %f\n",
+        print_to_screen("%s --------------------------------\n", name_.c_str());
+        print_to_screen("count: %d\n min_interval: "
+                        "%f\n max_interval: %f\n avg_interval: %f\n",
                   count_, min_interval(), max_interval(), avg_interval());
-        rt_printf("--------------------------------------------\n");
-
+        print_to_screen("--------------------------------------------\n");
     }
 
     static double current_time_ms()
     {
-        return double(rt_timer_read()) / 1000000.;
+        return get_current_time_ms();
     }
 
     static void sleep_ms(const double& sleep_time_ms)
     {
-        rt_task_sleep(int(sleep_time_ms * 1000000.));
+        osi::sleep_ms(sleep_time_ms);
     }
 
 private:

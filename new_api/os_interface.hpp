@@ -146,12 +146,13 @@ void initialize_realtime_printing()
     rt_print_auto_init(1);
 }
 
-
+namespace osi
+{
 void sleep_ms(const double& sleep_time_ms)
 {
     rt_task_sleep(int(sleep_time_ms * 1000000.));
 }
-
+}
 double get_current_time_ms()
 {
     return double(rt_timer_read()) / 1000000.;
