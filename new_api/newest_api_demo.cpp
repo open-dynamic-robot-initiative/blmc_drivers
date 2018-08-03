@@ -1138,22 +1138,24 @@ public:
 
     void start_loop()
     {
-        // for memory management
-        mlockall(MCL_CURRENT | MCL_FUTURE);
+//        // for memory management
+//        mlockall(MCL_CURRENT | MCL_FUTURE);
 
-        //        signal(SIGTERM, cleanup_and_exit);
-        //        signal(SIGINT, cleanup_and_exit);
+//        //        signal(SIGTERM, cleanup_and_exit);
+//        //        signal(SIGINT, cleanup_and_exit);
 
-        // start real-time thread ------------------------------------------------------------------
-        // for real time printing
-        rt_print_auto_init(1);
-        int priority = 10;
-        int return_task_create = rt_task_create(&rt_task_, NULL, 0, priority,  T_JOINABLE | T_FPU);
-        if (return_task_create) {
-            rt_fprintf(stderr, "controller: %s\n", strerror(-return_task_create));
-            exit(-1);
-        }
-        rt_task_start(&rt_task_, &Controller::loop, this);
+//        // start real-time thread ------------------------------------------------------------------
+//        // for real time printing
+//        rt_print_auto_init(1);
+//        int priority = 10;
+//        int return_task_create = rt_task_create(&rt_task_, NULL, 0, priority,  T_JOINABLE | T_FPU);
+//        if (return_task_create) {
+//            rt_fprintf(stderr, "controller: %s\n", strerror(-return_task_create));
+//            exit(-1);
+//        }
+//        rt_task_start(&rt_task_, &Controller::loop, this);
+
+        start_thread(&Controller::loop, this);
     }
 
 
@@ -1172,19 +1174,13 @@ public:
             motor_->set_current_target(current_target);
 
             // print --------------------------------------------------------------
-            rt_task_sleep(1000000);
+            Timer<>::sleep_ms(1);
             time_logger.end_and_start_interval();
             if ((time_logger.count() % 1000) == 0)
             {
                 rt_printf("sending current: %f\n", current_target);
             }
         }
-    }
-
-
-    int join()
-    {
-        rt_task_join(&rt_task_);
     }
 };
 
