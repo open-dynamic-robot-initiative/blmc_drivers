@@ -323,7 +323,11 @@ private:
     ThreadsafeObject<StampedFrame> input_;
 
     // methods -----------------------------------------------------------------
-    static void loop(void* instance_pointer)
+    static void
+#ifndef __XENO__
+    *
+#endif
+    loop(void* instance_pointer)
     {
         ((XenomaiCanbus*)(instance_pointer))->loop();
     }
@@ -826,7 +830,11 @@ private:
         return can_bus_->input_send_can_frame(StampedData<CanFrame>(can_frame, -1, -1));
     }
 
-    static void loop(void* instance_pointer)
+    static void
+#ifndef __XENO__
+    *
+#endif
+    loop(void* instance_pointer)
     {
         ((XenomaiCanMotorboard*)(instance_pointer))->loop();
     }
@@ -1060,7 +1068,11 @@ public:
         osi::start_thread(&Controller::loop, this);
     }
 
-    static void loop(void* instance_pointer)
+    static void
+#ifndef __XENO__
+    *
+#endif
+    loop(void* instance_pointer)
     {
         ((Controller*)(instance_pointer))->loop();
     }

@@ -156,6 +156,7 @@ void receive_message_from_can_device(int fd, struct msghdr *msg, int flags)
 
 }
 
+#ifdef __XENO__
 
 RT_TASK start_thread(void (*function)(void *cookie), void *argument=NULL)
 {
@@ -178,6 +179,59 @@ RT_TASK start_thread(void (*function)(void *cookie), void *argument=NULL)
 
     return rt_task;
 }
+
+#else
+
+void start_thread(void * (*function)(void *cookie), void *argument=NULL)
+{
+    struct sched_param param;
+    pthread_attr_t attr;
+    pthread_t thread;
+
+    ret = pthread_attr_init(&attr);
+    if (ret) {
+        printf("init pthread attributes failed\n");
+        return ret;
+    }
+
+    /* Set a specific stack size  */
+    ret = pthread_attr_setstacksize(&attr, PTHREAD_STACK_MIN);
+    if (ret) {
+        printf("pthread setstacksize failed\n");
+        return ret;
+    }
+
+    /* Set scheduler policy and priority of pthread */
+    ret = pthread_attr_setschedpolicy(&attr, SCHED_FIFO);
+    if (ret) {
+        printf("pthread setschedpolicy failed\n");
+        return ret;
+    }
+    param.sched_priority = 80;
+    ret = pthread_attr_setschedparam(&attr, &param);
+    if (ret) {
+        printf("pthread setschedparam failed\n");
+        return ret;
+    }
+    /* Use scheduling parameters of attr */
+    ret = pthread_attr_setinheritsched(&attr, PTHREAD_EXPLICIT_SCHED);
+    if (ret) {
+        printf("pthread setinheritsched failed\n");
+        return ret;
+    }
+
+    /* Create a pthread with specified attributes */
+    ret = pthread_create(&thread, &attr, &my_task, NULL);
+    if (ret) {
+        printf("create pthread failed. Ret=%d\n", ret);
+        if (ret == 1) {
+            printf("NOTE: This program must be executed as root to get the "
+                "required realtime permissions.\n");
+        }
+        return ret;
+    }
+}
+#endif
 
 void initialize_realtime_printing()
 {

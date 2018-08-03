@@ -32,7 +32,11 @@ std::array< DataType, OUTPUT_COUNT> output_data;
 
 
 template <int INDEX, typename ThreadsafeObjectType>
-void input_function(void* void_ptr)
+void
+#ifndef __XENO__
+    *
+#endif
+input_function(void* void_ptr)
 {
     ThreadsafeObjectType* threadsafe_object_ptr =
             static_cast<ThreadsafeObjectType*>(void_ptr);
@@ -53,7 +57,11 @@ void input_function(void* void_ptr)
 
 
 template <int DATA_INDEX, int OUTPUT_INDEX, typename ThreadsafeObjectType>
-void output_function(void * void_ptr)
+void
+#ifndef __XENO__
+    *
+#endif
+output_function(void * void_ptr)
 {
     ThreadsafeObjectType* threadsafe_object_ptr =
             static_cast<ThreadsafeObjectType*>(void_ptr);
@@ -75,7 +83,11 @@ void output_function(void * void_ptr)
 
 
 template <int OUTPUT_INDEX, typename ThreadsafeObjectType>
-void complete_output_function(void * void_ptr)
+void
+#ifndef __XENO__
+    *
+#endif
+complete_output_function(void * void_ptr)
 {
     ThreadsafeObjectType* threadsafe_object_ptr =
             static_cast<ThreadsafeObjectType*>(void_ptr);
