@@ -112,21 +112,21 @@ void complete_output_function(void * void_ptr)
 }
 
 
-RT_TASK start_thread(void (*function)(void *cookie), void *argument=NULL)
-{
+//RT_TASK start_thread(void (*function)(void *cookie), void *argument=NULL)
+//{
 
-    RT_TASK trash;
-    int priority = 10;
+//    RT_TASK trash;
+//    int priority = 10;
 
-    int return_task_create = rt_task_create(&trash, NULL, 0, priority,  T_JOINABLE | T_FPU);
-    if (return_task_create) {
-        rt_fprintf(stderr, "controller: %s\n", strerror(-return_task_create));
-        exit(-1);
-    }
-    rt_task_start(&trash, function, argument);
+//    int return_task_create = rt_task_create(&trash, NULL, 0, priority,  T_JOINABLE | T_FPU);
+//    if (return_task_create) {
+//        rt_fprintf(stderr, "controller: %s\n", strerror(-return_task_create));
+//        exit(-1);
+//    }
+//    rt_task_start(&trash, function, argument);
 
-    return trash;
-}
+//    return trash;
+//}
 
 void print(double value)
 {

@@ -17,56 +17,11 @@
 
 #include <time_logger.hpp>
 
+#include <os_interface.hpp>
 
 
-namespace xenomai
-{
-class mutex
-{
-public:
-    RT_MUTEX rt_mutex_;
-
-    mutex()
-    {
-        rt_mutex_create(&rt_mutex_, NULL);
-    }
-
-    void lock()
-    {
-        rt_mutex_acquire(&rt_mutex_, TM_INFINITE);
-
-    }
-
-    void unlock()
-    {
-        rt_mutex_release(&rt_mutex_);
-    }
-
-};
-
-class condition_variable
-{
-public:
-    RT_COND rt_condition_variable_;
 
 
-    condition_variable()
-    {
-        rt_cond_create(&rt_condition_variable_, NULL);
-    }
-
-    void wait(std::unique_lock<mutex>& lock )
-    {
-        rt_cond_wait(&rt_condition_variable_,
-                     &lock.mutex()->rt_mutex_, TM_INFINITE);
-    }
-
-    void notify_all()
-    {
-        rt_cond_broadcast(&rt_condition_variable_);
-    }
-};
-}
 
 
 template<typename ...Types> class ThreadsafeObject
@@ -77,13 +32,7 @@ public:
 
     static const std::size_t SIZE = sizeof...(Types);
 
-#ifdef __XENO__
-    typedef xenomai::mutex Mutex;
-    typedef xenomai::condition_variable ConditionVariable;
-#else
-    typedef std::mutex Mutex;
-    typedef std::condition_variable ConditionVariable;
-#endif
+
 
 private:
     std::shared_ptr<std::tuple<Types ...> > data_;
