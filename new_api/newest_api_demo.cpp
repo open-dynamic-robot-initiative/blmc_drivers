@@ -75,7 +75,7 @@
 //  // increment mode swich counter
 //  ++count_xenomai_mode_switches;
 
-//  rt_printf("MOOOOODE SWIIIIITCH\n");
+//  osi::print_to_screen("MOOOOODE SWIIIIITCH\n");
 //  exit(-1);
 //}
 
@@ -88,7 +88,7 @@
 // **************************************************************************
 //void cleanup_and_exit(int sig)
 //{
-//    rt_printf("Signal %d received\n", sig);
+//    osi::print_to_screen("Signal %d received\n", sig);
 //    // Disable system before closing connection
 
 //    for(int i = 0; i < can_connections.size(); i++)
