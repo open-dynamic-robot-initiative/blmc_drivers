@@ -1,0 +1,1 @@
+we should have a test after startup making sure that everything was initialized properly. e.g. execution of some typical command and see whether it behaves as usually.

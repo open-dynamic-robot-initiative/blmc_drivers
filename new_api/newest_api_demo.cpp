@@ -152,12 +152,23 @@ public:
         data_ = data;
     }
 
-    // constructors ------------------------------------------------------------
-    StampedData()
+    template<typename Type>
+    void set_header_equal(const StampedData<Type>& other_stamped_data)
     {
-        id_ = 0;
-        time_stamp_ = 0;
+        id_ = other_stamped_data.get_id();
+        time_stamp_ = other_stamped_data.get_time_stamp();
     }
+
+    // constructors ------------------------------------------------------------
+    StampedData():
+        id_(std::numeric_limits<size_t>::quiet_NaN()),
+        time_stamp_(std::numeric_limits<double>::quiet_NaN()) {  }
+
+    StampedData(const DataType& data):
+        data_(data),
+        id_(std::numeric_limits<size_t>::quiet_NaN()),
+        time_stamp_(std::numeric_limits<double>::quiet_NaN()) {  }
+
     StampedData(const DataType& data,
                 const size_t& id,
                 const double& time_stamp):
@@ -165,7 +176,15 @@ public:
         id_(id),
         time_stamp_(time_stamp) {  }
 
-    /// private data ===============================================================
+    template<typename Type>
+    StampedData(const StampedData<Type>& other_stamped_data,
+                const DataType& data)
+    {
+        data_ = data;
+        set_header_equal(other_stamped_data);
+    }
+
+    /// private data ===========================================================
 private:
     DataType data_;
     size_t id_;
@@ -792,9 +811,9 @@ private:
     RT_TASK rt_task_;
 
     ThreadsafeObject<
-        StampedScalar,
-        StampedScalar,
-        StampedCommand> input_;
+    StampedScalar,
+    StampedScalar,
+    StampedCommand> input_;
 
     ThreadsafeObject<
     StampedScalar,
@@ -1036,11 +1055,11 @@ private:
         rt_printf("status: time_stamp = %f, id = %d ---------------\n", status.get_time_stamp(), status.get_id());
         BLMC_printStatus(&status.get_data());
 
-//        auto encoders = output_.get<ENCODERS>();
-//        rt_printf("encoders: time_stamp = %f, id = %d ---------------\n", encoders.get_time_stamp(), encoders.get_id());
-//        std::stringstream output_string;
-//        output_string << encoders.get_data().transpose();
-//        rt_printf("%s\n", output_string.str().c_str());
+        //        auto encoders = output_.get<ENCODERS>();
+        //        rt_printf("encoders: time_stamp = %f, id = %d ---------------\n", encoders.get_time_stamp(), encoders.get_id());
+        //        std::stringstream output_string;
+        //        output_string << encoders.get_data().transpose();
+        //        rt_printf("%s\n", output_string.str().c_str());
     }
 
     unsigned id_to_index(unsigned motor_id)
