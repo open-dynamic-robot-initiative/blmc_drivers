@@ -1,27 +1,11 @@
 #pragma once
 
-#include <signal.h>
-#include <stdlib.h>
-#include <unistd.h>
-#include <sys/mman.h>
-#include <native/task.h>
-#include <native/timer.h>
-#include <native/mutex.h>
-#include <native/cond.h>
-#include <mutex>
-#include <condition_variable>
-#include <rtdk.h>
 #include <array>
 #include <tuple>
 #include <memory>
 
 #include <time_logger.hpp>
-
 #include <os_interface.hpp>
-
-
-
-
 
 
 template<typename ...Types> class ThreadsafeObject
@@ -31,8 +15,6 @@ public:
     = typename std::tuple_element<INDEX, std::tuple<Types...>>::type;
 
     static const std::size_t SIZE = sizeof...(Types);
-
-
 
 private:
     std::shared_ptr<std::tuple<Types ...> > data_;
@@ -166,4 +148,3 @@ public:
         return modified_index;
     }
 };
-
