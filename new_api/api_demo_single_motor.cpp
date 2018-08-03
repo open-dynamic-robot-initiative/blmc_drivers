@@ -4,12 +4,9 @@ class Controller
 {
 private:
     std::shared_ptr<Motor> motor_;
-    std::shared_ptr<AnalogSensor> analog_sensor_;
 
 public:
-    Controller(std::shared_ptr<Motor> motor,
-               std::shared_ptr<AnalogSensor> analog_sensor):
-        motor_(motor), analog_sensor_(analog_sensor) { }
+    Controller(std::shared_ptr<Motor> motor): motor_(motor) { }
 
     void start_loop()
     {
@@ -30,8 +27,7 @@ public:
         Timer<10> time_logger("controller", 1000);
         while(true)
         {
-            double current_target =
-                    2 * (analog_sensor_->get_latest_analogs() - 0.5);
+            double current_target = 0.5;
             motor_->set_current_target(current_target);
 
             // print -----------------------------------------------------------
@@ -54,31 +50,17 @@ int main(int argc, char **argv)
 
     // create bus and boards -------------------------------------------------
     auto can_bus1 = std::make_shared<XenomaiCanbus>("rtcan0");
-    auto can_bus2 = std::make_shared<XenomaiCanbus>("rtcan1");
     auto board1 = std::make_shared<XenomaiCanMotorboard>(can_bus1);
-    auto board2 = std::make_shared<XenomaiCanMotorboard>(can_bus2);
 
     // create motors and sensors ---------------------------------------------
     auto motor_1 = std::make_shared<Motor>(board1, BLMC_MTR1);
-    auto motor_2 = std::make_shared<Motor>(board1, BLMC_MTR2);
-    auto motor_3 = std::make_shared<Motor>(board2, BLMC_MTR1);
 
-    auto analog_sensor_1 = std::make_shared<AnalogSensor>(board1, BLMC_ADC_A);
-    auto analog_sensor_2 = std::make_shared<AnalogSensor>(board1, BLMC_ADC_B);
-    auto analog_sensor_3 = std::make_shared<AnalogSensor>(board2, BLMC_ADC_A);
-
-    Controller controller1(motor_1, analog_sensor_1);
-    Controller controller2(motor_2, analog_sensor_2);
-    Controller controller3(motor_3, analog_sensor_3);
+    Controller controller1(motor_1);
 
     // somehow this is necessary to be able to use some of the functionality
     osi::make_this_thread_realtime();
     board1->enable();
-    board2->enable();
-
     controller1.start_loop();
-    controller2.start_loop();
-    controller3.start_loop();
 
     while(true)
     {
