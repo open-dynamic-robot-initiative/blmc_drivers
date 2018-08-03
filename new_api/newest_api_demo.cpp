@@ -748,17 +748,20 @@ public:
     // send input data ---------------------------------------------------------
     void input_send_current_target_a(StampedScalar current_target)
     {
-        input_send_current_target(current_target.get_data(), 0);
+        input_.set<CURRENT_TARGET_A>(current_target);
+        send_current_targets();
     }
 
     void input_send_current_target_b(StampedScalar current_target)
     {
-        input_send_current_target(current_target.get_data(), 1);
+        input_.set<CURRENT_TARGET_B>(current_target);
+        send_current_targets();
     }
 
 
     void input_send_command(const StampedCommand& command)
     {
+        input_.set<COMMAND>(command);
 
         uint32_t id = command.get_data().id_;
         int32_t content = command.get_data().content_;
@@ -807,9 +810,6 @@ public:
 private:
     std::shared_ptr<XenomaiCanbus> can_bus_;
 
-
-    RT_TASK rt_task_;
-
     ThreadsafeObject<
     StampedScalar,
     StampedScalar,
@@ -828,25 +828,11 @@ private:
     StampedScalar,
     StampedStatus > output_;
 
-
-
-    BLMC_BoardData_t data_;
-    RT_MUTEX data_mutex_;
-
-    // controls
-    Eigen::Vector2d current_targets_;
-    RT_MUTEX current_targets_mutex_;
-
     /// constructor ============================================================
 public:
     XenomaiCanMotorboard(std::shared_ptr<XenomaiCanbus> can_bus): can_bus_(can_bus)
     {
-        rt_mutex_create(&data_mutex_, NULL);
-        rt_mutex_create(&current_targets_mutex_, NULL);
 
-        // initialize members
-        BLMC_initBoardData(&data_, BLMC_SYNC_ON_ADC6);
-        current_targets_.setZero();
 
         // initialize members ------------------------------------------------------
         StampedScalar stamped_default_measurement(0, -1, -1);
@@ -861,6 +847,8 @@ public:
         output_.set<ENCODER_A>(stamped_default_measurement);
         output_.set<ENCODER_B>(stamped_default_measurement);
 
+        input_.set<CURRENT_TARGET_A>(stamped_default_measurement);
+        input_.set<CURRENT_TARGET_B>(stamped_default_measurement);
 
         _BLMC_StatusMsg_t_ default_status_message;
         default_status_message.system_enabled = 0;
@@ -873,31 +861,19 @@ public:
                     StampedData<_BLMC_StatusMsg_t_>(default_status_message,
                                                     -1, -1));
 
-
-        rt_task_ = start_thread(&XenomaiCanMotorboard::loop, this);
+        start_thread(&XenomaiCanMotorboard::loop, this);
     }
 
     /// private methods ========================================================
 private:
-
-    void input_send_current_target(double current, unsigned motor_id)
+    void send_current_targets()
     {
-        rt_mutex_acquire(&current_targets_mutex_, TM_INFINITE);
-        Eigen::Vector2d current_targets = current_targets_;
-        rt_mutex_release(&current_targets_mutex_);
+        Eigen::Vector2d current_targets;
+        current_targets[0] = input_.get<CURRENT_TARGET_A>().get_data();
+        current_targets[1] = input_.get<CURRENT_TARGET_B>().get_data();
 
-        current_targets[id_to_index(motor_id)] = current;
-        input_send_current_targets(current_targets);
-    }
-
-    void input_send_current_targets(Eigen::Vector2d currents)
-    {
-        rt_mutex_acquire(&current_targets_mutex_, TM_INFINITE);
-        current_targets_ = currents;
-        rt_mutex_release(&current_targets_mutex_);
-
-        float current_mtr1 = currents[0];
-        float current_mtr2 = currents[1];
+        float current_mtr1 = current_targets[0];
+        float current_mtr2 = current_targets[1];
 
         uint8_t data[8];
         uint32_t q_current1, q_current2;
