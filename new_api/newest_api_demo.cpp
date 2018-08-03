@@ -310,7 +310,7 @@ public:
         memcpy(can_frame.data, unstamped_can_frame.data.begin(), unstamped_can_frame.dlc);
 
         // send ----------------------------------------------------------------
-        send_to_can_device(socket,
+        osi::send_to_can_device(socket,
                                 (void *)&can_frame,
                                 sizeof(can_frame_t),
                                 0,
@@ -330,7 +330,7 @@ public:
                                can_interface_name.c_str(), 0);
         if (ret < 0)
         {
-            print_to_screen("Couldn't setup CAN connection. Exit.");
+            osi::print_to_screen("Couldn't setup CAN connection. Exit.");
             exit(-1);
         }
 
@@ -345,11 +345,11 @@ public:
         connection_info_.set(can_connection);
 
 
-        start_thread(&XenomaiCanbus::loop, this);
+        osi::start_thread(&XenomaiCanbus::loop, this);
     }
     virtual ~XenomaiCanbus()
     {
-        close_can_device(connection_info_.get().socket);
+        osi::close_can_device(connection_info_.get().socket);
     }
 
     /// private attributes and methods =========================================
@@ -408,7 +408,7 @@ private:
         message_header.msg_controllen = sizeof(nanosecs_abs_t);
 
         // receive message from can bus ----------------------------------------
-        receive_message_from_can_device(socket, &message_header, 0);
+        osi::receive_message_from_can_device(socket, &message_header, 0);
 
         // process received data and put into felix widmaier's format ----------
         if (message_header.msg_controllen == 0)
@@ -819,7 +819,7 @@ public:
                     StampedData<_BLMC_StatusMsg_t_>(default_status_message,
                                                     -1, -1));
 
-        start_thread(&XenomaiCanMotorboard::loop, this);
+        osi::start_thread(&XenomaiCanMotorboard::loop, this);
     }
 
     /// private methods ========================================================
@@ -937,7 +937,7 @@ private:
 
                 else
                 {
-                    print_to_screen("ERROR: Invalid motor number"
+                    osi::print_to_screen("ERROR: Invalid motor number"
                               "for encoder index: %d\n", motor_index);
                     exit(-1);
                 }
@@ -986,14 +986,14 @@ private:
     void print_everything()
     {
         auto status = output_.get<STATUS>();
-        print_to_screen("status: time_stamp = %f, id = %d ---------------\n", status.get_time_stamp(), status.get_id());
+        osi::print_to_screen("status: time_stamp = %f, id = %d ---------------\n", status.get_time_stamp(), status.get_id());
         BLMC_printStatus(&status.get_data());
 
         //        auto encoders = output_.get<ENCODERS>();
-        //        print_to_screen("encoders: time_stamp = %f, id = %d ---------------\n", encoders.get_time_stamp(), encoders.get_id());
+        //        osi::print_to_screen("encoders: time_stamp = %f, id = %d ---------------\n", encoders.get_time_stamp(), encoders.get_id());
         //        std::stringstream output_string;
         //        output_string << encoders.get_data().transpose();
-        //        print_to_screen("%s\n", output_string.str().c_str());
+        //        osi::print_to_screen("%s\n", output_string.str().c_str());
     }
 
     unsigned id_to_index(unsigned motor_id)
@@ -1003,7 +1003,7 @@ private:
         else if(motor_id == BLMC_MTR2)
             return 1;
 
-        print_to_screen("unknown motor id: %d", motor_id);
+        osi::print_to_screen("unknown motor id: %d", motor_id);
         exit(-1);
     }
 };
@@ -1094,7 +1094,7 @@ public:
 
     void start_loop()
     {
-        start_thread(&Controller::loop, this);
+        osi::start_thread(&Controller::loop, this);
     }
 
     static void loop(void* instance_pointer)
@@ -1116,7 +1116,7 @@ public:
             time_logger.end_and_start_interval();
             if ((time_logger.count() % 1000) == 0)
             {
-                print_to_screen("sending current: %f\n", current_target);
+                osi::print_to_screen("sending current: %f\n", current_target);
             }
         }
     }
@@ -1127,7 +1127,7 @@ public:
 
 int main(int argc, char **argv)
 {  
-    initialize_realtime_printing();
+    osi::initialize_realtime_printing();
 
     // create bus and boards -------------------------------------------------
     auto can_bus1 = std::make_shared<XenomaiCanbus>("rtcan0");
@@ -1149,7 +1149,7 @@ int main(int argc, char **argv)
     Controller controller3(motor_3, analog_sensor_3);
 
     // somehow this is necessary to be able to use some of the functionality
-    make_this_thread_realtime();
+    osi::make_this_thread_realtime();
     board1->enable();
     board2->enable();
 

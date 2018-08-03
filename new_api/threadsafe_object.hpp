@@ -19,24 +19,24 @@ public:
 private:
     std::shared_ptr<std::tuple<Types ...> > data_;
 
-    mutable std::shared_ptr<ConditionVariable> condition_;
-    mutable std::shared_ptr<Mutex> condition_mutex_;
+    mutable std::shared_ptr<osi::ConditionVariable> condition_;
+    mutable std::shared_ptr<osi::Mutex> condition_mutex_;
     std::shared_ptr<std::array<size_t, SIZE>> modification_counts_;
     std::shared_ptr<size_t> total_modification_count_;
 
-    std::shared_ptr<std::array<Mutex, SIZE>> data_mutexes_;
+    std::shared_ptr<std::array<osi::Mutex, SIZE>> data_mutexes_;
 
 public:
     ThreadsafeObject()
     {
         // initialize shared pointers ------------------------------------------
         data_ = std::make_shared<std::tuple<Types ...> >();
-        condition_ = std::make_shared<ConditionVariable>();
-        condition_mutex_ = std::make_shared<Mutex>();
+        condition_ = std::make_shared<osi::ConditionVariable>();
+        condition_mutex_ = std::make_shared<osi::Mutex>();
         modification_counts_ =
                 std::make_shared<std::array<size_t, SIZE>>();
         total_modification_count_ = std::make_shared<size_t>();
-        data_mutexes_ = std::make_shared<std::array<Mutex, SIZE>>();
+        data_mutexes_ = std::make_shared<std::array<osi::Mutex, SIZE>>();
 
         // initialize counts ---------------------------------------------------
         for(size_t i = 0; i < SIZE; i++)
@@ -48,7 +48,7 @@ public:
 
     template<int INDEX=0> Type<INDEX> get() const
     {
-        std::unique_lock<Mutex> lock((*data_mutexes_)[INDEX]);
+        std::unique_lock<osi::Mutex> lock((*data_mutexes_)[INDEX]);
         return std::get<INDEX>(*data_);
     }
 
@@ -59,13 +59,13 @@ public:
         Timer<>::sleep_ms(0.000001);
         // set datum in our data_ member ---------------------------------------
         {
-            std::unique_lock<Mutex> lock((*data_mutexes_)[INDEX]);
+            std::unique_lock<osi::Mutex> lock((*data_mutexes_)[INDEX]);
             std::get<INDEX>(*data_) = datum;
         }
 
         // notify --------------------------------------------------------------
         {
-            std::unique_lock<Mutex> lock(*condition_mutex_);
+            std::unique_lock<osi::Mutex> lock(*condition_mutex_);
             (*modification_counts_)[INDEX] += 1;
             *total_modification_count_ += 1;
             condition_->notify_all();
@@ -74,7 +74,7 @@ public:
 
     void wait_for_update(unsigned index) const
     {
-        std::unique_lock<Mutex> lock(*condition_mutex_);
+        std::unique_lock<osi::Mutex> lock(*condition_mutex_);
 
         // wait until the datum with the right index is modified ---------------
         size_t initial_modification_count =
@@ -101,7 +101,7 @@ public:
 
     size_t wait_for_update() const
     {
-        std::unique_lock<Mutex> lock(*condition_mutex_);
+        std::unique_lock<osi::Mutex> lock(*condition_mutex_);
 
         // wait until any datum is modified ------------------------------------
         std::array<size_t, SIZE>

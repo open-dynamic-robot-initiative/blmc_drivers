@@ -15,7 +15,8 @@
 
 #include <sys/mman.h>
 
-
+namespace osi
+{
 
 namespace xenomai
 {
@@ -90,7 +91,7 @@ void send_to_can_device(int fd, const void *buf, size_t len,
 
     if (ret < 0)
     {
-        print_to_screen("something went wrong with "
+        osi::print_to_screen("something went wrong with "
                   "sending CAN frame, error code: %d\n", ret);
         exit(-1);
     }
@@ -111,7 +112,7 @@ void receive_message_from_can_device(int fd, struct msghdr *msg, int flags)
     int ret = rt_dev_recvmsg(fd, msg, flags);
     if (ret < 0)
     {
-        print_to_screen("something went wrong with receiving "
+        osi::print_to_screen("something went wrong with receiving "
                   "CAN frame, error code: %d\n", ret);
         exit(-1);
     }
@@ -146,13 +147,12 @@ void initialize_realtime_printing()
     rt_print_auto_init(1);
 }
 
-namespace osi
-{
+
 void sleep_ms(const double& sleep_time_ms)
 {
     rt_task_sleep(int(sleep_time_ms * 1000000.));
 }
-}
+
 double get_current_time_ms()
 {
     return double(rt_timer_read()) / 1000000.;
@@ -164,4 +164,5 @@ double get_current_time_ms()
 void make_this_thread_realtime()
 {
     rt_task_shadow(NULL, NULL, 0, 0);
+}
 }

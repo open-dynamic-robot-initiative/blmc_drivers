@@ -145,34 +145,34 @@ TEST(threadsafe_object, single_input_multi_output)
     rt_print_auto_init(1);
 
     // start a thread for each output and input function -----------------------
-    start_thread(output_function<0,0,TestType1>, &test_object_1);
-    start_thread(output_function<0,1,TestType1>, &test_object_1);
-    start_thread(output_function<0,2,TestType1>, &test_object_1);
-    start_thread(output_function<0,3,TestType1>, &test_object_1);
+    osi::start_thread(output_function<0,0,TestType1>, &test_object_1);
+    osi::start_thread(output_function<0,1,TestType1>, &test_object_1);
+    osi::start_thread(output_function<0,2,TestType1>, &test_object_1);
+    osi::start_thread(output_function<0,3,TestType1>, &test_object_1);
 
-    start_thread(output_function<1,0,TestType1>, &test_object_1);
-    start_thread(output_function<1,1,TestType1>, &test_object_1);
-    start_thread(output_function<1,2,TestType1>, &test_object_1);
-    start_thread(output_function<1,3,TestType1>, &test_object_1);
+    osi::start_thread(output_function<1,0,TestType1>, &test_object_1);
+    osi::start_thread(output_function<1,1,TestType1>, &test_object_1);
+    osi::start_thread(output_function<1,2,TestType1>, &test_object_1);
+    osi::start_thread(output_function<1,3,TestType1>, &test_object_1);
 
-    start_thread(output_function<2,0,TestType1>, &test_object_1);
-    start_thread(output_function<2,1,TestType1>, &test_object_1);
-    start_thread(output_function<2,2,TestType1>, &test_object_1);
-    start_thread(output_function<2,3,TestType1>, &test_object_1);
+    osi::start_thread(output_function<2,0,TestType1>, &test_object_1);
+    osi::start_thread(output_function<2,1,TestType1>, &test_object_1);
+    osi::start_thread(output_function<2,2,TestType1>, &test_object_1);
+    osi::start_thread(output_function<2,3,TestType1>, &test_object_1);
 
-    start_thread(output_function<3,0,TestType1>, &test_object_1);
-    start_thread(output_function<3,1,TestType1>, &test_object_1);
-    start_thread(output_function<3,2,TestType1>, &test_object_1);
-    start_thread(output_function<3,3,TestType1>, &test_object_1);
+    osi::start_thread(output_function<3,0,TestType1>, &test_object_1);
+    osi::start_thread(output_function<3,1,TestType1>, &test_object_1);
+    osi::start_thread(output_function<3,2,TestType1>, &test_object_1);
+    osi::start_thread(output_function<3,3,TestType1>, &test_object_1);
 
-    start_thread(complete_output_function<4, TestType1>, &test_object_1);
+    osi::start_thread(complete_output_function<4, TestType1>, &test_object_1);
 
     usleep(1000);
 
-    auto task_1 = start_thread(input_function<0, TestType1>, &test_object_1);
-    auto task_2 = start_thread(input_function<1, TestType1>, &test_object_1);
-    auto task_3 = start_thread(input_function<2, TestType1>, &test_object_1);
-    auto task_4 = start_thread(input_function<3, TestType1>, &test_object_1);
+    auto task_1 = osi::start_thread(input_function<0, TestType1>, &test_object_1);
+    auto task_2 = osi::start_thread(input_function<1, TestType1>, &test_object_1);
+    auto task_3 = osi::start_thread(input_function<2, TestType1>, &test_object_1);
+    auto task_4 = osi::start_thread(input_function<3, TestType1>, &test_object_1);
 
     usleep(1000000);
 
