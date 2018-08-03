@@ -1,6 +1,9 @@
 #pragma once
 
 
+
+#ifdef __XENO__
+
 #include <native/task.h>
 #include <native/timer.h>
 #include <native/mutex.h>
@@ -9,11 +12,45 @@
 #include <rtdk.h>
 #include <rtdm/rtcan.h>
 
+#else
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <stdint.h>
+#include <string.h>
+
+#include <net/if.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <sys/ioctl.h>
+
+#include <linux/can.h>
+#include <linux/can/raw.h>
+
+// Define typedefs to make code compatible with Xenoami code.
+typedef struct can_frame can_frame_t;
+typedef canid_t can_id_t;
+typedef uint64_t 	nanosecs_abs_t;
+
+#define rt_fprintf fprintf
+#define rt_printf printf
+
+
+
+#define rt_dev_socket socket
+#define rt_dev_ioctl ioctl
+#define rt_dev_close close
+#define rt_dev_setsockopt setsockopt
+#define rt_dev_bind bind
+#define rt_dev_recvmsg recvmsg
+#define rt_dev_sendto sendto
+#endif
+
 #include <mutex>
 #include <condition_variable>
 
-
 #include <sys/mman.h>
+
 
 namespace osi
 {

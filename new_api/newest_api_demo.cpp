@@ -25,41 +25,20 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
-#include <signal.h>
-#include <stdlib.h>
-#include <unistd.h>
-#include <sys/mman.h>
-#include <native/task.h>
-#include <native/timer.h>
-#include <native/mutex.h>
-#include <native/cond.h>
 
-#include <rtdk.h>
 #include <blmc_can/can.h>
 #include <blmc_can/blmc_can.h>
-#include <blmc_can/optoforce_can.h>
-#include <functional>
-
 
 #include <iostream>
 #include <stdlib.h>
 #include <memory>
-
 #include <eigen3/Eigen/Core>
-
-
-
 #include <array>
-#include <time_logger.hpp>
-
-
 #include <tuple>
-
-#include <threadsafe_object.hpp>
-
 #include <string>
-#include <iostream>
 
+#include <time_logger.hpp>
+#include <threadsafe_object.hpp>
 #include <os_interface.hpp>
 
 
@@ -130,7 +109,7 @@ public:
 
 template<typename DataType> class StampedData
 {
-    /// public interface ===========================================================
+    /// public interface =======================================================
 public:
     // getters -----------------------------------------------------------------
     const DataType& get_data() const
@@ -194,11 +173,6 @@ private:
 
 
 
-
-
-
-
-
 // Convertion of a byte array to a int32_t.
 #define BYTES_TO_INT32(bytes) (\
     (int32_t) bytes[3] + \
@@ -216,17 +190,6 @@ private:
 // Convertion of Q24 byte array to float.
 #define QBYTES_TO_FLOAT(qbytes) (\
     Q24_TO_FLOAT( BYTES_TO_INT32(qbytes) ) )
-
-
-
-/// a device has to
-///  - keep output object up to data
-///  - keep input object up to data
-///  - implement send functions
-///  we can split it up into an input and an output device, and then derive from both for Input Output objects
-///  send(bla, input_id)
-
-
 
 
 // This interface allows to communicate with the can bus. It has one input
