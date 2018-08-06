@@ -32,31 +32,6 @@
 //  exit(-1);
 //}
 
-//// GLOBALS
-//// **************************************************************************
-//std::vector<CAN_CanConnection_t> can_connections;
-
-
-// FUNCTIONS
-// **************************************************************************
-//void cleanup_and_exit(int sig)
-//{
-//    osi::print_to_screen("Signal %d received\n", sig);
-//    // Disable system before closing connection
-
-//    for(int i = 0; i < can_connections.size(); i++)
-//    {
-//        BLMC_sendCommand(&can_connections[i], BLMC_CMD_ENABLE_SYS, BLMC_DISABLE);
-//        CAN_closeCan(&can_connections[i]);
-//    }
-//    exit(0);
-//}
-
-
-
-
-
-
 
 // new class created to replace CAN_Frame_t,
 // avoiding dangerous pointers
@@ -703,6 +678,8 @@ public:
                                                             MotorboardCommand::Contents::ENABLE),-1,-1));
         input_send_command(StampedCommand(MotorboardCommand(MotorboardCommand::IDs::ENABLE_MTR2,
                                                             MotorboardCommand::Contents::ENABLE),-1,-1));
+        input_send_command(StampedCommand(MotorboardCommand(MotorboardCommand::IDs::SET_CAN_RECV_TIMEOUT,
+                                                            100),-1,-1));
     }
 
     /// private members ========================================================
@@ -761,6 +738,12 @@ public:
                                                     -1, -1));
 
         osi::start_thread(&XenomaiCanMotorboard::loop, this);
+    }
+
+    ~XenomaiCanMotorboard()
+    {
+        input_send_command(StampedCommand(MotorboardCommand(MotorboardCommand::IDs::ENABLE_SYS,
+                                                            MotorboardCommand::Contents::DISABLE),-1,-1));
     }
 
     /// private methods ========================================================
