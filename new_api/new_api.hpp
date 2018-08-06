@@ -122,23 +122,6 @@ private:
 
 
 
-// Convertion of a byte array to a int32_t.
-#define BYTES_TO_INT32(bytes) (\
-    (int32_t) bytes[3] + \
-    ((int32_t)bytes[2] << 8) + \
-    ((int32_t)bytes[1] << 16) + \
-    ((int32_t)bytes[0] << 24) \
-    )
-
-// Conversion of Q24 value to float.
-#define Q24_TO_FLOAT(qval) ((float)qval / (1 << 24))
-
-// Conversion of float to Q24
-#define FLOAT_TO_Q24(fval) ((int)(fval * (1 << 24)))
-
-// Convertion of Q24 byte array to float.
-#define QBYTES_TO_FLOAT(qbytes) (\
-    Q24_TO_FLOAT( BYTES_TO_INT32(qbytes) ) )
 
 
 // This interface allows to communicate with the can bus. It has one input
@@ -748,6 +731,27 @@ public:
 
     /// private methods ========================================================
 private:
+    template<typename T> int32_t bytes_to_int32(T bytes)
+    {
+        return (int32_t) bytes[3] + ((int32_t)bytes[2] << 8) +
+                ((int32_t)bytes[1] << 16) + ((int32_t)bytes[0] << 24);
+    }
+
+    float q24_to_float(int32_t qval)
+    {
+        return ((float)qval / (1 << 24));
+    }
+
+    int32_t float_to_q24(float fval)
+    {
+        return ((int)(fval * (1 << 24)));
+    }
+
+    template<typename T> float qbytes_to_float(T qbytes)
+    {
+        return q24_to_float(bytes_to_int32(qbytes));
+    }
+
     void send_current_targets()
     {
         Eigen::Vector2d current_targets;
@@ -761,8 +765,8 @@ private:
         uint32_t q_current1, q_current2;
 
         // Convert floats to Q24 values
-        q_current1 = FLOAT_TO_Q24(current_mtr1);
-        q_current2 = FLOAT_TO_Q24(current_mtr2);
+        q_current1 = float_to_q24(current_mtr1);
+        q_current2 = float_to_q24(current_mtr2);
 
         // Motor 1
         data[0] = (q_current1 >> 24) & 0xFF;
@@ -815,9 +819,9 @@ private:
 
             // convert to measurement ------------------------------------------
             Eigen::Vector2d measurement;
-            double measurement_a = QBYTES_TO_FLOAT(can_frame.data.begin());
+            double measurement_a = qbytes_to_float(can_frame.data.begin());
             double measurement_b =
-                    QBYTES_TO_FLOAT((can_frame.data.begin() + 4));
+                    qbytes_to_float((can_frame.data.begin() + 4));
 
             StampedScalar
                     stamped_measurement_a(measurement_a,
