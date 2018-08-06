@@ -221,7 +221,7 @@ public:
         // setup can connection --------------------------------
         // \todo get rid of old format stuff
         CAN_CanConnection_t can_connection_old_format;
-        int ret = CAN_setupCan(&can_connection_old_format,
+        int ret = setup_can(&can_connection_old_format,
                                can_interface_name.c_str(), 0);
         if (ret < 0)
         {
@@ -242,6 +242,10 @@ public:
 
         osi::start_thread(&XenomaiCanbus::loop, this);
     }
+
+
+
+
     virtual ~XenomaiCanbus()
     {
         osi::close_can_device(connection_info_.get().socket);
@@ -326,6 +330,107 @@ private:
         }
 
         return out_frame;
+    }
+
+
+
+    int setup_can(CAN_CanHandle_t canHandle, char const *interface,
+            uint32_t err_mask)
+    {
+        CAN_CanConnection_t *can = (CAN_CanConnection_t*)canHandle;
+        int ret;
+        struct ifreq ifr;
+
+
+        ret = rt_dev_socket(PF_CAN, SOCK_RAW, CAN_RAW);
+        if (ret < 0) {
+            rt_fprintf(stderr, "rt_dev_socket: %s\n", strerror(-ret));
+            return -1;
+        }
+        can->socket = ret;
+
+
+        // Select interface
+        if (interface == NULL) {
+            ifr.ifr_ifindex = 0;
+        } else {
+            strncpy(ifr.ifr_name, interface, IFNAMSIZ);
+            ret = rt_dev_ioctl(can->socket, SIOCGIFINDEX, &ifr);
+            if (ret < 0) {
+                rt_fprintf(stderr, "rt_dev_ioctl GET_IFINDEX: %s\n",
+                        strerror(-ret));
+                CAN_closeCan(canHandle);
+                return -1;
+            }
+        }
+
+
+        // Set error mask
+        if (err_mask) {
+            ret = rt_dev_setsockopt(can->socket, SOL_CAN_RAW, CAN_RAW_ERR_FILTER,
+                                    &err_mask, sizeof(err_mask));
+            if (ret < 0) {
+                rt_fprintf(stderr, "rt_dev_setsockopt: %s\n", strerror(-ret));
+                CAN_closeCan(canHandle);
+                return -1;
+            }
+        }
+
+
+        //if (filter_count) {
+        //    ret = rt_dev_setsockopt(s, SOL_CAN_RAW, CAN_RAW_FILTER,
+        //                            &recv_filter, filter_count *
+        //                            sizeof(struct can_filter));
+        //    if (ret < 0) {
+        //        rt_fprintf(stderr, "rt_dev_setsockopt: %s\n", strerror(-ret));
+        //        goto failure;
+        //    }
+        //}
+
+
+        // Bind to socket
+        can->recv_addr.can_family = AF_CAN;
+        can->recv_addr.can_ifindex = ifr.ifr_ifindex;
+        ret = rt_dev_bind(can->socket, (struct sockaddr *)&can->recv_addr,
+                          sizeof(struct sockaddr_can));
+        if (ret < 0) {
+            rt_fprintf(stderr, "rt_dev_bind: %s\n", strerror(-ret));
+            CAN_closeCan(canHandle);
+            return -1;
+        }
+
+    #ifdef __XENO__
+        // Enable timestamps for frames
+        ret = rt_dev_ioctl(can->socket,
+                RTCAN_RTIOC_TAKE_TIMESTAMP, RTCAN_TAKE_TIMESTAMPS);
+        if (ret) {
+            rt_fprintf(stderr, "rt_dev_ioctl TAKE_TIMESTAMP: %s\n",
+                    strerror(-ret));
+            CAN_closeCan(canHandle);
+            return -1;
+        }
+    #elif defined __RT_PREEMPT__
+    // TODO: Need to support timestamps.
+    #endif
+
+
+        can->recv_addr.can_family = AF_CAN;
+        can->recv_addr.can_ifindex = ifr.ifr_ifindex;
+
+        can->msg.msg_iov = &can->iov;
+        can->msg.msg_iovlen = 1;
+        can->msg.msg_name = (void *)&can->msg_addr;
+        can->msg.msg_namelen = sizeof(struct sockaddr_can);
+        can->msg.msg_control = (void *)&can->timestamp;
+        can->msg.msg_controllen = sizeof(nanosecs_abs_t);
+
+        // TODO why the memset?
+        memset(&can->send_addr, 0, sizeof(can->send_addr));
+        can->send_addr.can_family = AF_CAN;
+        can->send_addr.can_ifindex = ifr.ifr_ifindex;
+
+
+        return 0;
     }
 };
 
