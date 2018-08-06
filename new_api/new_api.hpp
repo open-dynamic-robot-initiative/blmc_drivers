@@ -1,6 +1,6 @@
 #pragma once
 
-#include <blmc_can/can.h>
+//#include <blmc_can/can.h>
 #include <blmc_can/blmc_can.h>
 
 #include <iostream>
@@ -222,7 +222,7 @@ public:
         // \todo get rid of old format stuff
         CAN_CanConnection_t can_connection_old_format;
         int ret = setup_can(&can_connection_old_format,
-                               can_interface_name.c_str(), 0);
+                            can_interface_name.c_str(), 0);
         if (ret < 0)
         {
             osi::print_to_screen("Couldn't setup CAN connection. Exit.");
@@ -335,7 +335,7 @@ private:
 
 
     int setup_can(CAN_CanHandle_t canHandle, char const *interface,
-            uint32_t err_mask)
+                  uint32_t err_mask)
     {
         CAN_CanConnection_t *can = (CAN_CanConnection_t*)canHandle;
         int ret;
@@ -358,7 +358,7 @@ private:
             ret = rt_dev_ioctl(can->socket, SIOCGIFINDEX, &ifr);
             if (ret < 0) {
                 rt_fprintf(stderr, "rt_dev_ioctl GET_IFINDEX: %s\n",
-                        strerror(-ret));
+                           strerror(-ret));
                 CAN_closeCan(canHandle);
                 return -1;
             }
@@ -399,19 +399,19 @@ private:
             return -1;
         }
 
-    #ifdef __XENO__
+#ifdef __XENO__
         // Enable timestamps for frames
         ret = rt_dev_ioctl(can->socket,
-                RTCAN_RTIOC_TAKE_TIMESTAMP, RTCAN_TAKE_TIMESTAMPS);
+                           RTCAN_RTIOC_TAKE_TIMESTAMP, RTCAN_TAKE_TIMESTAMPS);
         if (ret) {
             rt_fprintf(stderr, "rt_dev_ioctl TAKE_TIMESTAMP: %s\n",
-                    strerror(-ret));
+                       strerror(-ret));
             CAN_closeCan(canHandle);
             return -1;
         }
-    #elif defined __RT_PREEMPT__
-    // TODO: Need to support timestamps.
-    #endif
+#elif defined __RT_PREEMPT__
+        // TODO: Need to support timestamps.
+#endif
 
 
         can->recv_addr.can_family = AF_CAN;
@@ -493,12 +493,25 @@ public:
 
 
 
+struct MotorboardStatus
+{                             // bits
+    uint8_t system_enabled:1;  // 0
+    uint8_t motor1_enabled:1;  // 1
+    uint8_t motor1_ready:1;    // 2
+    uint8_t motor2_enabled:1;  // 3
+    uint8_t motor2_ready:1;    // 4
+    uint8_t error_code:3;      // 5-7
+};
+
+
+
+
 class MotorboardInterface
 {
 public:
     typedef StampedData<double> StampedScalar;
     typedef StampedData<MotorboardCommand> StampedCommand;
-    typedef StampedData<_BLMC_StatusMsg_t_> StampedStatus;
+    typedef StampedData<MotorboardStatus> StampedStatus;
 
     enum InputNames {
         CURRENT_TARGET_A,
@@ -744,7 +757,7 @@ public:
         data[7] = id & 0xFF;
 
         CanFrame can_frame;
-        can_frame.id = BLMC_CAN_ID_COMMAND;
+        can_frame.id = CanframeIDs::COMMAND_ID;
         for(size_t i = 0; i < 8; i++)
         {
             can_frame.data[i] = data[i];
@@ -792,6 +805,18 @@ private:
     StampedScalar,
     StampedStatus > output_;
 
+
+    enum CanframeIDs
+    {
+        COMMAND_ID   = 0x00,
+        IqRef     = 0x05,
+        STATUSMSG = 0x10,
+        Iq        = 0x20,
+        POS       = 0x30,
+        SPEED     = 0x40,
+        ADC6      = 0x50,
+        ENC_INDEX = 0x60
+    };
     /// constructor ============================================================
 public:
     XenomaiCanMotorboard(std::shared_ptr<XenomaiCanbus> can_bus): can_bus_(can_bus)
@@ -814,16 +839,14 @@ public:
         input_.set<CURRENT_TARGET_A>(stamped_default_measurement);
         input_.set<CURRENT_TARGET_B>(stamped_default_measurement);
 
-        _BLMC_StatusMsg_t_ default_status_message;
+        MotorboardStatus default_status_message;
         default_status_message.system_enabled = 0;
         default_status_message.motor1_enabled = 0;
         default_status_message.motor1_ready   = 0;
         default_status_message.motor2_enabled = 0;
         default_status_message.motor2_ready   = 0;
         default_status_message.error_code     = 0;
-        output_.set<STATUS>(
-                    StampedData<_BLMC_StatusMsg_t_>(default_status_message,
-                                                    -1, -1));
+        output_.set<STATUS>(StampedStatus(default_status_message, -1, -1));
 
         osi::start_thread(&XenomaiCanMotorboard::loop, this);
     }
@@ -941,23 +964,23 @@ private:
 
             switch(can_frame.id)
             {
-            case BLMC_CAN_ID_Iq:
+            case CanframeIDs::Iq:
                 output_.set<CURRENT_A>(stamped_measurement_a);
                 output_.set<CURRENT_B>(stamped_measurement_b);
                 break;
-            case BLMC_CAN_ID_POS:
+            case CanframeIDs::POS:
                 output_.set<POSITION_A>(stamped_measurement_a);
                 output_.set<POSITION_B>(stamped_measurement_b);
                 break;
-            case BLMC_CAN_ID_SPEED:
+            case CanframeIDs::SPEED:
                 output_.set<VELOCITY_A>(stamped_measurement_a);
                 output_.set<VELOCITY_B>(stamped_measurement_b);
                 break;
-            case BLMC_CAN_ID_ADC6:
+            case CanframeIDs::ADC6:
                 output_.set<ANALOG_A>(stamped_measurement_a);
                 output_.set<ANALOG_B>(stamped_measurement_b);
                 break;
-            case BLMC_CAN_ID_ENC_INDEX:
+            case CanframeIDs::ENC_INDEX:
             {
                 // here the interpretation of the message is different,
                 // we get a motor index and a measurement
@@ -975,14 +998,14 @@ private:
                 else
                 {
                     osi::print_to_screen("ERROR: Invalid motor number"
-                              "for encoder index: %d\n", motor_index);
+                                         "for encoder index: %d\n", motor_index);
                     exit(-1);
                 }
                 break;
             }
-            case BLMC_CAN_ID_STATUSMSG:
+            case CanframeIDs::STATUSMSG:
             {
-                _BLMC_StatusMsg_t_ status;
+                MotorboardStatus status;
                 uint8_t data = can_frame.data[0];
                 status.system_enabled = data >> 0;
                 status.motor1_enabled = data >> 1;
@@ -991,7 +1014,7 @@ private:
                 status.motor2_ready   = data >> 4;
                 status.error_code     = data >> 5;
 
-                StampedData<_BLMC_StatusMsg_t_>
+                StampedData<MotorboardStatus>
                         stamped_status(status,
                                        stamped_can_frame.get_id(),
                                        stamped_can_frame.get_time_stamp());
@@ -1024,8 +1047,14 @@ private:
     {
         auto status = output_.get<STATUS>();
         osi::print_to_screen("status: time_stamp = %f, id = %d ---------------\n", status.get_time_stamp(), status.get_id());
-        BLMC_printStatus(&status.get_data());
+        //        BLMC_printStatus(&status.get_data());
 
+        rt_printf("\tSystem enabled: %d\n", status.get_data().system_enabled);
+        rt_printf("\tMotor 1 enabled: %d\n", status.get_data().motor1_enabled);
+        rt_printf("\tMotor 1 ready: %d\n", status.get_data().motor1_ready);
+        rt_printf("\tMotor 2 enabled: %d\n", status.get_data().motor2_enabled);
+        rt_printf("\tMotor 2 ready: %d\n", status.get_data().motor2_ready);
+        rt_printf("\tError Code: %d\n", status.get_data().error_code);
         //        auto encoders = output_.get<ENCODERS>();
         //        osi::print_to_screen("encoders: time_stamp = %f, id = %d ---------------\n", encoders.get_time_stamp(), encoders.get_id());
         //        std::stringstream output_string;
