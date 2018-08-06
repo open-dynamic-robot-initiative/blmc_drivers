@@ -501,6 +501,25 @@ struct MotorboardStatus
     uint8_t motor2_enabled:1;  // 3
     uint8_t motor2_ready:1;    // 4
     uint8_t error_code:3;      // 5-7
+
+    enum ErrorCodes
+    {
+        //! \brief No error
+        NONE = 0,
+        //! \brief Encoder error too high
+        ENCODER = 1,
+        //! \brief Timeout for receiving current references exceeded
+        CAN_RECV_TIMEOUT = 2,
+        //! \brief Motor temperature reached critical value
+        //! \note This is currently unused as no temperature sensing is done.
+        CRIT_TEMP = 3,  // currently unused
+        //! \brief Some error in the SpinTAC Position Convert module
+        POSCONV = 4,
+        //! \brief Position Rollover occured
+        POS_ROLLOVER = 5,
+        //! \brief Some other error
+        OTHER = 7
+    };
 };
 
 
