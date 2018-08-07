@@ -40,6 +40,11 @@ public:
         *total_modification_count_ = 0;
     }
 
+    size_t size()
+    {
+        return SIZE;
+    }
+
     Type get(const size_t& index = 0) const
     {
         std::unique_lock<osi::Mutex> lock((*data_mutexes_)[index]);
