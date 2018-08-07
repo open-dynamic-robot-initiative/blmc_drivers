@@ -8,6 +8,154 @@
 #include <os_interface.hpp>
 
 
+
+template<typename Type, size_t SIZE> class SingletypeThreadsafeObject
+{
+private:
+    std::shared_ptr<std::array<Type, SIZE> > data_;
+
+    mutable std::shared_ptr<osi::ConditionVariable> condition_;
+    mutable std::shared_ptr<osi::Mutex> condition_mutex_;
+    std::shared_ptr<std::array<size_t, SIZE>> modification_counts_;
+    std::shared_ptr<size_t> total_modification_count_;
+
+    std::shared_ptr<std::array<osi::Mutex, SIZE>> data_mutexes_;
+
+public:
+    SingletypeThreadsafeObject()
+    {
+        // initialize shared pointers ------------------------------------------
+        data_ = std::make_shared<std::array<Type, SIZE>>();
+        condition_ = std::make_shared<osi::ConditionVariable>();
+        condition_mutex_ = std::make_shared<osi::Mutex>();
+        modification_counts_ = std::make_shared<std::array<size_t, SIZE>>();
+        total_modification_count_ = std::make_shared<size_t>();
+        data_mutexes_ = std::make_shared<std::array<osi::Mutex, SIZE>>();
+
+        // initialize counts ---------------------------------------------------
+        for(size_t i = 0; i < SIZE; i++)
+        {
+            (*modification_counts_)[i] = 0;
+        }
+        *total_modification_count_ = 0;
+    }
+
+    Type get(const size_t& index = 0) const
+    {
+        std::unique_lock<osi::Mutex> lock((*data_mutexes_)[index]);
+        return (*data_)[index];
+    }
+
+    /// for backwards compatibility ============================================
+    template<int INDEX=0> void set(Type datum)
+    {
+        set(datum, INDEX);
+    }
+
+    template<int INDEX=0> Type get() const
+    {
+        return get(INDEX);
+    }
+
+
+    /// ========================================================================
+
+    void set(const Type& datum, const size_t& index = 0)
+    {
+        // we sleep for a nanosecond, in case some thread calls set several
+        // times in a row. this way we do hopefully not miss messages
+        Timer<>::sleep_ms(0.000001);
+        // set datum in our data_ member ---------------------------------------
+        {
+            std::unique_lock<osi::Mutex> lock((*data_mutexes_)[index]);
+            (*data_)[index] = datum;
+        }
+
+        // notify --------------------------------------------------------------
+        {
+            std::unique_lock<osi::Mutex> lock(*condition_mutex_);
+            (*modification_counts_)[index] += 1;
+            *total_modification_count_ += 1;
+            condition_->notify_all();
+        }
+    }
+
+    void wait_for_update(const size_t& index) const
+    {
+        std::unique_lock<osi::Mutex> lock(*condition_mutex_);
+
+        // wait until the datum with the right index is modified ---------------
+        size_t initial_modification_count =
+                (*modification_counts_)[index];
+        while(initial_modification_count == (*modification_counts_)[index])
+        {
+            condition_->wait(lock);
+        }
+
+        // check that we did not miss data -------------------------------------
+        if(initial_modification_count + 1 != (*modification_counts_)[index])
+        {
+            osi::print_to_screen("size: %d, \n other info: %s \n",
+                      SIZE, __PRETTY_FUNCTION__ );
+            osi::print_to_screen("something went wrong, we missed a message.\n");
+            exit(-1);
+        }
+    }
+
+    size_t wait_for_update() const
+    {
+        std::unique_lock<osi::Mutex> lock(*condition_mutex_);
+
+        // wait until any datum is modified ------------------------------------
+        std::array<size_t, SIZE>
+                initial_modification_counts = *modification_counts_;
+        size_t initial_modification_count = *total_modification_count_;
+
+        while(initial_modification_count == *total_modification_count_)
+        {
+            condition_->wait(lock);
+        }
+
+        // make sure we did not miss any data ----------------------------------
+        if(initial_modification_count + 1 != *total_modification_count_)
+        {
+            osi::print_to_screen("size: %d, \n other info: %s \n",
+                      SIZE, __PRETTY_FUNCTION__ );
+
+            osi::print_to_screen("something went wrong, we missed a message.\n");
+            exit(-1);
+        }
+
+        // figure out which index was modified and return it -------------------
+        int modified_index = -1;
+        for(size_t i = 0; i < SIZE; i++)
+        {
+            if(initial_modification_counts[i] + 1 == (*modification_counts_)[i])
+            {
+                if(modified_index != -1)
+                {
+                    osi::print_to_screen("something in the threadsafe object "
+                              "went horribly wrong\n");
+                    exit(-1);
+                }
+
+                modified_index = i;
+            }
+            else if(initial_modification_counts[i] !=(*modification_counts_)[i])
+            {
+                osi::print_to_screen("something in the threadsafe object "
+                          "went horribly wrong\n");
+                exit(-1);
+            }
+        }
+        return modified_index;
+    }
+};
+
+
+
+
+
 template<typename ...Types> class ThreadsafeObject
 {
 public:

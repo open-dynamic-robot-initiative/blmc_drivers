@@ -254,9 +254,9 @@ public:
     /// private attributes and methods =========================================
 private:
     // attributes --------------------------------------------------------------
-    ThreadsafeObject<CanConnection> connection_info_;
-    ThreadsafeObject<StampedFrame> output_;
-    ThreadsafeObject<StampedFrame> input_;
+    SingletypeThreadsafeObject<CanConnection, 1> connection_info_;
+    SingletypeThreadsafeObject<StampedFrame, 1> output_;
+    SingletypeThreadsafeObject<StampedFrame, 1> input_;
 
     // methods -----------------------------------------------------------------
     static void
