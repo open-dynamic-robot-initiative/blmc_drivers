@@ -68,11 +68,11 @@ int main(int argc, char **argv)
     auto board2 = std::make_shared<CanMotorboard>(can_bus2);
 
     // create motors and sensors ---------------------------------------------
-    std::shared_ptr<MotorInterface> motor_1 = std::make_shared<Motor>(board1, BLMC_MTR1);
-    std::shared_ptr<MotorInterface> motor_2 = std::make_shared<Motor>(board1, BLMC_MTR2);
-    std::shared_ptr<MotorInterface> motor_3 = std::make_shared<Motor>(board2, BLMC_MTR1);
+    std::shared_ptr<MotorInterface> motor_1 = std::make_shared<Motor>(board1, 0);
+    std::shared_ptr<MotorInterface> motor_2 = std::make_shared<Motor>(board1, 1);
+    std::shared_ptr<MotorInterface> motor_3 = std::make_shared<Motor>(board2, 0);
 
-    std::shared_ptr<AnalogsensorInterface> analog_sensor_1 = std::make_shared<Analogsensor>(board1, BLMC_ADC_A);
+    std::shared_ptr<AnalogsensorInterface> analog_sensor_1 = std::make_shared<Analogsensor>(board1, 0);
 
     std::shared_ptr<FingerInterface> finger = std::make_shared<Finger>(motor_1, motor_2, motor_3);
 
