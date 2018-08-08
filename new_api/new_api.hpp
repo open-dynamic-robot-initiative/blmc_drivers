@@ -534,19 +534,7 @@ public:
     typedef StampedData<MotorboardStatus> StampedStatus;
 
     /// outputs ================================================================
-    std::map<std::string, size_t> measurement_map_ = {{"current_0", 0},
-                                                      {"current_1", 1},
-                                                      {"position_0", 2},
-                                                      {"position_1", 3},
-                                                      {"velocity_0", 4},
-                                                      {"velocity_1", 5},
-                                                      {"analog_0", 6},
-                                                      {"analog_1", 7},
-                                                      {"encoder_0", 8},
-                                                      {"encoder_1", 9}};
-
-
-    std::vector<std::string> measurement_names_ = {{"current_0",
+    std::vector<std::string> measurement_names_ = {"current_0",
                                                    "current_1",
                                                    "position_0",
                                                    "position_1",
@@ -555,15 +543,22 @@ public:
                                                    "analog_0",
                                                    "analog_1",
                                                    "encoder_0",
-                                                   "encoder_1"}};
+                                                   "encoder_1"};
 
-    std::map<std::string, size_t> status_map_ = {{"status", 0}};
+    std::vector<std::string> status_names_ = {"status"};
+
+//    std::map<std::string, size_t> status_names_ = {{"status", 0}};
 
     /// inputs =================================================================
     std::map<std::string, size_t> control_map_ = {{"current_target_0", 0},
                                                   {"current_target_1", 1}};
 
+    std::vector<std::string> control_names_ = {"current_target_0",
+                                                "current_target_1"};
+
     std::map<std::string, size_t> command_map_ = {{"command", 0}};
+
+    std::vector<std::string> command_names_ = {"command"};
 
 public:
     // get output data ---------------------------------------------------------
@@ -622,11 +617,11 @@ public:
 
     virtual StampedStatus get_status(const std::string& name) const
     {
-        return status_.get(status_map_.at(name));
+        return status_.get(name);
     }
     virtual void wait_for_status(const std::string& name) const
     {
-        status_.wait_for_update(status_map_.at(name));
+        status_.wait_for_update(name);
     }
     virtual void wait_for_any_status() const
     {
@@ -636,11 +631,11 @@ public:
     // get input data ---------------------------------------------------------
     virtual StampedScalar get_control(const std::string& name) const
     {
-        return controls_.get(control_map_.at(name));
+        return controls_.get(name);
     }
     virtual void wait_for_control(const std::string& name) const
     {
-        controls_.wait_for_update(control_map_.at(name));
+        controls_.wait_for_update(name);
     }
     virtual void wait_for_any_control() const
     {
@@ -649,11 +644,11 @@ public:
 
     virtual StampedCommand get_command(const std::string& name) const
     {
-        return command_.get(command_map_.at(name));
+        return command_.get(name);
     }
     virtual void wait_for_command(const std::string& name) const
     {
-        command_.wait_for_update(command_map_.at(name));
+        command_.wait_for_update(name);
     }
     virtual void wait_for_any_command() const
     {
@@ -664,13 +659,13 @@ public:
     virtual void send_control(const StampedScalar& control,
                               const std::string& name)
     {
-        controls_.set(control, control_map_.at(name));
+        controls_.set(control, name);
         send_current_targets();
     }
 
     void send_command(const StampedCommand& command, const std::string& name)
     {
-        command_.set(command, command_map_.at(name));
+        command_.set(command, name);
 
         uint32_t id = command.get_data().id_;
         int32_t content = command.get_data().content_;
@@ -745,7 +740,10 @@ private:
 public:
     XenomaiCanMotorboard(std::shared_ptr<XenomaiCanbus> can_bus):
         can_bus_(can_bus),
-        measurements_(measurement_names_)
+        measurements_(measurement_names_),
+        status_(status_names_),
+        controls_(control_names_),
+        command_(command_names_)
     {
 
         for(size_t i = 0; i < measurements_.size(); i++)
@@ -932,7 +930,7 @@ private:
                                        stamped_can_frame.get_id(),
                                        stamped_can_frame.get_time_stamp());
 
-                status_.set(stamped_status, status_map_.at("status"));
+                status_.set(stamped_status, "status");
                 break;
             }
             }

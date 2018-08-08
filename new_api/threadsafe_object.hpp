@@ -47,7 +47,10 @@ public:
     {
         if(names.size() != size())
         {
-            osi::print_to_screen("you passed a list of names of wrong size\n");
+            osi::print_to_screen("you passed a list of names of wrong size."
+                                 "expected size: %d, actual size: %d\n",
+                                 size(), names.size());
+            osi::print_to_screen("name: %s\n", names[0].c_str());
             exit(-1);
         }
 
