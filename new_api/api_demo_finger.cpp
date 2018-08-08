@@ -3,13 +3,13 @@
 class Controller
 {
 private:
-    std::shared_ptr<Motor> motor_;
-    std::shared_ptr<Analogsensor> analog_sensor_;
+std::shared_ptr<FingerInterface> finger_;
+std::shared_ptr<AnalogsensorInterface> analog_sensor_;
 
 public:
-    Controller(std::shared_ptr<Motor> motor,
-               std::shared_ptr<Analogsensor> analog_sensor):
-        motor_(motor), analog_sensor_(analog_sensor) { }
+    Controller(std::shared_ptr<FingerInterface> finger,
+               std::shared_ptr<AnalogsensorInterface> analog_sensor):
+        finger_(finger), analog_sensor_(analog_sensor) { }
 
     void start_loop()
     {
@@ -32,7 +32,16 @@ public:
         {
             double current_target =
                     2 * (analog_sensor_->get_measurement("analog").get_data() - 0.5);
-            motor_->send_control(StampedData<double>(current_target, -1, -1), "current_target");
+
+            StampedData<double> stamped_current_target(current_target, -1, -1);
+
+
+
+            finger_->send_control(stamped_current_target, "current_target_interior");
+            finger_->send_control(stamped_current_target, "current_target_center");
+            finger_->send_control(stamped_current_target, "current_target_tip");
+
+
 
             // print -----------------------------------------------------------
             Timer<>::sleep_ms(1);
@@ -59,17 +68,17 @@ int main(int argc, char **argv)
     auto board2 = std::make_shared<CanMotorboard>(can_bus2);
 
     // create motors and sensors ---------------------------------------------
-    auto motor_1 = std::make_shared<Motor>(board1, BLMC_MTR1);
-    auto motor_2 = std::make_shared<Motor>(board1, BLMC_MTR2);
-    auto motor_3 = std::make_shared<Motor>(board2, BLMC_MTR1);
+    std::shared_ptr<MotorInterface> motor_1 = std::make_shared<Motor>(board1, BLMC_MTR1);
+    std::shared_ptr<MotorInterface> motor_2 = std::make_shared<Motor>(board1, BLMC_MTR2);
+    std::shared_ptr<MotorInterface> motor_3 = std::make_shared<Motor>(board2, BLMC_MTR1);
 
-    auto analog_sensor_1 = std::make_shared<Analogsensor>(board1, BLMC_ADC_A);
-    auto analog_sensor_2 = std::make_shared<Analogsensor>(board1, BLMC_ADC_B);
-    auto analog_sensor_3 = std::make_shared<Analogsensor>(board2, BLMC_ADC_A);
+    std::shared_ptr<AnalogsensorInterface> analog_sensor_1 = std::make_shared<Analogsensor>(board1, BLMC_ADC_A);
 
-    Controller controller1(motor_1, analog_sensor_1);
-    Controller controller2(motor_2, analog_sensor_2);
-    Controller controller3(motor_3, analog_sensor_3);
+    std::shared_ptr<FingerInterface> finger = std::make_shared<Finger>(motor_1, motor_2, motor_3);
+
+
+    Controller controller1(finger, analog_sensor_1);
+
 
     // somehow this is necessary to be able to use some of the functionality
     osi::make_this_thread_realtime();
@@ -77,8 +86,7 @@ int main(int argc, char **argv)
     board2->enable();
 
     controller1.start_loop();
-    controller2.start_loop();
-    controller3.start_loop();
+
 
     while(true)
     {

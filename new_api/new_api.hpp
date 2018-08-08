@@ -1175,10 +1175,15 @@ public:
     void parse_name(const std::string& name,
                     std::string& motor_name, std::string& content_name) const
     {
-        size_t _position = name.find("_");
-        motor_name = name.substr(0, _position);
-        content_name = name;
-        content_name.erase(0, _position + 1);
+        size_t _position = name.rfind("_");
+        content_name = name.substr(0, _position);
+        motor_name = name;
+        motor_name.erase(0, _position + 1);
+
+
+//        osi::print_to_screen("names: %s, %s\n", motor_name.c_str(), content_name.c_str());
+
+//        exit(-1);
     }
 
     // get output data ---------------------------------------------------------
