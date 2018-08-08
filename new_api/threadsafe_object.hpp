@@ -3,6 +3,7 @@
 #include <array>
 #include <tuple>
 #include <memory>
+#include <map>
 
 #include <time_logger.hpp>
 #include <os_interface.hpp>
@@ -13,13 +14,14 @@ template<typename Type, size_t SIZE> class SingletypeThreadsafeObject
 {
 private:
     std::shared_ptr<std::array<Type, SIZE> > data_;
-
-    mutable std::shared_ptr<osi::ConditionVariable> condition_;
-    mutable std::shared_ptr<osi::Mutex> condition_mutex_;
     std::shared_ptr<std::array<size_t, SIZE>> modification_counts_;
     std::shared_ptr<size_t> total_modification_count_;
 
-    std::shared_ptr<std::array<osi::Mutex, SIZE>> data_mutexes_;
+    std::map<std::string, size_t> name_to_index_;
+
+    mutable std::shared_ptr<osi::ConditionVariable> condition_;
+    mutable std::shared_ptr<osi::Mutex> condition_mutex_;
+    mutable std::shared_ptr<std::array<osi::Mutex, SIZE>> data_mutexes_;
 
 public:
     SingletypeThreadsafeObject()
@@ -40,6 +42,22 @@ public:
         *total_modification_count_ = 0;
     }
 
+    SingletypeThreadsafeObject(const std::vector<std::string>& names):
+        SingletypeThreadsafeObject()
+    {
+        if(names.size() != size())
+        {
+            osi::print_to_screen("you passed a list of names of wrong size\n");
+            exit(-1);
+        }
+
+        for(size_t i = 0; i < names.size(); i++)
+        {
+            name_to_index_[names[i]] = i;
+        }
+//        name_to_index_ = name_to_index;
+    }
+
     size_t size()
     {
         return SIZE;
@@ -49,6 +67,10 @@ public:
     {
         std::unique_lock<osi::Mutex> lock((*data_mutexes_)[index]);
         return (*data_)[index];
+    }
+    Type get(const std::string& name) const
+    {
+        return get(name_to_index_.at(name));
     }
 
     /// for backwards compatibility ============================================
@@ -84,6 +106,10 @@ public:
             condition_->notify_all();
         }
     }
+    void set(const Type& datum, const std::string& name)
+    {
+        set(datum, name_to_index_.at(name));
+    }
 
     void wait_for_update(const size_t& index) const
     {
@@ -105,6 +131,10 @@ public:
             osi::print_to_screen("something went wrong, we missed a message.\n");
             exit(-1);
         }
+    }
+    void wait_for_update(const std::string& name) const
+    {
+        wait_for_update(name_to_index_.at(name));
     }
 
     size_t wait_for_update() const
