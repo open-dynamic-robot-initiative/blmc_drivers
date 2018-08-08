@@ -32,7 +32,7 @@ public:
         {
             double current_target =
                     2 * (analog_sensor_->get_latest_analogs() - 0.5);
-            motor_->set_current_target(current_target);
+            motor_->send_control(StampedData<double>(current_target, -1, -1), "current_target");
 
             // print -----------------------------------------------------------
             Timer<>::sleep_ms(1);

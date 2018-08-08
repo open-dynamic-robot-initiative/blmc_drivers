@@ -547,16 +547,9 @@ public:
 
     std::vector<std::string> status_names_ = {"status"};
 
-//    std::map<std::string, size_t> status_names_ = {{"status", 0}};
-
     /// inputs =================================================================
-    std::map<std::string, size_t> control_map_ = {{"current_target_0", 0},
-                                                  {"current_target_1", 1}};
-
     std::vector<std::string> control_names_ = {"current_target_0",
                                                 "current_target_1"};
-
-    std::map<std::string, size_t> command_map_ = {{"command", 0}};
 
     std::vector<std::string> command_names_ = {"command"};
 
@@ -610,6 +603,9 @@ public:
     {
         measurements_.wait_for_update(name);
     }
+
+    ///
+    /// \todo: do we need this?? also, this should return a string
     virtual void wait_for_any_measurement() const
     {
         measurements_.wait_for_update();
@@ -939,14 +935,6 @@ private:
             if(count % 4000 == 0)
             {
                 print_everything();
-
-
-
-                //                BLMC_printSensorData(&bd->latest);
-                //                BLMC_printEncoderIndex(bd->encoder_index);
-
-
-                //                BLMC_printLatestBoardStatus(&data_);
             }
             count++;
 
@@ -985,6 +973,13 @@ private:
     }
 };
 
+
+
+
+
+
+/// >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+
 class MotorInterface
 {
 public:
@@ -992,20 +987,23 @@ public:
     typedef StampedData<MotorboardCommand> StampedCommand;
     typedef StampedData<MotorboardStatus> StampedStatus;
 
+    /// outputs ================================================================
+    std::vector<std::string> measurement_names_ = {"current",
+                                                   "position",
+                                                   "velocity",
+                                                   "encoder"};
 
+    /// inputs =================================================================
+    std::vector<std::string> control_names_ = {"current_target"};
 
 public:
-    /// measurements: current, position, velocity, encoder =====================
+    // get output data ---------------------------------------------------------
     virtual StampedScalar get_measurement(const std::string& name) const = 0;
     virtual void wait_for_measurement(const std::string& name) const = 0;
-    virtual void wait_for_any_measurement() const = 0;
 
-
-    /// controls: current_target ===============================================
+    // get input data ----------------------------------------------------------
     virtual StampedScalar get_control(const std::string& name) const = 0;
     virtual void wait_for_control(const std::string& name) const = 0;
-    virtual void wait_for_any_control() const = 0;
-
 
     // send input data ---------------------------------------------------------
     virtual void send_control(const StampedScalar& control,
@@ -1013,80 +1011,60 @@ public:
 
     virtual ~MotorInterface() {}
 };
-/// >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-class Motor
+
+
+
+
+class Motor: public MotorInterface
 {
-    std::map<std::string, std::string> measurement_map_;
-    std::map<std::string, std::string> control_map_;
-
+    std::map<std::string, std::string> motor_to_board_name_;
     std::shared_ptr<XenomaiCanMotorboard> board_;
-    bool motor_id_;
+
 public:
-
     Motor(std::shared_ptr<XenomaiCanMotorboard> board, unsigned motor_id):
-        board_(board), motor_id_(motor_id)
+        board_(board)
     {
-        if(motor_id == 0)
+        for(size_t i = 0; i < measurement_names_.size(); i++)
         {
-            measurement_map_ = {{"current", "current_0"},
-                                {"position", "position_0"},
-                                {"velocity", "velocity_0"},
-                                {"encoder", "encoder_0"}};
-
-            control_map_ = {{"current_target", "current_target_0"}};
+            motor_to_board_name_[measurement_names_[i]] =
+                    measurement_names_[i] + "_" + std::to_string(motor_id);
         }
-        else
+        for(size_t i = 0; i < control_names_.size(); i++)
         {
-            measurement_map_ = {{"current", "current_1"},
-                                {"position", "position_1"},
-                                {"velocity", "velocity_1"},
-                                {"encoder", "encoder_1"}};
-
-            control_map_ = {{"current_target", "current_target_1"}};
+            motor_to_board_name_[control_names_[i]] =
+                    control_names_[i] + "_" + std::to_string(motor_id);
         }
-
     }
 
 
-    double get_latest_currents()
+    // get output data ---------------------------------------------------------
+    virtual StampedScalar get_measurement(const std::string& name) const
     {
-        if(motor_id_ == 0)
-            return board_->get_measurement("current_0").get_data();
-        else
-            return board_->get_measurement("current_1").get_data();
+        return board_->get_measurement(motor_to_board_name_.at(name));
     }
-    double get_latest_positions()
+    virtual void wait_for_measurement(const std::string& name) const
     {
-        if(motor_id_ == 0)
-            return board_->get_measurement("position_0").get_data();
-        else
-            return board_->get_measurement("position_1").get_data();
-    }
-    double get_latest_velocities()
-    {
-        if(motor_id_ == 0)
-            return board_->get_measurement("velocity_0").get_data();
-        else
-            return board_->get_measurement("velocity_1").get_data();
-    }
-    double get_latest_encoders()
-    {
-        if(motor_id_ == 0)
-            return board_->get_measurement("encoder_0").get_data();
-        else
-            return board_->get_measurement("encoder_1").get_data();
+        board_->wait_for_measurement(motor_to_board_name_.at(name));
     }
 
-    void set_current_target(double current_target)
+
+    // get input data ----------------------------------------------------------
+    virtual StampedScalar get_control(const std::string& name) const
     {
-        if(motor_id_ == 0)
-            return board_->send_control(
-                        StampedData<double>(current_target, -1, -1),
-                        "current_target_0");
-        else
-            return board_->send_control(
-                        StampedData<double>(current_target, -1, -1),
-                        "current_target_1");    }
+        return board_->get_control(motor_to_board_name_.at(name));
+    }
+    virtual void wait_for_control(const std::string& name) const
+    {
+        board_->wait_for_control(motor_to_board_name_.at(name));
+    }
+
+
+    // send input data ---------------------------------------------------------
+    virtual void send_control(const StampedScalar& control,
+                              const std::string& name)
+    {
+        board_->send_control(control, motor_to_board_name_.at(name));
+    }
 };
 
 

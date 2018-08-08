@@ -28,7 +28,8 @@ public:
         while(true)
         {
             double current_target = 0.5;
-            motor_->set_current_target(current_target);
+            motor_->send_control(StampedData<double>(current_target, -1, -1), "current_target");
+
 
             // print -----------------------------------------------------------
             Timer<>::sleep_ms(1);
