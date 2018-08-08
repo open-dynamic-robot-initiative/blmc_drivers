@@ -51,7 +51,7 @@ int main(int argc, char **argv)
 
     // create bus and boards -------------------------------------------------
     auto can_bus1 = std::make_shared<XenomaiCanbus>("rtcan0");
-    auto board1 = std::make_shared<XenomaiCanMotorboard>(can_bus1);
+    auto board1 = std::make_shared<CanMotorboard>(can_bus1);
 
     // create motors and sensors ---------------------------------------------
     auto motor_1 = std::make_shared<Motor>(board1, BLMC_MTR1);

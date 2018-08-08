@@ -134,7 +134,7 @@ class Motor
 };
 
 
-class AnalogSensor
+class Analogsensor
 {
 
     std::shared_ptr<Board> board_;
@@ -142,7 +142,7 @@ class AnalogSensor
 
  public:
 
-    AnalogSensor(std::shared_ptr<Board> board, unsigned sensor_id);
+    Analogsensor(std::shared_ptr<Board> board, unsigned sensor_id);
     double get_analog_measurement();
 
 };
@@ -156,11 +156,11 @@ class Controller
     RT_TASK rt_task_;
     // \todo: should probably make this a shared pointer
     std::shared_ptr<Motor> motor_;
-    std::shared_ptr<AnalogSensor> analog_sensor_;
+    std::shared_ptr<Analogsensor> analog_sensor_;
 
  public:
 
-    Controller(std::shared_ptr<Motor> motor, std::shared_ptr<AnalogSensor> analog_sensor);
+    Controller(std::shared_ptr<Motor> motor, std::shared_ptr<Analogsensor> analog_sensor);
     void start_loop();
     static void loop(void* instance_pointer);
     void loop();

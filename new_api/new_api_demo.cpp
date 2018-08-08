@@ -555,13 +555,13 @@ public:
 
 
 
-class AnalogSensor
+class Analogsensor
 {
     std::shared_ptr<Board> board_;
     unsigned sensor_id_;
 public:
 
-    AnalogSensor(std::shared_ptr<Board> board, unsigned sensor_id): board_(board), sensor_id_(sensor_id) { }
+    Analogsensor(std::shared_ptr<Board> board, unsigned sensor_id): board_(board), sensor_id_(sensor_id) { }
 
     double get_analog_measurement()
     {
@@ -578,10 +578,10 @@ private:
 
     // \todo: should probably make this a shared pointer
     std::shared_ptr<Motor> motor_;
-    std::shared_ptr<AnalogSensor> analog_sensor_;
+    std::shared_ptr<Analogsensor> analog_sensor_;
 
 public:
-    Controller(std::shared_ptr<Motor> motor, std::shared_ptr<AnalogSensor> analog_sensor):
+    Controller(std::shared_ptr<Motor> motor, std::shared_ptr<Analogsensor> analog_sensor):
         motor_(motor), analog_sensor_(analog_sensor) { }
 
     void start_loop()
@@ -652,9 +652,9 @@ int main(int argc, char **argv)
     auto motor_2 = std::make_shared<Motor>(board1, BLMC_MTR2);
     auto motor_3 = std::make_shared<Motor>(board2, BLMC_MTR1);
 
-    auto analog_sensor_1 = std::make_shared<AnalogSensor>(board1, BLMC_ADC_A);
-    auto analog_sensor_2 = std::make_shared<AnalogSensor>(board1, BLMC_ADC_B);
-    auto analog_sensor_3 = std::make_shared<AnalogSensor>(board2, BLMC_ADC_A);
+    auto analog_sensor_1 = std::make_shared<Analogsensor>(board1, BLMC_ADC_A);
+    auto analog_sensor_2 = std::make_shared<Analogsensor>(board1, BLMC_ADC_B);
+    auto analog_sensor_3 = std::make_shared<Analogsensor>(board2, BLMC_ADC_A);
 
     Controller controller1(motor_1, analog_sensor_1);
     Controller controller2(motor_2, analog_sensor_2);

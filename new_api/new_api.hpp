@@ -440,7 +440,7 @@ private:
 
 
 
-//class XenomaiCanMotorboardInput: public ThreadsafeObject
+//class CanMotorboardInput: public ThreadsafeObject
 //{
 
 //};
@@ -590,7 +590,7 @@ public:
 
 
 
-class XenomaiCanMotorboard: public MotorboardInterface
+class CanMotorboard: public MotorboardInterface
 {
     /// public interface =======================================================
 public:
@@ -734,7 +734,7 @@ private:
     };
     /// constructor ============================================================
 public:
-    XenomaiCanMotorboard(std::shared_ptr<XenomaiCanbus> can_bus):
+    CanMotorboard(std::shared_ptr<XenomaiCanbus> can_bus):
         can_bus_(can_bus),
         measurements_(measurement_names_),
         status_(status_names_),
@@ -755,10 +755,10 @@ public:
         }
 
 
-        osi::start_thread(&XenomaiCanMotorboard::loop, this);
+        osi::start_thread(&CanMotorboard::loop, this);
     }
 
-    ~XenomaiCanMotorboard()
+    ~CanMotorboard()
     {
         send_command(StampedCommand(MotorboardCommand(MotorboardCommand::IDs::ENABLE_SYS,
                                                       MotorboardCommand::Contents::DISABLE),-1,-1), "command");
@@ -832,7 +832,7 @@ private:
 #endif
     loop(void* instance_pointer)
     {
-        ((XenomaiCanMotorboard*)(instance_pointer))->loop();
+        ((CanMotorboard*)(instance_pointer))->loop();
     }
 
     void loop()
@@ -979,7 +979,6 @@ private:
 
 
 /// >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-
 class MotorInterface
 {
 public:
@@ -1018,10 +1017,10 @@ public:
 class Motor: public MotorInterface
 {
     std::map<std::string, std::string> motor_to_board_name_;
-    std::shared_ptr<XenomaiCanMotorboard> board_;
+    std::shared_ptr<CanMotorboard> board_;
 
 public:
-    Motor(std::shared_ptr<XenomaiCanMotorboard> board, unsigned motor_id):
+    Motor(std::shared_ptr<CanMotorboard> board, bool motor_id):
         board_(board)
     {
         for(size_t i = 0; i < measurement_names_.size(); i++)
@@ -1069,22 +1068,47 @@ public:
 
 
 
-
-class AnalogSensor
+class AnalogsensorInterface
 {
-    std::shared_ptr<XenomaiCanMotorboard> board_;
-    bool sensor_id_;
 public:
+    typedef StampedData<double> StampedScalar;
 
-    AnalogSensor(std::shared_ptr<XenomaiCanMotorboard> board, unsigned sensor_id):
-        board_(board), sensor_id_(sensor_id) { }
+    /// outputs ================================================================
+    std::vector<std::string> measurement_names_ = {"analog"};
 
-    double get_latest_analogs()
+public:
+    // get output data ---------------------------------------------------------
+    virtual StampedScalar get_measurement(const std::string& name) const = 0;
+    virtual void wait_for_measurement(const std::string& name) const = 0;
+
+    virtual ~AnalogsensorInterface() {}
+};
+
+
+
+
+class Analogsensor: public AnalogsensorInterface
+{
+    std::map<std::string, std::string> sensor_to_board_name_;
+    std::shared_ptr<CanMotorboard> board_;
+
+public:
+    Analogsensor(std::shared_ptr<CanMotorboard> board, bool sensor_id):
+        board_(board)
     {
-        if(sensor_id_ == 0)
-            return board_->get_measurement("analog_0").get_data();
-        else
-            return board_->get_measurement("analog_1").get_data();
+        sensor_to_board_name_[measurement_names_[0]] =
+                measurement_names_[0] + "_" + std::to_string(sensor_id);
+    }
+
+    // get output data ---------------------------------------------------------
+    virtual StampedScalar get_measurement(const std::string& name) const
+    {
+        return board_->get_measurement(sensor_to_board_name_.at(name));
+    }
+    virtual void wait_for_measurement(const std::string& name) const
+    {
+        board_->wait_for_measurement(sensor_to_board_name_.at(name));
     }
 };
+
 
