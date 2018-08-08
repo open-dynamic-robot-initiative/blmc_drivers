@@ -106,6 +106,14 @@ if(Xenomai_FOUND)
         )
     target_link_libraries(api_demo_finger ${PROJECT_NAME})
 
+    add_executable(api_demo_3_motors
+        new_api/api_demo_3_motors.cpp
+        src/can.c
+        src/blmc_can.c
+        src/optoforce_can.c
+        )
+    target_link_libraries(api_demo_3_motors ${PROJECT_NAME})
+
 
     add_executable(api_demo_single_motor
         new_api/api_demo_single_motor.cpp

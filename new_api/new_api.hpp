@@ -549,7 +549,7 @@ public:
 
     /// inputs =================================================================
     std::vector<std::string> control_names_ = {"current_target_0",
-                                                "current_target_1"};
+                                               "current_target_1"};
 
     std::vector<std::string> command_names_ = {"command"};
 
@@ -1108,6 +1108,116 @@ public:
     virtual void wait_for_measurement(const std::string& name) const
     {
         board_->wait_for_measurement(sensor_to_board_name_.at(name));
+    }
+};
+
+
+
+/// >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+class FingerInterface
+{
+public:
+    typedef StampedData<double> StampedScalar;
+    typedef StampedData<MotorboardCommand> StampedCommand;
+    typedef StampedData<MotorboardStatus> StampedStatus;
+
+    /// outputs ================================================================
+    std::vector<std::string> measurement_names_ = {"current_interior",
+                                                   "current_center",
+                                                   "current_tip",
+                                                   "position_interior",
+                                                   "position_center",
+                                                   "position_tip"
+                                                   "velocity_interior",
+                                                   "velocity_center",
+                                                   "velocity_tip",
+                                                   "encoder_interior",
+                                                   "encoder_center",
+                                                   "encoder_tip"};
+
+    /// inputs =================================================================
+    std::vector<std::string> control_names_ = {"current_target_interior",
+                                               "current_target_center",
+                                               "current_target_tip"};
+
+public:
+    // get output data ---------------------------------------------------------
+    virtual StampedScalar get_measurement(const std::string& name) const = 0;
+    virtual void wait_for_measurement(const std::string& name) const = 0;
+
+    // get input data ----------------------------------------------------------
+    virtual StampedScalar get_control(const std::string& name) const = 0;
+    virtual void wait_for_control(const std::string& name) const = 0;
+
+    // send input data ---------------------------------------------------------
+    virtual void send_control(const StampedScalar& control,
+                              const std::string& name) = 0;
+
+    virtual ~FingerInterface() {}
+};
+
+
+
+class Finger: public FingerInterface
+{
+    std::map<std::string, std::shared_ptr<MotorInterface>> motors_;
+
+public:
+    Finger(std::shared_ptr<MotorInterface> interior_motor,
+           std::shared_ptr<MotorInterface> center_motor,
+           std::shared_ptr<MotorInterface> tip_motor)
+    {
+        motors_["interior"] = interior_motor;
+        motors_["center"] = center_motor;
+        motors_["tip"] = tip_motor;
+    }
+
+    void parse_name(const std::string& name,
+                    std::string& motor_name, std::string& content_name) const
+    {
+        size_t _position = name.find("_");
+        motor_name = name.substr(0, _position);
+        content_name = name;
+        content_name.erase(0, _position + 1);
+    }
+
+    // get output data ---------------------------------------------------------
+    virtual StampedScalar get_measurement(const std::string& name) const
+    {
+        std::string motor_name, content_name;
+        parse_name(name, motor_name, content_name);
+        return motors_.at(motor_name)->get_measurement(content_name);
+    }
+    virtual void wait_for_measurement(const std::string& name) const
+    {
+        std::string motor_name, content_name;
+        parse_name(name, motor_name, content_name);
+        motors_.at(motor_name)->wait_for_measurement(content_name);
+    }
+
+
+    // get input data ----------------------------------------------------------
+    virtual StampedScalar get_control(const std::string& name) const
+    {
+        std::string motor_name, content_name;
+        parse_name(name, motor_name, content_name);
+        return motors_.at(motor_name)->get_control(content_name);
+    }
+    virtual void wait_for_control(const std::string& name) const
+    {
+        std::string motor_name, content_name;
+        parse_name(name, motor_name, content_name);
+        motors_.at(motor_name)->wait_for_control(content_name);
+    }
+
+
+    // send input data ---------------------------------------------------------
+    virtual void send_control(const StampedScalar& control,
+                              const std::string& name)
+    {
+        std::string motor_name, content_name;
+        parse_name(name, motor_name, content_name);
+        motors_.at(motor_name)->send_control(control, content_name);
     }
 };
 
