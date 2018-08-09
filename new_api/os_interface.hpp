@@ -55,6 +55,9 @@ typedef uint64_t 	nanosecs_abs_t;
 namespace osi
 {
 
+
+
+#ifdef __XENO__
 namespace xenomai
 {
 class mutex
@@ -104,7 +107,7 @@ public:
 };
 }
 
-#ifdef __XENO__
+
     typedef xenomai::mutex Mutex;
     typedef xenomai::condition_variable ConditionVariable;
 #else
@@ -118,6 +121,7 @@ template<typename ...Ts>
     void print_to_screen(Ts... args)
 {
     rt_printf(args...);
+
 }
 
 void send_to_can_device(int fd, const void *buf, size_t len,
@@ -187,66 +191,78 @@ void start_thread(void * (*function)(void *cookie), void *argument=NULL)
     struct sched_param param;
     pthread_attr_t attr;
     pthread_t thread;
+    int ret;
 
     ret = pthread_attr_init(&attr);
     if (ret) {
         printf("init pthread attributes failed\n");
-        return ret;
     }
 
     /* Set a specific stack size  */
     ret = pthread_attr_setstacksize(&attr, PTHREAD_STACK_MIN);
     if (ret) {
         printf("pthread setstacksize failed\n");
-        return ret;
     }
 
     /* Set scheduler policy and priority of pthread */
     ret = pthread_attr_setschedpolicy(&attr, SCHED_FIFO);
     if (ret) {
         printf("pthread setschedpolicy failed\n");
-        return ret;
     }
     param.sched_priority = 80;
     ret = pthread_attr_setschedparam(&attr, &param);
     if (ret) {
         printf("pthread setschedparam failed\n");
-        return ret;
     }
     /* Use scheduling parameters of attr */
     ret = pthread_attr_setinheritsched(&attr, PTHREAD_EXPLICIT_SCHED);
     if (ret) {
         printf("pthread setinheritsched failed\n");
-        return ret;
     }
 
     /* Create a pthread with specified attributes */
-    ret = pthread_create(&thread, &attr, &my_task, NULL);
+    ret = pthread_create(&thread, &attr, function, argument);
     if (ret) {
         printf("create pthread failed. Ret=%d\n", ret);
         if (ret == 1) {
             printf("NOTE: This program must be executed as root to get the "
                 "required realtime permissions.\n");
         }
-        return ret;
     }
 }
 #endif
 
 void initialize_realtime_printing()
 {
+#ifdef __XENO__
     rt_print_auto_init(1);
+#endif
 }
 
 
 void sleep_ms(const double& sleep_time_ms)
 {
+#ifdef __XENO__
     rt_task_sleep(int(sleep_time_ms * 1000000.));
+#else
+    usleep(sleep_time_ms * 1000.);
+#endif
 }
 
 double get_current_time_ms()
 {
+#ifdef __XENO__
     return double(rt_timer_read()) / 1000000.;
+#else
+    struct timespec now;
+    clock_gettime(CLOCK_REALTIME, &now);
+    double current_time_ms = (double)(now.tv_sec*1e3) + (now.tv_nsec/1e6);
+
+    return current_time_ms;
+
+
+
+#endif
 }
 
 
@@ -254,6 +270,9 @@ double get_current_time_ms()
 
 void make_this_thread_realtime()
 {
+#ifdef __XENO__
+
     rt_task_shadow(NULL, NULL, 0, 0);
+#endif
 }
 }
