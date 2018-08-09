@@ -1068,6 +1068,60 @@ public:
 
 
 
+class SafeMotor: public Motor
+{
+public:
+    SafeMotor(std::shared_ptr<CanMotorboard> board, bool motor_id):
+        Motor(board, motor_id)
+    {
+        temperature_.set(StampedScalar(room_temperature_));
+        osi::start_thread(&SafeMotor::loop, this);
+    }
+
+
+    // send input data ---------------------------------------------------------
+    virtual void send_control(const StampedScalar& control,
+                              const std::string& name)
+    {
+    }
+
+private:
+    ThreadsafeObject<StampedScalar> temperature_;
+
+    const double room_temperature_ = 30;
+
+    static void
+#ifndef __XENO__
+    *
+#endif
+    loop(void* instance_pointer)
+    {
+        ((SafeMotor*)(instance_pointer))->loop();
+    }
+
+    void loop()
+    {
+        Timer<10> time_logger("controller", 1000);
+        while(true)
+        {
+            wait_for_measurement("current");
+            StampedScalar current = get_measurement("current");
+
+
+
+
+            // print -----------------------------------------------------------
+            Timer<>::sleep_ms(1);
+            time_logger.end_and_start_interval();
+            if ((time_logger.count() % 1000) == 0)
+            {
+            }
+        }
+    }
+};
+
+
+
 class AnalogsensorInterface
 {
 public:
@@ -1083,6 +1137,8 @@ public:
 
     virtual ~AnalogsensorInterface() {}
 };
+
+
 
 
 
