@@ -113,6 +113,11 @@ public:
         set_header_equal(other_stamped_data);
     }
 
+    void print_header() const
+    {
+        osi::print_to_screen("id: %d, time_stamp: %f\n", id_, time_stamp_);
+    }
+
     /// private data ===========================================================
 private:
     DataType data_;
@@ -466,6 +471,12 @@ public:
         content_ = content;
     }
 
+    void print() const
+    {
+        osi::print_to_screen("command id: %d, content: %d\n", id_, content_);
+    }
+
+
     enum IDs
     {
         ENABLE_SYS = 1,
@@ -497,8 +508,10 @@ public:
 
 
 
-struct MotorboardStatus
-{                             // bits
+class MotorboardStatus
+{
+public:
+    // bits
     uint8_t system_enabled:1;  // 0
     uint8_t motor1_enabled:1;  // 1
     uint8_t motor1_ready:1;    // 2
@@ -524,6 +537,16 @@ struct MotorboardStatus
         //! \brief Some other error
         OTHER = 7
     };
+
+    void print() const
+    {
+        osi::print_to_screen("\tSystem enabled: %d\n", system_enabled);
+        osi::print_to_screen("\tMotor 1 enabled: %d\n", motor1_enabled);
+        osi::print_to_screen("\tMotor 1 ready: %d\n", motor1_ready);
+        osi::print_to_screen("\tMotor 2 enabled: %d\n", motor2_enabled);
+        osi::print_to_screen("\tMotor 2 ready: %d\n", motor2_ready);
+        osi::print_to_screen("\tError Code: %d\n", error_code);
+    }
 };
 
 
@@ -580,6 +603,9 @@ public:
                               const std::string& name) = 0;
     virtual void send_command(const StampedCommand& command,
                               const std::string& name) = 0;
+
+    // print status ------------------------------------------------------------
+    virtual void print_status() = 0;
 
     virtual ~MotorboardInterface() {}
 };
@@ -937,31 +963,48 @@ private:
             static int count = 0;
             if(count % 4000 == 0)
             {
-                print_everything();
+                print_status();
             }
             count++;
 
         }
     }
 
-
-    void print_everything()
+    void print_status()
     {
-        auto status = status_.get();
-        osi::print_to_screen("status: time_stamp = %f, id = %d ---------------\n", status.get_time_stamp(), status.get_id());
-        //        BLMC_printStatus(&status.get_data());
+        osi::print_to_screen("outputs =====================================\n");
 
-        rt_printf("\tSystem enabled: %d\n", status.get_data().system_enabled);
-        rt_printf("\tMotor 1 enabled: %d\n", status.get_data().motor1_enabled);
-        rt_printf("\tMotor 1 ready: %d\n", status.get_data().motor1_ready);
-        rt_printf("\tMotor 2 enabled: %d\n", status.get_data().motor2_enabled);
-        rt_printf("\tMotor 2 ready: %d\n", status.get_data().motor2_ready);
-        rt_printf("\tError Code: %d\n", status.get_data().error_code);
-        //        auto encoders = output_.get<ENCODERS>();
-        //        osi::print_to_screen("encoders: time_stamp = %f, id = %d ---------------\n", encoders.get_time_stamp(), encoders.get_id());
-        //        std::stringstream output_string;
-        //        output_string << encoders.get_data().transpose();
-        //        osi::print_to_screen("%s\n", output_string.str().c_str());
+        for(size_t i = 0; i < measurement_names_.size(); i++)
+        {
+            osi::print_to_screen("%s: ---------------------------------\n",
+                                 measurement_names_[i].c_str());
+            StampedScalar measurement = get_measurement(measurement_names_[i]);
+            measurement.print_header();
+            osi::print_to_screen("value %f:\n", measurement.get_data());
+        }
+
+        osi::print_to_screen("status: ---------------------------------\n");
+        StampedStatus status = get_status("status");
+        status.print_header();
+        status.get_data().print();
+
+
+        osi::print_to_screen("inputs ======================================\n");
+
+        for(size_t i = 0; i < control_names_.size(); i++)
+        {
+            osi::print_to_screen("%s: ---------------------------------\n",
+                                 control_names_[i].c_str());
+            StampedScalar control = get_control(control_names_[i]);
+            control.print_header();
+            osi::print_to_screen("value %f:\n", control.get_data());
+        }
+
+        osi::print_to_screen("command: ---------------------------------\n");
+        StampedCommand command = get_command("command");
+        command.print_header();
+        command.get_data().print();
+
     }
 
     unsigned id_to_index(unsigned motor_id)
