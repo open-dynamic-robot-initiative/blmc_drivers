@@ -3,7 +3,7 @@ project(blmc_can)
 
 find_package(catkin REQUIRED)
 find_package(Xenomai QUIET)
-find_package(Eigen REQUIRED)
+find_package(Eigen3 REQUIRED)
 
 # support for c++ 11 -----------------------------------
 SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=gnu++11")
@@ -151,6 +151,8 @@ else()
 
     include_directories(
         ./include
+        ./new_api
+
      )
 
     catkin_package(
@@ -191,6 +193,33 @@ else()
         src/optoforce_can.c
     )
     target_link_libraries(blmc_can_sine_demo ${PROJECT_NAME} pthread m)
+
+
+
+    add_executable(api_demo_finger
+        new_api/api_demo_finger.cpp
+        src/can.c
+        src/blmc_can.c
+        src/optoforce_can.c
+        )
+    target_link_libraries(api_demo_finger ${PROJECT_NAME} pthread)
+
+    add_executable(api_demo_3_motors
+        new_api/api_demo_3_motors.cpp
+        src/can.c
+        src/blmc_can.c
+        src/optoforce_can.c
+        )
+    target_link_libraries(api_demo_3_motors ${PROJECT_NAME} pthread)
+
+
+    add_executable(api_demo_single_motor
+        new_api/api_demo_single_motor.cpp
+        src/can.c
+        src/blmc_can.c
+        src/optoforce_can.c
+        )
+    target_link_libraries(api_demo_single_motor ${PROJECT_NAME} pthread)
 
   # Demo executable
 #  add_executable(blmc_can_demo_optoforce_dumper

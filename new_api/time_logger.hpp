@@ -1,7 +1,5 @@
 #pragma once
 
-#include <native/timer.h>
-#include <rtdk.h>
 
 #include <limits>
 #include <eigen3/Eigen/Core>
