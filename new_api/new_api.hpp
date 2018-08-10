@@ -285,6 +285,9 @@ private:
                                output_.get<0>().get_id() + 1,
                                Timer<1>::current_time_ms()));
 
+            // sometimes can messages come in a burst, so we add a little wait
+            Timer<>::sleep_ms(0.1);
+
             loop_time_logger.end_and_start_interval();
         }
     }
