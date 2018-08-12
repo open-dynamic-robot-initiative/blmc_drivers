@@ -10,7 +10,7 @@
 
 template<typename Type> class ThreadsafeTimeseriesInterface
 {
-    virtual Type operator[](int timeindex) const = 0;
+    virtual Type operator[](long int timeindex) const = 0;
     virtual void append(const Type& element) = 0;
 
     virtual size_t newest_timeindex() const = 0;
@@ -30,15 +30,15 @@ class ThreadsafeTimeseries: public ThreadsafeTimeseriesInterface<Type>
 private:
     std::shared_ptr<std::vector<Type>> history_;
 
-    int oldest_timeindex_;
-    int newest_timeindex_;
+    long int oldest_timeindex_;
+    long int newest_timeindex_;
 
     mutable std::shared_ptr<osi::ConditionVariable> condition_;
     mutable std::shared_ptr<osi::Mutex> mutex_;
 
 public:
 
-    ThreadsafeTimeseries(size_t size, int start_timeindex = 0)
+    ThreadsafeTimeseries(size_t size, long int start_timeindex = 0)
     {
         oldest_timeindex_ = start_timeindex;
         newest_timeindex_ = oldest_timeindex_ - 1;
@@ -48,7 +48,7 @@ public:
         mutex_ = std::make_shared<osi::Mutex>();
     }
 
-    Type operator[](int timeindex) const
+    Type operator[](long int timeindex) const
     {
         std::unique_lock<osi::Mutex> lock(*mutex_);
 
@@ -62,7 +62,7 @@ public:
         {
             osi::print_to_screen("WARNING: you are trying to access a "
                                  "timeseries element which is not in our "
-                                 "history (anymore). returning oldest existing"
+                                 "history (anymore). returning oldest existing "
                                  "element.\n");
             timeindex = oldest_timeindex_;
         }
@@ -75,7 +75,7 @@ public:
         {
             std::unique_lock<osi::Mutex> lock(*mutex_);
             newest_timeindex_++;
-            if(newest_timeindex_ - oldest_timeindex_ > history_->size())
+            if(newest_timeindex_ - oldest_timeindex_ + 1 > history_->size())
             {
                 oldest_timeindex_++;
             }
