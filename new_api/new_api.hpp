@@ -126,7 +126,17 @@ private:
 };
 
 
+class NewCanbus
+{
+    typedef ThreadsafeHistoryInterface<CanFrame> Input;
+    typedef const Input Output;
 
+public:
+    virtual std::shared_ptr<Input> input() = 0;
+    virtual std::shared_ptr<Output> output() = 0;
+
+    virtual void send_if_input_changed() = 0;
+};
 
 
 
@@ -550,7 +560,42 @@ public:
 };
 
 
+class NewMotorboardInterface
+{
+public:
+    typedef ThreadsafeHistoryInterface<Eigen::Vector2d> MeasurementHistory;
+    typedef ThreadsafeHistoryInterface<MotorboardStatus> StatusHistory;
 
+    typedef const ThreadsafeHistoryInterface<Eigen::Vector2d> ControlHistory;
+    typedef const ThreadsafeHistoryInterface<MotorboardCommand> CommandHistory;
+
+    std::vector<std::string> measurement_names_ = {"current_0",
+                                                   "current_1",
+                                                   "position_0",
+                                                   "position_1",
+                                                   "velocity_0",
+                                                   "velocity_1",
+                                                   "analog_0",
+                                                   "analog_1",
+                                                   "encoder_0",
+                                                   "encoder_1"};
+
+    virtual std::shared_ptr<MeasurementHistory> measurement(std::string name) const = 0;
+    virtual std::shared_ptr<StatusHistory> status() const = 0;
+
+    std::vector<std::string> control_names_ = {"current_target_0",
+                                               "current_target_1"};
+
+    virtual std::shared_ptr<ControlHistory> control(std::string name) = 0;
+    virtual std::shared_ptr<CommandHistory> command() = 0;
+
+    virtual void send_if_input_changed() = 0;
+
+    // print status ------------------------------------------------------------
+    virtual void print_status() = 0;
+
+    virtual ~NewMotorboardInterface() {}
+};
 
 class MotorboardInterface
 {
@@ -611,7 +656,24 @@ public:
 };
 
 
+//class NewCanMotorboard: public NewMotorboardInterface
+//{
+//    std::shared_ptr<MeasurementHistory> measurement_history_;
 
+
+//    virtual std::shared_ptr<MeasurementHistory> measurement(std::string name) const
+//    {
+//        return measurement_history_
+
+//    }
+//    virtual std::shared_ptr<StatusHistory> status() const = 0;
+
+//    virtual std::shared_ptr<ControlHistory> control(std::string name) = 0;
+//    virtual std::shared_ptr<CommandHistory> command() = 0;
+
+//    virtual void send_if_input_changed() = 0;
+
+//};
 
 
 
