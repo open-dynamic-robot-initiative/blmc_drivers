@@ -68,14 +68,31 @@ if(Xenomai_FOUND)
     # selecting "catkin_make run_tests" will results in all found tests to be compiled
     # and run, but you may select specific test
 
-    catkin_add_gtest(blmc_can_tests
+    catkin_add_gtest(threadsafe_object_test
       tests/main.cpp
       tests/threadsafe_object_test.cpp
+
       src/can.c ### i have no idea why, but without this it gives a linking error...
     )
-    target_link_libraries(blmc_can_tests ${PROJECT_NAME})
+    target_link_libraries(threadsafe_object_test ${PROJECT_NAME})
 
 
+    catkin_add_gtest(threadsafe_timeseries_test
+      tests/main.cpp
+      tests/threadsafe_timeseries_test.cpp
+
+
+      src/can.c ### i have no idea why, but without this it gives a linking error...
+    )
+    target_link_libraries(threadsafe_timeseries_test ${PROJECT_NAME})
+
+#    catkin_add_gtest(blmc_can_tests
+#      tests/main.cpp
+#      tests/threadsafe_timeseries_test.cpp
+
+#      src/can.c ### i have no idea why, but without this it gives a linking error...
+#    )
+#    target_link_libraries(blmc_can_tests ${PROJECT_NAME})
 
 
 

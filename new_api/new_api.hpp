@@ -16,6 +16,8 @@
 #include <threadsafe_object.hpp>
 #include <os_interface.hpp>
 
+#include <threadsafe_timeseries.hpp>
+
 
 //long unsigned count_xenomai_mode_switches = 0;
 

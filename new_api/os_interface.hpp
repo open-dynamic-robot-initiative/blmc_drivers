@@ -118,13 +118,13 @@ public:
 
 
 template<typename ...Ts>
-    void print_to_screen(Ts... args)
+ inline   void print_to_screen(Ts... args)
 {
     rt_printf(args...);
 
 }
 
-void send_to_can_device(int fd, const void *buf, size_t len,
+inline void send_to_can_device(int fd, const void *buf, size_t len,
                        int flags, const struct sockaddr *to,
                        socklen_t tolen)
 {
@@ -138,7 +138,7 @@ void send_to_can_device(int fd, const void *buf, size_t len,
     }
 }
 
-void close_can_device(int socket)
+inline void close_can_device(int socket)
 {
     int ret = rt_dev_close(socket);
     if (ret)
@@ -148,7 +148,7 @@ void close_can_device(int socket)
     }
 }
 
-void receive_message_from_can_device(int fd, struct msghdr *msg, int flags)
+inline void receive_message_from_can_device(int fd, struct msghdr *msg, int flags)
 {
     int ret = rt_dev_recvmsg(fd, msg, flags);
     if (ret < 0)
@@ -162,7 +162,7 @@ void receive_message_from_can_device(int fd, struct msghdr *msg, int flags)
 
 #ifdef __XENO__
 
-RT_TASK start_thread(void (*function)(void *cookie), void *argument=NULL)
+inline RT_TASK start_thread(void (*function)(void *cookie), void *argument=NULL)
 {
     // TODO: not sure if this is the right place for this
     mlockall(MCL_CURRENT | MCL_FUTURE);
@@ -186,7 +186,7 @@ RT_TASK start_thread(void (*function)(void *cookie), void *argument=NULL)
 
 #else
 
-void start_thread(void * (*function)(void *cookie), void *argument=NULL)
+inline void start_thread(void * (*function)(void *cookie), void *argument=NULL)
 {
     struct sched_param param;
     pthread_attr_t attr;
@@ -232,7 +232,7 @@ void start_thread(void * (*function)(void *cookie), void *argument=NULL)
 }
 #endif
 
-void initialize_realtime_printing()
+inline void initialize_realtime_printing()
 {
 #ifdef __XENO__
     rt_print_auto_init(1);
@@ -240,7 +240,7 @@ void initialize_realtime_printing()
 }
 
 
-void sleep_ms(const double& sleep_time_ms)
+inline void sleep_ms(const double& sleep_time_ms)
 {
 #ifdef __XENO__
     rt_task_sleep(int(sleep_time_ms * 1000000.));
@@ -249,7 +249,7 @@ void sleep_ms(const double& sleep_time_ms)
 #endif
 }
 
-double get_current_time_ms()
+inline double get_current_time_ms()
 {
 #ifdef __XENO__
     return double(rt_timer_read()) / 1000000.;
@@ -268,7 +268,7 @@ double get_current_time_ms()
 
 
 
-void make_this_thread_realtime()
+inline void make_this_thread_realtime()
 {
 #ifdef __XENO__
 
