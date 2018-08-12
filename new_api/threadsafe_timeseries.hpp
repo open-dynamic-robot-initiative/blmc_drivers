@@ -10,29 +10,22 @@
 
 template<typename Type> class ThreadsafeTimeseriesInterface
 {
-    // return the element after the one with the given id. if there is no
-    // newer element, then wait until one arrives.
-    virtual Type get_next(size_t id) const
+    virtual Type operator[](int timeindex) const = 0;
+    virtual void append(const Type& element) = 0;
+
+    virtual size_t newest_timeindex() const = 0;
+    virtual Type newest_element()
     {
-        return get(get_next_id(id));
+        return (*this)[newest_timeindex()];
     }
-    virtual size_t get_next_id(size_t id) const = 0;
 
-    // wait if empty
-    virtual Type get_newest() const
-    {
-        return get(get_newest_id());
-    }
-    virtual size_t get_newest_id() const = 0;
-
-    virtual Type get(size_t id) const = 0;
-
-    virtual void add() = 0;
+    virtual size_t size() const = 0;
 };
 
 
 
-template<typename Type> class ThreadsafeTimeseries
+template<typename Type>
+class ThreadsafeTimeseries: public ThreadsafeTimeseriesInterface<Type>
 {
 private:
     std::shared_ptr<std::vector<Type>> history_;
@@ -77,11 +70,6 @@ public:
         return (*history_)[timeindex % history_->size()];
     }
 
-    size_t size()
-    {
-        return history_->size();
-    }
-
     void append(const Type& element)
     {
         {
@@ -95,6 +83,17 @@ public:
         }
 
         condition_->notify_all();
+    }
+
+    size_t size() const
+    {
+        return history_->size();
+    }
+
+    size_t newest_timeindex() const
+    {
+        std::unique_lock<osi::Mutex> lock(*mutex_);
+        return newest_timeindex_;
     }
 };
 
