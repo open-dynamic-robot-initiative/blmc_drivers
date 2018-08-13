@@ -610,50 +610,47 @@ public:
     }
     virtual void send_if_input_changed()
     {
-
-        send_current_targets();
-
-        /// \todo: we need to make sure we actually only send when things
-        /// have changed.
         // initialize outputs --------------------------------------------------
-//        bool controls_have_changed = false;
-//        for(size_t i = 0; i < control_names_.size(); i++)
-//        {
-//            long int new_hash =
-//                    controls_.at(control_names_[i])->next_timeindex();
-//            if(new_hash != control_hashes_.get(control_names_[i]))
-//            {
-//                control_hashes_.set(new_hash, control_names_[i]);
-//                controls_have_changed = true;
-//            }
-//        }
-//        if(controls_have_changed)
-//        {
-//            send_current_targets();
-//        }
-//        command_ = std::make_shared<ThreadsafeTimeseries<MotorboardCommand>>(1000);
-//        command_hash_.set(command_->next_timeindex());
+        bool controls_have_changed = false;
+        for(size_t i = 0; i < control_names_.size(); i++)
+        {
+            long int new_hash =
+                    controls_.at(control_names_[i])->next_timeindex();
+            if(new_hash != control_hashes_.get(control_names_[i]))
+            {
+                control_hashes_.set(new_hash, control_names_[i]);
+                controls_have_changed = true;
+            }
+        }
+        if(controls_have_changed)
+        {
+            send_controls();
+        }
 
-
-
-//        long int new_hash = input_->next_timeindex();
-//        if(new_hash != input_hash_.get())
-//        {
-//            send_frame(input_->current_element());
-//            input_hash_.set(new_hash);
-//        }
+        long int new_hash = command_->next_timeindex();
+        if(new_hash != command_hash_.get())
+        {
+            command_hash_.set(new_hash);
+            send_command();
+        }
 
     }
 
     /// ========================================================================
-
-
-
     void send_command(const MotorboardCommand& command)
+    {
+        command_->append(command);
+        send_if_input_changed();
+    }
+
+
+    void send_command()
     {
 //        old_command_.set(command, name);
 
-        command_->append(command);
+        MotorboardCommand command = command_->current_element();
+
+//        command_->append(command);
 
         uint32_t id = command.id_;
         int32_t content = command.content_;
@@ -791,7 +788,7 @@ private:
         return q24_to_float(bytes_to_int32(qbytes));
     }
 
-    void send_current_targets()
+    void send_controls()
     {
         float current_mtr1 = controls_["current_target_0"]->current_element();
         float current_mtr2 = controls_["current_target_1"]->current_element();
