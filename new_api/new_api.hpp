@@ -546,85 +546,6 @@ public:
 
 
 
-class OldMotorboardInterface
-{
-public:
-    typedef StampedData<double> StampedScalar;
-    typedef StampedData<MotorboardCommand> StampedCommand;
-    typedef StampedData<MotorboardStatus> StampedStatus;
-
-    /// outputs ================================================================
-//    std::vector<std::string> measurement_names_ = {"current_0",
-//                                                   "current_1",
-//                                                   "position_0",
-//                                                   "position_1",
-//                                                   "velocity_0",
-//                                                   "velocity_1",
-//                                                   "analog_0",
-//                                                   "analog_1",
-//                                                   "encoder_0",
-//                                                   "encoder_1"};
-
-    std::vector<std::string> status_names_ = {"status"};
-
-    /// inputs =================================================================
-//    std::vector<std::string> control_names_ = {"current_target_0",
-//                                               "current_target_1"};
-
-    std::vector<std::string> command_names_ = {"command"};
-
-public:
-    // get output data ---------------------------------------------------------
-    virtual StampedScalar get_measurement(const std::string& name) const = 0;
-    virtual void wait_for_measurement(const std::string& name) const = 0;
-    virtual void wait_for_any_measurement() const = 0;
-
-    virtual StampedStatus get_status(const std::string& name) const = 0;
-    virtual void wait_for_status(const std::string& name) const = 0;
-    virtual void wait_for_any_status() const = 0;
-
-    // get input data ---------------------------------------------------------
-    virtual StampedScalar get_control(const std::string& name) const = 0;
-    virtual void wait_for_control(const std::string& name) const = 0;
-    virtual void wait_for_any_control() const = 0;
-
-    virtual StampedCommand get_command(const std::string& name) const = 0;
-    virtual void wait_for_command(const std::string& name) const = 0;
-    virtual void wait_for_any_command() const = 0;
-
-    // send input data ---------------------------------------------------------
-    virtual void send_control(const StampedScalar& control,
-                              const std::string& name) = 0;
-    virtual void send_command(const StampedCommand& command,
-                              const std::string& name) = 0;
-
-    // print status ------------------------------------------------------------
-    virtual void print_status() = 0;
-
-    virtual ~OldMotorboardInterface() {}
-};
-
-
-//class NewCanMotorboard: public NewMotorboardInterface
-//{
-//    std::shared_ptr<MeasurementHistory> measurement_history_;
-
-
-//    virtual std::shared_ptr<MeasurementHistory> measurement(std::string name) const
-//    {
-//        return measurement_history_
-
-//    }
-//    virtual std::shared_ptr<StatusHistory> status() const = 0;
-
-//    virtual std::shared_ptr<ControlHistory> control(std::string name) = 0;
-//    virtual std::shared_ptr<CommandHistory> command() = 0;
-
-//    virtual void send_if_input_changed() = 0;
-
-//};
-
-
 
 
 class MotorboardInterface
@@ -663,7 +584,7 @@ public:
 };
 
 
-class CanMotorboard: public  OldMotorboardInterface, MotorboardInterface
+class CanMotorboard: public  MotorboardInterface
 {
     /// public interface =======================================================
 public:
@@ -728,78 +649,14 @@ public:
 
 
 
+    void send_command(const MotorboardCommand& command)
+    {
+//        old_command_.set(command, name);
 
-    // get output data ---------------------------------------------------------
-    virtual StampedScalar get_measurement(const std::string& name) const
-    {
-        return old_measurements_.get(name);
-    }
-    virtual void wait_for_measurement(const std::string& name) const
-    {
-        old_measurements_.wait_for_update(name);
-    }
+        command_->append(command);
 
-    ///
-    /// \todo: do we need this?? also, this should return a string
-    virtual void wait_for_any_measurement() const
-    {
-        old_measurements_.wait_for_update();
-    }
-
-    virtual StampedStatus get_status(const std::string& name) const
-    {
-        return old_status_.get(name);
-    }
-    virtual void wait_for_status(const std::string& name) const
-    {
-        old_status_.wait_for_update(name);
-    }
-    virtual void wait_for_any_status() const
-    {
-        old_status_.wait_for_update();
-    }
-
-    // get input data ---------------------------------------------------------
-    virtual StampedScalar get_control(const std::string& name) const
-    {
-        return old_controls_.get(name);
-    }
-    virtual void wait_for_control(const std::string& name) const
-    {
-        old_controls_.wait_for_update(name);
-    }
-    virtual void wait_for_any_control() const
-    {
-        old_controls_.wait_for_update();
-    }
-
-    virtual StampedCommand get_command(const std::string& name) const
-    {
-        return old_command_.get(name);
-    }
-    virtual void wait_for_command(const std::string& name) const
-    {
-        old_command_.wait_for_update(name);
-    }
-    virtual void wait_for_any_command() const
-    {
-        old_command_.wait_for_update();
-    }
-
-    // send input data ---------------------------------------------------------
-    virtual void send_control(const StampedScalar& control,
-                              const std::string& name)
-    {
-        old_controls_.set(control, name);
-        send_current_targets();
-    }
-
-    void send_command(const StampedCommand& command, const std::string& name)
-    {
-        old_command_.set(command, name);
-
-        uint32_t id = command.get_data().id_;
-        int32_t content = command.get_data().content_;
+        uint32_t id = command.id_;
+        int32_t content = command.content_;
 
 
         uint8_t data[8];
@@ -834,16 +691,16 @@ public:
     // todo: this should go away
     void enable()
     {
-        send_command(StampedCommand(MotorboardCommand(MotorboardCommand::IDs::ENABLE_SYS,
-                                                      MotorboardCommand::Contents::ENABLE),-1,-1), "command");
-        send_command(StampedCommand(MotorboardCommand(MotorboardCommand::IDs::SEND_ALL,
-                                                      MotorboardCommand::Contents::ENABLE),-1,-1), "command");
-        send_command(StampedCommand(MotorboardCommand(MotorboardCommand::IDs::ENABLE_MTR1,
-                                                      MotorboardCommand::Contents::ENABLE),-1,-1), "command");
-        send_command(StampedCommand(MotorboardCommand(MotorboardCommand::IDs::ENABLE_MTR2,
-                                                      MotorboardCommand::Contents::ENABLE),-1,-1), "command");
-        send_command(StampedCommand(MotorboardCommand(MotorboardCommand::IDs::SET_CAN_RECV_TIMEOUT,
-                                                      100),-1,-1), "command");
+        send_command(MotorboardCommand(MotorboardCommand::IDs::ENABLE_SYS,
+                                       MotorboardCommand::Contents::ENABLE));
+        send_command(MotorboardCommand(MotorboardCommand::IDs::SEND_ALL,
+                                       MotorboardCommand::Contents::ENABLE));
+        send_command(MotorboardCommand(MotorboardCommand::IDs::ENABLE_MTR1,
+                                       MotorboardCommand::Contents::ENABLE));
+        send_command(MotorboardCommand(MotorboardCommand::IDs::ENABLE_MTR2,
+                                       MotorboardCommand::Contents::ENABLE));
+        send_command(MotorboardCommand(MotorboardCommand::IDs::SET_CAN_RECV_TIMEOUT,
+                                                      100));
     }
 
     /// private members ========================================================
@@ -860,16 +717,6 @@ private:
     std::shared_ptr<CommandTimeseries> command_;
     SingletypeThreadsafeObject<long int, 1> command_hash_;
 
-
-    // outputs -----------------------------------------------------------------
-    SingletypeThreadsafeObject<StampedScalar, 10> old_measurements_;
-    SingletypeThreadsafeObject<StampedStatus, 1> old_status_;
-
-    // inputs ------------------------------------------------------------------
-    SingletypeThreadsafeObject<StampedScalar, 2> old_controls_;
-    SingletypeThreadsafeObject<StampedCommand, 1> old_command_;
-
-
     enum CanframeIDs
     {
         COMMAND_ID   = 0x00,
@@ -885,10 +732,6 @@ private:
 public:
     CanMotorboard(std::shared_ptr<XenomaiCanbus> can_bus):
         can_bus_(can_bus),
-        old_measurements_(measurement_names_),
-        old_status_(status_names_),
-        old_controls_(control_names_),
-        old_command_(command_names_),
         control_hashes_(control_names_)
     {
         // initialize outputs --------------------------------------------------
@@ -897,7 +740,8 @@ public:
             measurements_[measurement_names_[i]]
                     = std::make_shared<ThreadsafeTimeseries<double>>(1000);
         }
-        status_ = std::make_shared<ThreadsafeTimeseries<MotorboardStatus>>(1000);
+        status_ =
+                std::make_shared<ThreadsafeTimeseries<MotorboardStatus>>(1000);
 
         // initialize outputs --------------------------------------------------
         for(size_t i = 0; i < control_names_.size(); i++)
@@ -905,35 +749,23 @@ public:
             controls_[control_names_[i]]
                     = std::make_shared<ThreadsafeTimeseries<double>>(1000);
 
+            controls_.at(control_names_[i])->append(0);
+
             control_hashes_.set(
                         controls_.at(control_names_[i])->next_timeindex(),
                     control_names_[i]);
         }
-        command_ = std::make_shared<ThreadsafeTimeseries<MotorboardCommand>>(1000);
+        command_ =
+                std::make_shared<ThreadsafeTimeseries<MotorboardCommand>>(1000);
         command_hash_.set(command_->next_timeindex());
-
-
-        // ---------------------------------------------------------------------
-        for(size_t i = 0; i < old_measurements_.size(); i++)
-        {
-            old_measurements_.set(StampedScalar(0, -1, -1), i);
-        }
-        old_measurements_.set(StampedScalar(0.5, -1, -1), "analog_0");
-        old_measurements_.set(StampedScalar(0.5, -1, -1), "analog_1");
-
-        for(size_t i = 0; i < old_controls_.size(); i++)
-        {
-            old_controls_.set(StampedScalar(0, -1, -1), i);
-        }
-
 
         osi::start_thread(&CanMotorboard::loop, this);
     }
 
     ~CanMotorboard()
     {
-        send_command(StampedCommand(MotorboardCommand(MotorboardCommand::IDs::ENABLE_SYS,
-                                                      MotorboardCommand::Contents::DISABLE),-1,-1), "command");
+        send_command(MotorboardCommand(MotorboardCommand::IDs::ENABLE_SYS,
+                                       MotorboardCommand::Contents::DISABLE));
     }
 
     /// private methods ========================================================
@@ -961,12 +793,8 @@ private:
 
     void send_current_targets()
     {
-        Eigen::Vector2d current_targets;
-        current_targets[0] = get_control("current_target_0").get_data();
-        current_targets[1] = get_control("current_target_1").get_data();
-
-        float current_mtr1 = current_targets[0];
-        float current_mtr2 = current_targets[1];
+        float current_mtr1 = controls_["current_target_0"]->current_element();
+        float current_mtr2 = controls_["current_target_1"]->current_element();
 
         uint8_t data[8];
         uint32_t q_current1, q_current2;
@@ -1016,66 +844,48 @@ private:
         long int timeindex = can_bus_->output()->next_timeindex();
         while(true)
         {
+
+//            osi::print_to_screen("waiting for can frame with index %d\n", timeindex);
             CanFrame can_frame = (*can_bus_->output())[timeindex];
             timeindex++;
-
-
-            // get latest can frame --------------------------------------------
-
-//            can_bus_->output_wait_for_any();
-
-
-
-
-//            auto stamped_can_frame = can_bus_->output_get_can_frame();
-//            auto can_frame = stamped_can_frame.get_data();
+//            osi::print_to_screen("received\n");
 
             // convert to measurement ------------------------------------------
-            Eigen::Vector2d measurement;
             double measurement_0 = qbytes_to_float(can_frame.data.begin());
-            double measurement_1 =
-                    qbytes_to_float((can_frame.data.begin() + 4));
-
-            StampedScalar
-                    stamped_measurement_0(measurement_0);
-            StampedScalar
-                    stamped_measurement_1(measurement_1);
-
+            double measurement_1 = qbytes_to_float((can_frame.data.begin() + 4));
 
 
             switch(can_frame.id)
             {
             case CanframeIDs::Iq:
-                old_measurements_.set(stamped_measurement_0, "current_0");
-                old_measurements_.set(stamped_measurement_1, "current_1");
+                measurements_.at("current_0")->append(measurement_0);
+                measurements_.at("current_1")->append(measurement_1);
                 break;
             case CanframeIDs::POS:
-                old_measurements_.set(stamped_measurement_0, "position_0");
-                old_measurements_.set(stamped_measurement_1, "position_1");
+                measurements_.at("position_0")->append(measurement_0);
+                measurements_.at("position_1")->append(measurement_1);
                 break;
             case CanframeIDs::SPEED:
-                old_measurements_.set(stamped_measurement_0, "velocity_0");
-                old_measurements_.set(stamped_measurement_1, "velocity_1");
+                measurements_.at("velocity_0")->append(measurement_0);
+                measurements_.at("velocity_1")->append(measurement_1);
                 break;
             case CanframeIDs::ADC6:
-                old_measurements_.set(stamped_measurement_0, "analog_0");
-                old_measurements_.set(stamped_measurement_1, "analog_1");
+                measurements_.at("analog_0")->append(measurement_0);
+                measurements_.at("analog_1")->append(measurement_1);
                 break;
             case CanframeIDs::ENC_INDEX:
             {
                 // here the interpretation of the message is different,
                 // we get a motor index and a measurement
                 uint8_t motor_index = can_frame.data[4];
-                StampedScalar measurement = stamped_measurement_0;
                 if(motor_index == 0)
                 {
-                    old_measurements_.set(measurement, "encoder_0");
+                    measurements_.at("encoder_0")->append(measurement_0);
                 }
                 else if(motor_index == 1)
                 {
-                    old_measurements_.set(measurement, "encoder_1");
+                    measurements_.at("encoder_1")->append(measurement_0);
                 }
-
                 else
                 {
                     osi::print_to_screen("ERROR: Invalid motor number"
@@ -1095,12 +905,12 @@ private:
                 status.motor2_ready   = data >> 4;
                 status.error_code     = data >> 5;
 
-                StampedData<MotorboardStatus> stamped_status(status);
-
-                old_status_.set(stamped_status, "status");
+                status_->append(status);
                 break;
             }
             }
+
+
 
             static int count = 0;
             if(count % 4000 == 0)
@@ -1108,6 +918,7 @@ private:
                 print_status();
             }
             count++;
+//            print_status();
 
         }
     }
@@ -1120,16 +931,17 @@ private:
         {
             osi::print_to_screen("%s: ---------------------------------\n",
                                  measurement_names_[i].c_str());
-            StampedScalar measurement = get_measurement(measurement_names_[i]);
-            measurement.print_header();
-            osi::print_to_screen("value %f:\n", measurement.get_data());
+            if(measurements_.at(measurement_names_[i])->size() > 0)
+            {
+                double measurement =
+                        measurements_.at(measurement_names_[i])->current_element();
+                osi::print_to_screen("value %f:\n", measurement);
+            }
         }
 
         osi::print_to_screen("status: ---------------------------------\n");
-        StampedStatus status = get_status("status");
-        status.print_header();
-        status.get_data().print();
-
+        if(status_->size() > 0)
+            status_->current_element().print();
 
         osi::print_to_screen("inputs ======================================\n");
 
@@ -1137,16 +949,17 @@ private:
         {
             osi::print_to_screen("%s: ---------------------------------\n",
                                  control_names_[i].c_str());
-            StampedScalar control = get_control(control_names_[i]);
-            control.print_header();
-            osi::print_to_screen("value %f:\n", control.get_data());
+            if(controls_.at(control_names_[i])->size() > 0)
+            {
+                double control =
+                        controls_.at(control_names_[i])->current_element();
+                osi::print_to_screen("value %f:\n", control);
+            }
         }
 
         osi::print_to_screen("command: ---------------------------------\n");
-        StampedCommand command = get_command("command");
-        command.print_header();
-        command.get_data().print();
-
+        if(command_->size() > 0)
+            command_->current_element().print();
     }
 
     unsigned id_to_index(unsigned motor_id)
@@ -1186,11 +999,9 @@ public:
 public:
     // get output data ---------------------------------------------------------
     virtual StampedScalar get_measurement(const std::string& name) const = 0;
-    virtual void wait_for_measurement(const std::string& name) const = 0;
 
     // get input data ----------------------------------------------------------
     virtual StampedScalar get_control(const std::string& name) const = 0;
-    virtual void wait_for_control(const std::string& name) const = 0;
 
     // send input data ---------------------------------------------------------
     virtual void send_control(const StampedScalar& control,
@@ -1227,86 +1038,84 @@ public:
     // get output data ---------------------------------------------------------
     virtual StampedScalar get_measurement(const std::string& name) const
     {
-        return board_->get_measurement(motor_to_board_name_.at(name));
+        return board_->measurement(motor_to_board_name_.at(name))->current_element();
     }
-    virtual void wait_for_measurement(const std::string& name) const
-    {
-        board_->wait_for_measurement(motor_to_board_name_.at(name));
-    }
+
 
 
     // get input data ----------------------------------------------------------
     virtual StampedScalar get_control(const std::string& name) const
     {
-        return board_->get_control(motor_to_board_name_.at(name));
+        return board_->control(motor_to_board_name_.at(name))->current_element();
     }
-    virtual void wait_for_control(const std::string& name) const
-    {
-        board_->wait_for_control(motor_to_board_name_.at(name));
-    }
+
 
 
     // send input data ---------------------------------------------------------
     virtual void send_control(const StampedScalar& control,
                               const std::string& name)
     {
-        board_->send_control(control, motor_to_board_name_.at(name));
+        board_->control(motor_to_board_name_.at(name))->append(control.get_data());
+
+        board_->send_if_input_changed();
+
+//        board_->send_control(control, motor_to_board_name_.at(name));
     }
 };
 
 
 
-class SafeMotor: public Motor
-{
-public:
-    SafeMotor(std::shared_ptr<CanMotorboard> board, bool motor_id):
-        Motor(board, motor_id)
-    {
-        temperature_.set(StampedScalar(room_temperature_));
-        osi::start_thread(&SafeMotor::loop, this);
-    }
+//class SafeMotor: public Motor
+//{
+//public:
+//    SafeMotor(std::shared_ptr<CanMotorboard> board, bool motor_id):
+//        Motor(board, motor_id)
+//    {
+//        temperature_.set(StampedScalar(room_temperature_));
+//        osi::start_thread(&SafeMotor::loop, this);
+//    }
 
 
-    // send input data ---------------------------------------------------------
-    virtual void send_control(const StampedScalar& control,
-                              const std::string& name)
-    {
-    }
+//    // send input data ---------------------------------------------------------
+//    virtual void send_control(const StampedScalar& control,
+//                              const std::string& name)
+//    {
+//    }
 
-private:
-    ThreadsafeObject<StampedScalar> temperature_;
+//private:
+//    ThreadsafeObject<StampedScalar> temperature_;
 
-    const double room_temperature_ = 30;
+//    const double room_temperature_ = 30;
 
-    static void
-#ifndef __XENO__
-    *
-#endif
-    loop(void* instance_pointer)
-    {
-        ((SafeMotor*)(instance_pointer))->loop();
-    }
+//    static void
+//#ifndef __XENO__
+//    *
+//#endif
+//    loop(void* instance_pointer)
+//    {
+//        ((SafeMotor*)(instance_pointer))->loop();
+//    }
 
-    void loop()
-    {
-        Timer<10> time_logger("controller", 1000);
-        while(true)
-        {
-            wait_for_measurement("current");
-            StampedScalar current = get_measurement("current");
-
-
+//    void loop()
+//    {
+//        Timer<10> time_logger("controller", 1000);
+//        while(true)
+//        {
+//            wait_for_measurement("current");
+//            StampedScalar current = get_measurement("current");
 
 
-            // print -----------------------------------------------------------
-            Timer<>::sleep_ms(1);
-            time_logger.end_and_start_interval();
-            if ((time_logger.count() % 1000) == 0)
-            {
-            }
-        }
-    }
-};
+
+
+//            // print -----------------------------------------------------------
+//            Timer<>::sleep_ms(1);
+//            time_logger.end_and_start_interval();
+//            if ((time_logger.count() % 1000) == 0)
+//            {
+//            }
+//        }
+//    }
+//};
 
 
 
@@ -1321,7 +1130,6 @@ public:
 public:
     // get output data ---------------------------------------------------------
     virtual StampedScalar get_measurement(const std::string& name) const = 0;
-    virtual void wait_for_measurement(const std::string& name) const = 0;
 
     virtual ~AnalogsensorInterface() {}
 };
@@ -1347,12 +1155,11 @@ public:
     // get output data ---------------------------------------------------------
     virtual StampedScalar get_measurement(const std::string& name) const
     {
-        return board_->get_measurement(sensor_to_board_name_.at(name));
+        return board_->measurement(sensor_to_board_name_.at(name))->current_element();
+
+//        return board_->get_measurement(sensor_to_board_name_.at(name));
     }
-    virtual void wait_for_measurement(const std::string& name) const
-    {
-        board_->wait_for_measurement(sensor_to_board_name_.at(name));
-    }
+
 };
 
 
@@ -1387,11 +1194,9 @@ public:
 public:
     // get output data ---------------------------------------------------------
     virtual StampedScalar get_measurement(const std::string& name) const = 0;
-    virtual void wait_for_measurement(const std::string& name) const = 0;
 
     // get input data ----------------------------------------------------------
     virtual StampedScalar get_control(const std::string& name) const = 0;
-    virtual void wait_for_control(const std::string& name) const = 0;
 
     // send input data ---------------------------------------------------------
     virtual void send_control(const StampedScalar& control,
@@ -1437,12 +1242,7 @@ public:
         parse_name(name, motor_name, content_name);
         return motors_.at(motor_name)->get_measurement(content_name);
     }
-    virtual void wait_for_measurement(const std::string& name) const
-    {
-        std::string motor_name, content_name;
-        parse_name(name, motor_name, content_name);
-        motors_.at(motor_name)->wait_for_measurement(content_name);
-    }
+
 
 
     // get input data ----------------------------------------------------------
@@ -1452,12 +1252,7 @@ public:
         parse_name(name, motor_name, content_name);
         return motors_.at(motor_name)->get_control(content_name);
     }
-    virtual void wait_for_control(const std::string& name) const
-    {
-        std::string motor_name, content_name;
-        parse_name(name, motor_name, content_name);
-        motors_.at(motor_name)->wait_for_control(content_name);
-    }
+
 
 
     // send input data ---------------------------------------------------------

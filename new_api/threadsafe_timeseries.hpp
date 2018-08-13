@@ -25,7 +25,7 @@ public:
 
 
     // waits if empty
-    virtual Type current_element()
+    virtual Type current_element() const
     {
         return (*this)[next_timeindex()-1];
     }
