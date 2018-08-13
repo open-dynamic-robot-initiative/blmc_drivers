@@ -77,6 +77,8 @@ public:
                                  "timeseries element which is not in our "
                                  "history (anymore). returning oldest existing "
                                  "element.\n");
+
+            osi::print_to_screen("some info: %s \n", __PRETTY_FUNCTION__ );
             /// \todo we will get rid of this exit, just for now to not miss
             /// this case
             exit(-1);

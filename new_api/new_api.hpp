@@ -155,9 +155,6 @@ class XenomaiCanbus: public CanbusInterface
 
     /// public interface =======================================================
 public:
-    typedef StampedData<CanFrame> StampedFrame;
-
-
     virtual std::shared_ptr<CanframeTimeseries>  input()
     {
         return input_;
@@ -215,8 +212,6 @@ public:
 private:
     // attributes --------------------------------------------------------------
     SingletypeThreadsafeObject<CanConnection, 1> connection_info_;
-//    SingletypeThreadsafeObject<StampedFrame, 1> old_output_;
-//    SingletypeThreadsafeObject<StampedFrame, 1> old_input_;
 
     std::shared_ptr<ThreadsafeTimeseriesInterface<CanFrame>> input_;
     SingletypeThreadsafeObject<long int, 1> input_hash_;
@@ -264,14 +259,12 @@ private:
     }
 
     // send input data ---------------------------------------------------------
-    void send_frame(const StampedFrame& stamped_can_frame)
+    void send_frame(const CanFrame& unstamped_can_frame)
     {
         // get address ---------------------------------------------------------
         int socket = connection_info_.get().socket;
         struct sockaddr_can address = connection_info_.get().send_addr;
 
-
-        auto unstamped_can_frame = stamped_can_frame.get_data();
         // put data into can frame ---------------------------------------------
         can_frame_t can_frame;
         can_frame.can_id = unstamped_can_frame.id;
@@ -680,9 +673,6 @@ public:
 
         can_bus_->input()->append(can_frame);
         can_bus_->send_if_input_changed();
-
-//        can_bus_->input_send_can_frame(StampedData<CanFrame>(can_frame,
-//                                                             -1, -1));
     }
 
     // todo: this should go away
@@ -822,8 +812,6 @@ private:
 
         can_bus_->input()->append(can_frame);
         can_bus_->send_if_input_changed();
-
-//        return can_bus_->input_send_can_frame(StampedData<CanFrame>(can_frame, -1, -1));
     }
 
     static void
