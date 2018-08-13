@@ -58,8 +58,8 @@ int main(int argc, char **argv)
     osi::initialize_realtime_printing();
 
     // create bus and boards -------------------------------------------------
-    auto can_bus1 = std::make_shared<XenomaiCanbus>("rtcan0");
-    auto can_bus2 = std::make_shared<XenomaiCanbus>("rtcan1");
+    auto can_bus1 = std::make_shared<Canbus>("rtcan0");
+    auto can_bus2 = std::make_shared<Canbus>("rtcan1");
     auto board1 = std::make_shared<CanMotorboard>(can_bus1);
     auto board2 = std::make_shared<CanMotorboard>(can_bus2);
 

@@ -196,51 +196,6 @@ public:
     }
 
     /// ========================================================================
-    void send_command(const MotorboardCommand& command)
-    {
-        command_->append(command);
-        send_if_input_changed();
-    }
-
-
-    void send_command()
-    {
-//        old_command_.set(command, name);
-
-        MotorboardCommand command = command_->current_element();
-
-//        command_->append(command);
-
-        uint32_t id = command.id_;
-        int32_t content = command.content_;
-
-
-        uint8_t data[8];
-
-        // content
-        data[0] = (content >> 24) & 0xFF;
-        data[1] = (content >> 16) & 0xFF;
-        data[2] = (content >> 8) & 0xFF;
-        data[3] = content & 0xFF;
-
-        // command
-        data[4] = (id >> 24) & 0xFF;
-        data[5] = (id >> 16) & 0xFF;
-        data[6] = (id >> 8) & 0xFF;
-        data[7] = id & 0xFF;
-
-        CanFrame can_frame;
-        can_frame.id = CanframeIDs::COMMAND_ID;
-        for(size_t i = 0; i < 8; i++)
-        {
-            can_frame.data[i] = data[i];
-        }
-        can_frame.dlc = 8;
-
-        can_bus_->input()->append(can_frame);
-        can_bus_->send_if_input_changed();
-    }
-
     // todo: this should go away
     void enable()
     {
@@ -256,9 +211,16 @@ public:
                                                       100));
     }
 
+private:
+    void send_command(const MotorboardCommand& command)
+    {
+        command_->append(command);
+        send_if_input_changed();
+    }
+
     /// private members ========================================================
 private:
-    std::shared_ptr<XenomaiCanbus> can_bus_;
+    std::shared_ptr<CanbusInterface> can_bus_;
 
     // outputs -----------------------------------------------------------------
     std::map<std::string, std::shared_ptr<ScalarTimeseries>> measurements_;
@@ -283,7 +245,7 @@ private:
     };
     /// constructor ============================================================
 public:
-    CanMotorboard(std::shared_ptr<XenomaiCanbus> can_bus):
+    CanMotorboard(std::shared_ptr<CanbusInterface> can_bus):
         can_bus_(can_bus),
         control_hashes_(control_names_)
     {
@@ -368,9 +330,42 @@ private:
         data[6] = (q_current2 >> 8) & 0xFF;
         data[7] =  q_current2 & 0xFF;
 
-        CanFrame can_frame;
+        Canframe can_frame;
         can_frame.id = BLMC_CAN_ID_IqRef;
         for(size_t i = 0; i < 7; i++)
+        {
+            can_frame.data[i] = data[i];
+        }
+        can_frame.dlc = 8;
+
+        can_bus_->input()->append(can_frame);
+        can_bus_->send_if_input_changed();
+    }
+    void send_command()
+    {
+        MotorboardCommand command = command_->current_element();
+
+        uint32_t id = command.id_;
+        int32_t content = command.content_;
+
+
+        uint8_t data[8];
+
+        // content
+        data[0] = (content >> 24) & 0xFF;
+        data[1] = (content >> 16) & 0xFF;
+        data[2] = (content >> 8) & 0xFF;
+        data[3] = content & 0xFF;
+
+        // command
+        data[4] = (id >> 24) & 0xFF;
+        data[5] = (id >> 16) & 0xFF;
+        data[6] = (id >> 8) & 0xFF;
+        data[7] = id & 0xFF;
+
+        Canframe can_frame;
+        can_frame.id = CanframeIDs::COMMAND_ID;
+        for(size_t i = 0; i < 8; i++)
         {
             can_frame.data[i] = data[i];
         }
@@ -397,7 +392,7 @@ private:
         {
 
 //            osi::print_to_screen("waiting for can frame with index %d\n", timeindex);
-            CanFrame can_frame = (*can_bus_->output())[timeindex];
+            Canframe can_frame = (*can_bus_->output())[timeindex];
             timeindex++;
 //            osi::print_to_screen("received\n");
 
@@ -461,16 +456,12 @@ private:
             }
             }
 
-
-
             static int count = 0;
             if(count % 4000 == 0)
             {
                 print_status();
             }
             count++;
-//            print_status();
-
         }
     }
 

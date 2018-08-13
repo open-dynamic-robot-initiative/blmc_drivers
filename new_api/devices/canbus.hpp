@@ -13,7 +13,7 @@
 
 
 
-class CanFrame
+class Canframe
 {
 public:
     std::array<uint8_t, 8> data;
@@ -31,7 +31,7 @@ public:
 class CanbusInterface
 {
 public:
-    typedef ThreadsafeTimeseriesInterface<CanFrame> CanframeTimeseries;
+    typedef ThreadsafeTimeseriesInterface<Canframe> CanframeTimeseries;
 
     /// output =================================================================
     virtual std::shared_ptr<const CanframeTimeseries> output() const = 0;
@@ -45,7 +45,7 @@ public:
     virtual ~CanbusInterface() {}
 };
 
-class XenomaiCanbus: public CanbusInterface
+class Canbus: public CanbusInterface
 {
 public:
 
@@ -71,18 +71,18 @@ public:
     }
 
     /// ========================================================================
-    XenomaiCanbus(std::string can_interface_name)
+    Canbus(std::string can_interface_name)
     {
-        input_ = std::make_shared<ThreadsafeTimeseries<CanFrame>>(1000);
-        output_ = std::make_shared<ThreadsafeTimeseries<CanFrame>>(1000);
+        input_ = std::make_shared<ThreadsafeTimeseries<Canframe>>(1000);
+        output_ = std::make_shared<ThreadsafeTimeseries<Canframe>>(1000);
         input_hash_.set(input_->next_timeindex());
 
         can_connection_.set(setup_can(can_interface_name, 0));
 
-        osi::start_thread(&XenomaiCanbus::loop, this);
+        osi::start_thread(&Canbus::loop, this);
     }
 
-    virtual ~XenomaiCanbus()
+    virtual ~Canbus()
     {
         osi::close_can_device(can_connection_.get().socket);
     }
@@ -92,9 +92,9 @@ private:
     // attributes --------------------------------------------------------------
     SingletypeThreadsafeObject<CanConnection, 1> can_connection_;
 
-    std::shared_ptr<ThreadsafeTimeseriesInterface<CanFrame>> input_;
+    std::shared_ptr<ThreadsafeTimeseriesInterface<Canframe>> input_;
     SingletypeThreadsafeObject<long int, 1> input_hash_;
-    std::shared_ptr<ThreadsafeTimeseriesInterface<CanFrame>> output_;
+    std::shared_ptr<ThreadsafeTimeseriesInterface<Canframe>> output_;
 
     // methods -----------------------------------------------------------------
     static void
@@ -103,7 +103,7 @@ private:
 #endif
     loop(void* instance_pointer)
     {
-        ((XenomaiCanbus*)(instance_pointer))->loop();
+        ((Canbus*)(instance_pointer))->loop();
     }
 
     void loop()
@@ -118,7 +118,7 @@ private:
     }
 
     // send input data ---------------------------------------------------------
-    void send_frame(const CanFrame& unstamped_can_frame)
+    void send_frame(const Canframe& unstamped_can_frame)
     {
         // get address ---------------------------------------------------------
         int socket = can_connection_.get().socket;
@@ -142,7 +142,7 @@ private:
     }
 
 
-    CanFrame receive_frame()
+    Canframe receive_frame()
     {
         int socket = can_connection_.get().socket;
 
@@ -175,7 +175,7 @@ private:
             timestamp = 0;
         }
 
-        CanFrame out_frame;
+        Canframe out_frame;
         out_frame.id = can_frame.can_id;
         out_frame.dlc = can_frame.can_dlc;
         for(size_t i = 0; i < can_frame.can_dlc; i++)

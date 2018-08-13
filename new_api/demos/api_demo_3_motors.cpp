@@ -59,8 +59,8 @@ int main(int argc, char **argv)
     // create bus and boards -------------------------------------------------
 
 #ifdef __XENO__
-    auto can_bus1 = std::make_shared<XenomaiCanbus>("rtcan0");
-    auto can_bus2 = std::make_shared<XenomaiCanbus>("rtcan1");
+    auto can_bus1 = std::make_shared<Canbus>("rtcan0");
+    auto can_bus2 = std::make_shared<Canbus>("rtcan1");
 #else
     auto can_bus1 = std::make_shared<XenomaiCanbus>("can0");
     auto can_bus2 = std::make_shared<XenomaiCanbus>("can1");
