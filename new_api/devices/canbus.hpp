@@ -209,13 +209,9 @@ private:
         int socket;
         sockaddr_can recv_addr;
         sockaddr_can send_addr;
-
-
-        CAN_CanConnection_t temp;
-        CAN_CanConnection_t *can = &temp;
-        int ret;
         struct ifreq ifr;
 
+        int ret;
 
         ret = rt_dev_socket(PF_CAN, SOCK_RAW, CAN_RAW);
         if (ret < 0) {
@@ -224,7 +220,6 @@ private:
             exit(-1);
         }
         socket = ret;
-
 
         strncpy(ifr.ifr_name, name.c_str(), IFNAMSIZ);
         ret = rt_dev_ioctl(socket, SIOCGIFINDEX, &ifr);
@@ -236,8 +231,6 @@ private:
             osi::print_to_screen("Couldn't setup CAN connection. Exit.");
             exit(-1);
         }
-
-
 
         // Set error mask
         if (err_mask) {
@@ -251,16 +244,6 @@ private:
                 exit(-1);
             }
         }
-
-        //if (filter_count) {
-        //    ret = rt_dev_setsockopt(s, SOL_CAN_RAW, CAN_RAW_FILTER,
-        //                            &recv_filter, filter_count *
-        //                            sizeof(struct can_filter));
-        //    if (ret < 0) {
-        //        rt_fprintf(stderr, "rt_dev_setsockopt: %s\n", strerror(-ret));
-        //        goto failure;
-        //    }
-        //}
 
         // Bind to socket
         recv_addr.can_family = AF_CAN;
@@ -289,16 +272,6 @@ private:
 #elif defined __RT_PREEMPT__
         // TODO: Need to support timestamps.
 #endif
-
-        recv_addr.can_family = AF_CAN;
-        recv_addr.can_ifindex = ifr.ifr_ifindex;
-
-        can->msg.msg_iov = &can->iov;
-        can->msg.msg_iovlen = 1;
-        can->msg.msg_name = (void *)&can->msg_addr;
-        can->msg.msg_namelen = sizeof(struct sockaddr_can);
-        can->msg.msg_control = (void *)&can->timestamp;
-        can->msg.msg_controllen = sizeof(nanosecs_abs_t);
 
         // TODO why the memset?
         memset(&send_addr, 0, sizeof(send_addr));
