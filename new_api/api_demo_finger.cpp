@@ -29,9 +29,9 @@ public:
     {
         Timer<10> time_logger("controller", 1000);
         while(true)
-        {
-            double current_target =
-                    2 * (analog_sensor_->get_measurement("analog").get_data() - 0.5);
+        {           
+            double analog_measurement = analog_sensor_->measurement()->current_element();
+            double current_target = 2 * (analog_measurement - 0.5);
 
             StampedData<double> stamped_current_target(current_target, -1, -1);
 

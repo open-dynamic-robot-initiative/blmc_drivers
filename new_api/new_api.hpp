@@ -1101,14 +1101,9 @@ public:
 class AnalogsensorInterface
 {
 public:
-    typedef StampedData<double> StampedScalar;
+    typedef ThreadsafeTimeseriesInterface<double> ScalarTimeseries;
 
-    /// outputs ================================================================
-    std::vector<std::string> measurement_names_ = {"analog"};
-
-public:
-    // get output data ---------------------------------------------------------
-    virtual StampedScalar get_measurement(const std::string& name) const = 0;
+    virtual std::shared_ptr<const ScalarTimeseries> measurement() const = 0;
 
     virtual ~AnalogsensorInterface() {}
 };
@@ -1121,22 +1116,19 @@ public:
 class Analogsensor: public AnalogsensorInterface
 {
     std::map<std::string, std::string> sensor_to_board_name_;
+    std::string name_;
     std::shared_ptr<CanMotorboard> board_;
 
 public:
     Analogsensor(std::shared_ptr<CanMotorboard> board, bool sensor_id):
         board_(board)
     {
-        sensor_to_board_name_[measurement_names_[0]] =
-                measurement_names_[0] + "_" + std::to_string(sensor_id);
+        name_ = "analog_" + std::to_string(sensor_id);
     }
 
-    // get output data ---------------------------------------------------------
-    virtual StampedScalar get_measurement(const std::string& name) const
+    virtual std::shared_ptr<const ScalarTimeseries> measurement() const
     {
-        return board_->measurement(sensor_to_board_name_.at(name))->current_element();
-
-//        return board_->get_measurement(sensor_to_board_name_.at(name));
+        return board_->measurement(name_);
     }
 
 };
