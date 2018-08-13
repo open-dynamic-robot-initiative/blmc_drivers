@@ -10,13 +10,24 @@
 
 template<typename Type> class ThreadsafeTimeseriesInterface
 {
-    virtual Type operator[](long int timeindex) const = 0;
+public:
+    typedef long int Index;
+
+    virtual Type operator[](Index timeindex) const = 0;
     virtual void append(const Type& element) = 0;
 
-    virtual size_t newest_timeindex() const = 0;
-    virtual Type newest_element()
+    // these two functions return immediately. if called on object of zero size,
+    // undefined behaviour
+    virtual Index next_timeindex() const = 0;
+//    virtual Index current_timeindex() const = 0;
+
+
+
+
+    // waits if empty
+    virtual Type current_element()
     {
-        return (*this)[newest_timeindex()];
+        return (*this)[next_timeindex()-1];
     }
 
     virtual size_t size() const = 0;
@@ -27,18 +38,20 @@ template<typename Type> class ThreadsafeTimeseriesInterface
 template<typename Type>
 class ThreadsafeTimeseries: public ThreadsafeTimeseriesInterface<Type>
 {
+    typedef typename ThreadsafeTimeseriesInterface<Type>::Index Index;
+
 private:
     std::shared_ptr<std::vector<Type>> history_;
 
-    long int oldest_timeindex_;
-    long int newest_timeindex_;
+    Index oldest_timeindex_;
+    Index newest_timeindex_;
 
     mutable std::shared_ptr<osi::ConditionVariable> condition_;
     mutable std::shared_ptr<osi::Mutex> mutex_;
 
 public:
 
-    ThreadsafeTimeseries(size_t size, long int start_timeindex = 0)
+    ThreadsafeTimeseries(size_t size, Index start_timeindex = 0)
     {
         oldest_timeindex_ = start_timeindex;
         newest_timeindex_ = oldest_timeindex_ - 1;
@@ -48,7 +61,7 @@ public:
         mutex_ = std::make_shared<osi::Mutex>();
     }
 
-    Type operator[](long int timeindex) const
+    Type operator[](Index timeindex) const
     {
         std::unique_lock<osi::Mutex> lock(*mutex_);
 
@@ -64,6 +77,9 @@ public:
                                  "timeseries element which is not in our "
                                  "history (anymore). returning oldest existing "
                                  "element.\n");
+            /// \todo we will get rid of this exit, just for now to not miss
+            /// this case
+            exit(-1);
             timeindex = oldest_timeindex_;
         }
 
@@ -87,13 +103,22 @@ public:
 
     size_t size() const
     {
-        return history_->size();
+        std::unique_lock<osi::Mutex> lock(*mutex_);
+        return newest_timeindex_ - oldest_timeindex_ + 1;
     }
 
-    size_t newest_timeindex() const
+    Index newest_timeindex() const
     {
+        if(size() == 0)
+            return std::numeric_limits<Index>::quiet_NaN();
         std::unique_lock<osi::Mutex> lock(*mutex_);
         return newest_timeindex_;
+    }
+
+    Index next_timeindex() const
+    {
+        std::unique_lock<osi::Mutex> lock(*mutex_);
+        return newest_timeindex_ + 1;
     }
 };
 

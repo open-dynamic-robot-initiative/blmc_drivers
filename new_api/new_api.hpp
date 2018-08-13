@@ -128,17 +128,6 @@ private:
 };
 
 
-class NewCanbus
-{
-    typedef ThreadsafeHistoryInterface<CanFrame> Input;
-    typedef const Input Output;
-
-public:
-    virtual std::shared_ptr<Input> input() = 0;
-    virtual std::shared_ptr<Output> output() = 0;
-
-    virtual void send_if_input_changed() = 0;
-};
 
 
 
@@ -147,20 +136,12 @@ public:
 class CanbusInterface
 {
 public:
-    typedef StampedData<CanFrame> StampedFrame;
+    typedef ThreadsafeTimeseriesInterface<CanFrame> CanframeTimeseries;
 
-    // get output data ---------------------------------------------------------
-    virtual StampedFrame output_get_can_frame() const = 0;
-    virtual void output_wait_for_can_frame() const = 0;
-    virtual size_t output_wait_for_any() const = 0;
+    virtual std::shared_ptr<CanframeTimeseries> input() = 0;
+    virtual std::shared_ptr<const CanframeTimeseries> output() const = 0;
 
-    // get input data ----------------------------------------------------------
-    virtual StampedFrame input_get_can_frame() const = 0;
-    virtual void input_wait_for_can_frame() const = 0;
-    virtual size_t input_wait_for_any() const = 0;
-
-    // send input data ---------------------------------------------------------
-    virtual void input_send_can_frame(const StampedFrame& stamped_can_frame) = 0;
+    virtual void send_if_input_changed() = 0;
 
     virtual ~CanbusInterface() {}
 };
@@ -169,45 +150,122 @@ public:
 
 class XenomaiCanbus: public CanbusInterface
 {
-    /// public interface ===========================================================
+
+
+
+    /// public interface =======================================================
 public:
     typedef StampedData<CanFrame> StampedFrame;
 
-    // get output data ---------------------------------------------------------
-    StampedFrame output_get_can_frame() const
+
+    virtual std::shared_ptr<CanframeTimeseries>  input()
     {
-        return output_.get();
-    }
-    void output_wait_for_can_frame() const
-    {
-        output_.wait_for_update();
+        return input_;
     }
 
-    size_t output_wait_for_any() const
+    std::shared_ptr<const CanframeTimeseries> output() const
     {
-        return output_.wait_for_update();
+        return output_;
     }
 
-    // get input data ----------------------------------------------------------
-    StampedFrame input_get_can_frame() const
+    virtual void send_if_input_changed()
     {
-        return input_.get();
-    }
-    void input_wait_for_can_frame() const
-    {
-        input_.wait_for_update();
+        long int new_hash = input_->next_timeindex();
+        if(new_hash != input_hash_.get())
+        {
+            send_frame(input_->current_element());
+            input_hash_.set(new_hash);
+        }
     }
 
-    size_t input_wait_for_any() const
+    // constructor and destructor ----------------------------------------------
+    XenomaiCanbus(std::string can_interface_name)
     {
-        return input_.wait_for_update();
+        input_ = std::make_shared<ThreadsafeTimeseries<CanFrame>>(1000);
+        output_ = std::make_shared<ThreadsafeTimeseries<CanFrame>>(1000);
+        input_hash_.set(input_->next_timeindex());
+
+
+        // setup can connection --------------------------------
+        // \todo get rid of old format stuff
+        CAN_CanConnection_t can_connection_old_format;
+        int ret = setup_can(&can_connection_old_format,
+                            can_interface_name.c_str(), 0);
+        if (ret < 0)
+        {
+            osi::print_to_screen("Couldn't setup CAN connection. Exit.");
+            exit(-1);
+        }
+
+        CanConnection can_connection;
+        can_connection.send_addr = can_connection_old_format.send_addr;
+        can_connection.socket = can_connection_old_format.socket;
+        connection_info_.set(can_connection);
+
+
+        osi::start_thread(&XenomaiCanbus::loop, this);
+    }
+
+    virtual ~XenomaiCanbus()
+    {
+        osi::close_can_device(connection_info_.get().socket);
+    }
+
+    /// private attributes and methods =========================================
+private:
+    // attributes --------------------------------------------------------------
+    SingletypeThreadsafeObject<CanConnection, 1> connection_info_;
+//    SingletypeThreadsafeObject<StampedFrame, 1> old_output_;
+//    SingletypeThreadsafeObject<StampedFrame, 1> old_input_;
+
+    std::shared_ptr<ThreadsafeTimeseriesInterface<CanFrame>> input_;
+    SingletypeThreadsafeObject<long int, 1> input_hash_;
+    std::shared_ptr<ThreadsafeTimeseriesInterface<CanFrame>> output_;
+
+
+
+
+
+
+
+    // methods -----------------------------------------------------------------
+    static void
+#ifndef __XENO__
+    *
+#endif
+    loop(void* instance_pointer)
+    {
+        ((XenomaiCanbus*)(instance_pointer))->loop();
+    }
+
+    void loop()
+    {
+        Timer<100> loop_time_logger("can bus loop", 4000);
+        Timer<100> receive_time_logger("receive", 4000);
+
+        while (true)
+        {
+            receive_time_logger.start_interval();
+            CanFrame frame = receive_frame();
+            receive_time_logger.end_interval();
+
+            output_->append(frame);
+
+//            old_output_.set<0>(StampedData<CanFrame>(
+//                               frame,
+//                               old_output_.get<0>().get_id() + 1,
+//                               Timer<1>::current_time_ms()));
+
+            // sometimes can messages come in a burst, so we add a little wait
+//            Timer<>::sleep_ms(0.1);
+
+            loop_time_logger.end_and_start_interval();
+        }
     }
 
     // send input data ---------------------------------------------------------
-    void input_send_can_frame(const StampedFrame& stamped_can_frame)
+    void send_frame(const StampedFrame& stamped_can_frame)
     {
-        input_.set(stamped_can_frame);
-
         // get address ---------------------------------------------------------
         int socket = connection_info_.get().socket;
         struct sockaddr_can address = connection_info_.get().send_addr;
@@ -232,82 +290,6 @@ public:
 
     }
 
-    // constructor and destructor ----------------------------------------------
-    XenomaiCanbus(std::string can_interface_name)
-    {
-
-        // setup can connection --------------------------------
-        // \todo get rid of old format stuff
-        CAN_CanConnection_t can_connection_old_format;
-        int ret = setup_can(&can_connection_old_format,
-                            can_interface_name.c_str(), 0);
-        if (ret < 0)
-        {
-            osi::print_to_screen("Couldn't setup CAN connection. Exit.");
-            exit(-1);
-        }
-
-        // \todo:how do we make sure that can connection is closed when we close
-        //        can_connections.push_back(can_connection_old_format);
-
-        CanConnection can_connection;
-
-        can_connection.send_addr = can_connection_old_format.send_addr;
-        can_connection.socket = can_connection_old_format.socket;
-
-        connection_info_.set(can_connection);
-
-
-        osi::start_thread(&XenomaiCanbus::loop, this);
-    }
-
-
-
-
-    virtual ~XenomaiCanbus()
-    {
-        osi::close_can_device(connection_info_.get().socket);
-    }
-
-    /// private attributes and methods =========================================
-private:
-    // attributes --------------------------------------------------------------
-    SingletypeThreadsafeObject<CanConnection, 1> connection_info_;
-    SingletypeThreadsafeObject<StampedFrame, 1> output_;
-    SingletypeThreadsafeObject<StampedFrame, 1> input_;
-
-    // methods -----------------------------------------------------------------
-    static void
-#ifndef __XENO__
-    *
-#endif
-    loop(void* instance_pointer)
-    {
-        ((XenomaiCanbus*)(instance_pointer))->loop();
-    }
-
-    void loop()
-    {
-        Timer<100> loop_time_logger("can bus loop", 4000);
-        Timer<100> receive_time_logger("receive", 4000);
-
-        while (true)
-        {
-            receive_time_logger.start_interval();
-            CanFrame frame = receive_frame();
-            receive_time_logger.end_interval();
-
-            output_.set<0>(StampedData<CanFrame>(
-                               frame,
-                               output_.get<0>().get_id() + 1,
-                               Timer<1>::current_time_ms()));
-
-            // sometimes can messages come in a burst, so we add a little wait
-            Timer<>::sleep_ms(0.1);
-
-            loop_time_logger.end_and_start_interval();
-        }
-    }
 
     CanFrame receive_frame()
     {
@@ -782,8 +764,11 @@ public:
         }
         can_frame.dlc = 8;
 
-        can_bus_->input_send_can_frame(StampedData<CanFrame>(can_frame,
-                                                             -1, -1));
+        can_bus_->input()->append(can_frame);
+        can_bus_->send_if_input_changed();
+
+//        can_bus_->input_send_can_frame(StampedData<CanFrame>(can_frame,
+//                                                             -1, -1));
     }
 
     // todo: this should go away
@@ -916,7 +901,10 @@ private:
         }
         can_frame.dlc = 8;
 
-        return can_bus_->input_send_can_frame(StampedData<CanFrame>(can_frame, -1, -1));
+        can_bus_->input()->append(can_frame);
+        can_bus_->send_if_input_changed();
+
+//        return can_bus_->input_send_can_frame(StampedData<CanFrame>(can_frame, -1, -1));
     }
 
     static void
@@ -931,19 +919,22 @@ private:
     void loop()
     {
 
+        long int timeindex = can_bus_->output()->next_timeindex();
         while(true)
         {
+            CanFrame can_frame = (*can_bus_->output())[timeindex];
+            timeindex++;
 
 
             // get latest can frame --------------------------------------------
 
-            can_bus_->output_wait_for_any();
+//            can_bus_->output_wait_for_any();
 
 
 
 
-            auto stamped_can_frame = can_bus_->output_get_can_frame();
-            auto can_frame = stamped_can_frame.get_data();
+//            auto stamped_can_frame = can_bus_->output_get_can_frame();
+//            auto can_frame = stamped_can_frame.get_data();
 
             // convert to measurement ------------------------------------------
             Eigen::Vector2d measurement;
@@ -952,13 +943,9 @@ private:
                     qbytes_to_float((can_frame.data.begin() + 4));
 
             StampedScalar
-                    stamped_measurement_0(measurement_0,
-                                          stamped_can_frame.get_id(),
-                                          stamped_can_frame.get_time_stamp());
+                    stamped_measurement_0(measurement_0);
             StampedScalar
-                    stamped_measurement_1(measurement_1,
-                                          stamped_can_frame.get_id(),
-                                          stamped_can_frame.get_time_stamp());
+                    stamped_measurement_1(measurement_1);
 
 
 
@@ -1014,10 +1001,7 @@ private:
                 status.motor2_ready   = data >> 4;
                 status.error_code     = data >> 5;
 
-                StampedData<MotorboardStatus>
-                        stamped_status(status,
-                                       stamped_can_frame.get_id(),
-                                       stamped_can_frame.get_time_stamp());
+                StampedData<MotorboardStatus> stamped_status(status);
 
                 status_.set(stamped_status, "status");
                 break;
