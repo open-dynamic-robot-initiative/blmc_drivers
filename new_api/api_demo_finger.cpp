@@ -33,15 +33,10 @@ public:
             double analog_measurement = analog_sensor_->measurement()->current_element();
             double current_target = 2 * (analog_measurement - 0.5);
 
-            StampedData<double> stamped_current_target(current_target, -1, -1);
-
-
-
-            finger_->send_control(stamped_current_target, "current_target_interior");
-            finger_->send_control(stamped_current_target, "current_target_center");
-            finger_->send_control(stamped_current_target, "current_target_tip");
-
-
+            finger_->control("current_target_interior")->append(current_target);
+            finger_->control("current_target_center")->append(current_target);
+            finger_->control("current_target_tip")->append(current_target);
+            finger_->send_if_input_changed();
 
             // print -----------------------------------------------------------
             Timer<>::sleep_ms(1);

@@ -1139,9 +1139,7 @@ public:
 class FingerInterface
 {
 public:
-    typedef StampedData<double> StampedScalar;
-    typedef StampedData<MotorboardCommand> StampedCommand;
-    typedef StampedData<MotorboardStatus> StampedStatus;
+    typedef ThreadsafeTimeseriesInterface<double> ScalarTimeseries;
 
     /// outputs ================================================================
     std::vector<std::string> measurement_names_ = {"current_interior",
@@ -1157,21 +1155,18 @@ public:
                                                    "encoder_center",
                                                    "encoder_tip"};
 
+    virtual std::shared_ptr<const ScalarTimeseries>
+    measurement(std::string name) const = 0;
+
     /// inputs =================================================================
     std::vector<std::string> control_names_ = {"current_target_interior",
                                                "current_target_center",
                                                "current_target_tip"};
 
-public:
-    // get output data ---------------------------------------------------------
-    virtual StampedScalar get_measurement(const std::string& name) const = 0;
+    virtual std::shared_ptr<ScalarTimeseries> control(std::string name) = 0;
+    virtual void send_if_input_changed() = 0;
 
-    // get input data ----------------------------------------------------------
-//    virtual StampedScalar get_control(const std::string& name) const = 0;
-
-    // send input data ---------------------------------------------------------
-    virtual void send_control(const StampedScalar& control,
-                              const std::string& name) = 0;
+    /// ========================================================================
 
     virtual ~FingerInterface() {}
 };
@@ -1183,6 +1178,34 @@ class Finger: public FingerInterface
     std::map<std::string, std::shared_ptr<MotorInterface>> motors_;
 
 public:
+    /// outputs ================================================================
+    virtual std::shared_ptr<const ScalarTimeseries>
+    measurement(std::string name) const
+    {
+        std::string motor_name, content_name;
+        parse_name(name, motor_name, content_name);
+
+        return motors_.at(motor_name)->measurement(content_name);
+    }
+
+    /// inputs =================================================================
+    virtual std::shared_ptr<ScalarTimeseries> control(std::string name)
+    {
+        std::string motor_name, content_name;
+        parse_name(name, motor_name, content_name);
+
+        return motors_.at(motor_name)->current_target();
+    }
+
+    virtual void send_if_input_changed()
+    {
+        motors_["interior"]->send_if_input_changed();
+        motors_["center"]->send_if_input_changed();
+        motors_["tip"]->send_if_input_changed();
+    }
+
+    /// ========================================================================
+
     Finger(std::shared_ptr<MotorInterface> interior_motor,
            std::shared_ptr<MotorInterface> center_motor,
            std::shared_ptr<MotorInterface> tip_motor)
@@ -1192,6 +1215,7 @@ public:
         motors_["tip"] = tip_motor;
     }
 
+private:
     void parse_name(const std::string& name,
                     std::string& motor_name, std::string& content_name) const
     {
@@ -1199,46 +1223,6 @@ public:
         content_name = name.substr(0, _position);
         motor_name = name;
         motor_name.erase(0, _position + 1);
-
-
-//        osi::print_to_screen("names: %s, %s\n", motor_name.c_str(), content_name.c_str());
-
-//        exit(-1);
-    }
-
-    // get output data ---------------------------------------------------------
-    virtual StampedScalar get_measurement(const std::string& name) const
-    {
-        std::string motor_name, content_name;
-        parse_name(name, motor_name, content_name);
-
-        return motors_.at(motor_name)->measurement(content_name)->current_element();
-//        return motors_.at(motor_name)->get_measurement(content_name);
-    }
-
-
-
-//    // get input data ----------------------------------------------------------
-//    virtual StampedScalar get_control(const std::string& name) const
-//    {
-//        std::string motor_name, content_name;
-//        parse_name(name, motor_name, content_name);
-//        return motors_.at(motor_name)->current_target()->cu
-//        return motors_.at(motor_name)->get_control(content_name);
-//    }
-
-
-
-    // send input data ---------------------------------------------------------
-    virtual void send_control(const StampedScalar& control,
-                              const std::string& name)
-    {
-        std::string motor_name, content_name;
-        parse_name(name, motor_name, content_name);
-        motors_.at(motor_name)->current_target()->append(control.get_data());
-        motors_.at(motor_name)->send_if_input_changed();
-
-//        motors_.at(motor_name)->send_control(control, content_name);
     }
 };
 
