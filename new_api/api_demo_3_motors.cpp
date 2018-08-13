@@ -1,4 +1,5 @@
-#include <new_api.hpp>
+#include <devices/motor.hpp>
+#include <devices/analogsensor.hpp>
 
 class Controller
 {

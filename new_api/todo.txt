@@ -1,1 +1,17 @@
-we should have a test after startup making sure that everything was initialized properly. e.g. execution of some typical command and see whether it behaves as usually.
+- we should have a test after startup making sure that everything was initialized properly. e.g. execution of some typical command and see whether it behaves as usually.
+
+
+
+-//// TODO: make sure that mode switcheds are actually detected
+//void action_upon_switch(int sig __attribute__((unused)))
+//{
+//  void *bt[32];
+//  int nentries;
+
+//  // increment mode swich counter
+//  ++count_xenomai_mode_switches;
+
+//  osi::print_to_screen("MOOOOODE SWIIIIITCH\n");
+//  exit(-1);
+//}
+

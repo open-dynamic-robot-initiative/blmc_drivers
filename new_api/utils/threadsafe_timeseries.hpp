@@ -5,8 +5,8 @@
 #include <memory>
 #include <map>
 
-#include <time_logger.hpp>
-#include <os_interface.hpp>
+#include <utils/timer.hpp>
+#include <utils/os_interface.hpp>
 
 template<typename Type> class ThreadsafeTimeseriesInterface
 {

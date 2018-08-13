@@ -2,11 +2,8 @@
 #include <eigen3/Eigen/Core>
 #include <gtest/gtest.h>
 
-#include <threadsafe_timeseries.hpp>
-#include <time_logger.hpp>
-
-#include <tuple>
-
+#include <utils/threadsafe_timeseries.hpp>
+#include <utils/timer.hpp>
 
 
 typedef Eigen::Matrix<double, 20, 20> Type;
