@@ -106,17 +106,9 @@ if(Xenomai_FOUND)
     target_link_libraries(blmc_can_demo ${PROJECT_NAME})
 
 
-    add_executable(new_api_demo
-        new_api/new_api_demo.cpp
-        src/can.c
-        src/blmc_can.c
-        src/optoforce_can.c
-        )
-    target_link_libraries(new_api_demo ${PROJECT_NAME})
-
 
     add_executable(api_demo_finger
-        new_api/api_demo_finger.cpp
+        new_api/demos/api_demo_finger.cpp
         src/can.c
         src/blmc_can.c
         src/optoforce_can.c
@@ -124,7 +116,7 @@ if(Xenomai_FOUND)
     target_link_libraries(api_demo_finger ${PROJECT_NAME})
 
     add_executable(api_demo_3_motors
-        new_api/api_demo_3_motors.cpp
+        new_api/demos/api_demo_3_motors.cpp
         src/can.c
         src/blmc_can.c
         src/optoforce_can.c
@@ -133,7 +125,7 @@ if(Xenomai_FOUND)
 
 
     add_executable(api_demo_single_motor
-        new_api/api_demo_single_motor.cpp
+        new_api/demos/api_demo_single_motor.cpp
         src/can.c
         src/blmc_can.c
         src/optoforce_can.c
@@ -214,7 +206,7 @@ else()
 
 
     add_executable(api_demo_finger
-        new_api/api_demo_finger.cpp
+        new_api/demos/api_demo_finger.cpp
         src/can.c
         src/blmc_can.c
         src/optoforce_can.c
@@ -222,7 +214,7 @@ else()
     target_link_libraries(api_demo_finger ${PROJECT_NAME} pthread)
 
     add_executable(api_demo_3_motors
-        new_api/api_demo_3_motors.cpp
+        new_api/demos/api_demo_3_motors.cpp
         src/can.c
         src/blmc_can.c
         src/optoforce_can.c
@@ -231,7 +223,7 @@ else()
 
 
     add_executable(api_demo_single_motor
-        new_api/api_demo_single_motor.cpp
+        new_api/demos/api_demo_single_motor.cpp
         src/can.c
         src/blmc_can.c
         src/optoforce_can.c
