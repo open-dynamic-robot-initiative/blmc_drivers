@@ -77,34 +77,20 @@ public:
         output_ = std::make_shared<ThreadsafeTimeseries<CanFrame>>(1000);
         input_hash_.set(input_->next_timeindex());
 
-
-        // setup can connection --------------------------------
-        // \todo get rid of old format stuff
-//        CAN_CanConnection_t can_connection_old_format;
-//        int ret = setup_can(&can_connection_old_format,
-//                            can_interface_name.c_str(), 0);
-//        if (ret < 0)
-//        {
-//            osi::print_to_screen("Couldn't setup CAN connection. Exit.");
-//            exit(-1);
-//        }
-
-        CanConnection can_connection = setup_can(can_interface_name, 0);
-        connection_info_.set(can_connection);
-
+        can_connection_.set(setup_can(can_interface_name, 0));
 
         osi::start_thread(&XenomaiCanbus::loop, this);
     }
 
     virtual ~XenomaiCanbus()
     {
-        osi::close_can_device(connection_info_.get().socket);
+        osi::close_can_device(can_connection_.get().socket);
     }
 
     /// private attributes and methods =========================================
 private:
     // attributes --------------------------------------------------------------
-    SingletypeThreadsafeObject<CanConnection, 1> connection_info_;
+    SingletypeThreadsafeObject<CanConnection, 1> can_connection_;
 
     std::shared_ptr<ThreadsafeTimeseriesInterface<CanFrame>> input_;
     SingletypeThreadsafeObject<long int, 1> input_hash_;
@@ -123,14 +109,10 @@ private:
     void loop()
     {
         Timer<100> loop_time_logger("can bus loop", 4000);
-        Timer<100> receive_time_logger("receive", 4000);
 
         while (true)
         {
-            receive_time_logger.start_interval();
-            CanFrame frame = receive_frame();
-            receive_time_logger.end_interval();
-            output_->append(frame);
+            output_->append(receive_frame());
             loop_time_logger.end_and_start_interval();
         }
     }
@@ -139,8 +121,8 @@ private:
     void send_frame(const CanFrame& unstamped_can_frame)
     {
         // get address ---------------------------------------------------------
-        int socket = connection_info_.get().socket;
-        struct sockaddr_can address = connection_info_.get().send_addr;
+        int socket = can_connection_.get().socket;
+        struct sockaddr_can address = can_connection_.get().send_addr;
 
         // put data into can frame ---------------------------------------------
         can_frame_t can_frame;
@@ -162,7 +144,7 @@ private:
 
     CanFrame receive_frame()
     {
-        int socket = connection_info_.get().socket;
+        int socket = can_connection_.get().socket;
 
         // data we want to obtain ----------------------------------------------
         can_frame_t can_frame;
