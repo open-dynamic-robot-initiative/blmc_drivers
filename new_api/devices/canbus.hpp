@@ -80,18 +80,16 @@ public:
 
         // setup can connection --------------------------------
         // \todo get rid of old format stuff
-        CAN_CanConnection_t can_connection_old_format;
-        int ret = setup_can(&can_connection_old_format,
-                            can_interface_name.c_str(), 0);
-        if (ret < 0)
-        {
-            osi::print_to_screen("Couldn't setup CAN connection. Exit.");
-            exit(-1);
-        }
+//        CAN_CanConnection_t can_connection_old_format;
+//        int ret = setup_can(&can_connection_old_format,
+//                            can_interface_name.c_str(), 0);
+//        if (ret < 0)
+//        {
+//            osi::print_to_screen("Couldn't setup CAN connection. Exit.");
+//            exit(-1);
+//        }
 
-        CanConnection can_connection;
-        can_connection.send_addr = can_connection_old_format.send_addr;
-        can_connection.socket = can_connection_old_format.socket;
+        CanConnection can_connection = setup_can(can_interface_name, 0);
         connection_info_.set(can_connection);
 
 
@@ -206,10 +204,15 @@ private:
         return out_frame;
     }
 
-    int setup_can(CAN_CanHandle_t canHandle, char const *interface,
-                  uint32_t err_mask)
+    CanConnection setup_can(std::string name, uint32_t err_mask)
     {
-        CAN_CanConnection_t *can = (CAN_CanConnection_t*)canHandle;
+        int socket;
+        sockaddr_can recv_addr;
+        sockaddr_can send_addr;
+
+
+        CAN_CanConnection_t temp;
+        CAN_CanConnection_t *can = &temp;
         int ret;
         struct ifreq ifr;
 
@@ -217,34 +220,35 @@ private:
         ret = rt_dev_socket(PF_CAN, SOCK_RAW, CAN_RAW);
         if (ret < 0) {
             rt_fprintf(stderr, "rt_dev_socket: %s\n", strerror(-ret));
-            return -1;
+            osi::print_to_screen("Couldn't setup CAN connection. Exit.");
+            exit(-1);
         }
-        can->socket = ret;
+        socket = ret;
 
 
-        // Select interface
-        if (interface == NULL) {
-            ifr.ifr_ifindex = 0;
-        } else {
-            strncpy(ifr.ifr_name, interface, IFNAMSIZ);
-            ret = rt_dev_ioctl(can->socket, SIOCGIFINDEX, &ifr);
-            if (ret < 0) {
-                rt_fprintf(stderr, "rt_dev_ioctl GET_IFINDEX: %s\n",
-                           strerror(-ret));
-                CAN_closeCan(canHandle);
-                return -1;
-            }
+        strncpy(ifr.ifr_name, name.c_str(), IFNAMSIZ);
+        ret = rt_dev_ioctl(socket, SIOCGIFINDEX, &ifr);
+        if (ret < 0)
+        {
+            rt_fprintf(stderr, "rt_dev_ioctl GET_IFINDEX: %s\n",
+                       strerror(-ret));
+            osi::close_can_device(socket);
+            osi::print_to_screen("Couldn't setup CAN connection. Exit.");
+            exit(-1);
         }
+
 
 
         // Set error mask
         if (err_mask) {
-            ret = rt_dev_setsockopt(can->socket, SOL_CAN_RAW, CAN_RAW_ERR_FILTER,
+            ret = rt_dev_setsockopt(socket, SOL_CAN_RAW, CAN_RAW_ERR_FILTER,
                                     &err_mask, sizeof(err_mask));
-            if (ret < 0) {
+            if (ret < 0)
+            {
                 rt_fprintf(stderr, "rt_dev_setsockopt: %s\n", strerror(-ret));
-                CAN_closeCan(canHandle);
-                return -1;
+                osi::close_can_device(socket);
+                osi::print_to_screen("Couldn't setup CAN connection. Exit.");
+                exit(-1);
             }
         }
 
@@ -259,32 +263,35 @@ private:
         //}
 
         // Bind to socket
-        can->recv_addr.can_family = AF_CAN;
-        can->recv_addr.can_ifindex = ifr.ifr_ifindex;
-        ret = rt_dev_bind(can->socket, (struct sockaddr *)&can->recv_addr,
+        recv_addr.can_family = AF_CAN;
+        recv_addr.can_ifindex = ifr.ifr_ifindex;
+        ret = rt_dev_bind(socket, (struct sockaddr *)&recv_addr,
                           sizeof(struct sockaddr_can));
-        if (ret < 0) {
+        if (ret < 0)
+        {
             rt_fprintf(stderr, "rt_dev_bind: %s\n", strerror(-ret));
-            CAN_closeCan(canHandle);
-            return -1;
+            osi::close_can_device(socket);
+            osi::print_to_screen("Couldn't setup CAN connection. Exit.");
+            exit(-1);
         }
 
 #ifdef __XENO__
         // Enable timestamps for frames
-        ret = rt_dev_ioctl(can->socket,
+        ret = rt_dev_ioctl(socket,
                            RTCAN_RTIOC_TAKE_TIMESTAMP, RTCAN_TAKE_TIMESTAMPS);
         if (ret) {
             rt_fprintf(stderr, "rt_dev_ioctl TAKE_TIMESTAMP: %s\n",
                        strerror(-ret));
-            CAN_closeCan(canHandle);
-            return -1;
+            osi::close_can_device(socket);
+            osi::print_to_screen("Couldn't setup CAN connection. Exit.");
+            exit(-1);
         }
 #elif defined __RT_PREEMPT__
         // TODO: Need to support timestamps.
 #endif
 
-        can->recv_addr.can_family = AF_CAN;
-        can->recv_addr.can_ifindex = ifr.ifr_ifindex;
+        recv_addr.can_family = AF_CAN;
+        recv_addr.can_ifindex = ifr.ifr_ifindex;
 
         can->msg.msg_iov = &can->iov;
         can->msg.msg_iovlen = 1;
@@ -294,10 +301,14 @@ private:
         can->msg.msg_controllen = sizeof(nanosecs_abs_t);
 
         // TODO why the memset?
-        memset(&can->send_addr, 0, sizeof(can->send_addr));
-        can->send_addr.can_family = AF_CAN;
-        can->send_addr.can_ifindex = ifr.ifr_ifindex;
+        memset(&send_addr, 0, sizeof(send_addr));
+        send_addr.can_family = AF_CAN;
+        send_addr.can_ifindex = ifr.ifr_ifindex;
 
-        return 0;
+        CanConnection can_connection;
+        can_connection.send_addr = send_addr;
+        can_connection.socket = socket;
+
+        return can_connection;
     }
 };
