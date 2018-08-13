@@ -980,9 +980,7 @@ private:
 class MotorInterface
 {
 public:
-    typedef StampedData<double> StampedScalar;
-    typedef StampedData<MotorboardCommand> StampedCommand;
-    typedef StampedData<MotorboardStatus> StampedStatus;
+    typedef ThreadsafeTimeseriesInterface<double> ScalarTimeseries;
 
     /// outputs ================================================================
     std::vector<std::string> measurement_names_ = {"current",
@@ -990,19 +988,14 @@ public:
                                                    "velocity",
                                                    "encoder"};
 
-    /// inputs =================================================================
-    std::vector<std::string> control_names_ = {"current_target"};
+    virtual std::shared_ptr<const ScalarTimeseries>
+    measurement(std::string name) const = 0;
 
-public:
-    // get output data ---------------------------------------------------------
-    virtual StampedScalar get_measurement(const std::string& name) const = 0;
+    /// inputs =================================================================    
+    virtual std::shared_ptr<ScalarTimeseries> current_target() = 0;
+    virtual void send_if_input_changed() = 0;
 
-    // get input data ----------------------------------------------------------
-    virtual StampedScalar get_control(const std::string& name) const = 0;
-
-    // send input data ---------------------------------------------------------
-    virtual void send_control(const StampedScalar& control,
-                              const std::string& name) = 0;
+    /// ========================================================================
 
     virtual ~MotorInterface() {}
 };
@@ -1016,6 +1009,26 @@ class Motor: public MotorInterface
     std::shared_ptr<CanMotorboard> board_;
 
 public:
+    /// outputs ================================================================
+    virtual std::shared_ptr<const ScalarTimeseries>
+    measurement(std::string name) const
+    {
+        return board_->measurement(motor_to_board_name_.at(name));
+    }
+
+    /// inputs =================================================================
+    virtual std::shared_ptr<ScalarTimeseries> current_target()
+    {
+        return board_->control(motor_to_board_name_.at("current_target"));
+    }
+
+    virtual void send_if_input_changed()
+    {
+        board_->send_if_input_changed();
+    }
+
+    /// ========================================================================
+
     Motor(std::shared_ptr<CanMotorboard> board, bool motor_id):
         board_(board)
     {
@@ -1024,39 +1037,8 @@ public:
             motor_to_board_name_[measurement_names_[i]] =
                     measurement_names_[i] + "_" + std::to_string(motor_id);
         }
-        for(size_t i = 0; i < control_names_.size(); i++)
-        {
-            motor_to_board_name_[control_names_[i]] =
-                    control_names_[i] + "_" + std::to_string(motor_id);
-        }
-    }
-
-
-    // get output data ---------------------------------------------------------
-    virtual StampedScalar get_measurement(const std::string& name) const
-    {
-        return board_->measurement(motor_to_board_name_.at(name))->current_element();
-    }
-
-
-
-    // get input data ----------------------------------------------------------
-    virtual StampedScalar get_control(const std::string& name) const
-    {
-        return board_->control(motor_to_board_name_.at(name))->current_element();
-    }
-
-
-
-    // send input data ---------------------------------------------------------
-    virtual void send_control(const StampedScalar& control,
-                              const std::string& name)
-    {
-        board_->control(motor_to_board_name_.at(name))->append(control.get_data());
-
-        board_->send_if_input_changed();
-
-//        board_->send_control(control, motor_to_board_name_.at(name));
+        motor_to_board_name_["current_target"] =
+                "current_target_" + std::to_string(motor_id);
     }
 };
 
@@ -1161,7 +1143,7 @@ public:
 
 
 
-/// >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+///// >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 class FingerInterface
 {
 public:
@@ -1193,7 +1175,7 @@ public:
     virtual StampedScalar get_measurement(const std::string& name) const = 0;
 
     // get input data ----------------------------------------------------------
-    virtual StampedScalar get_control(const std::string& name) const = 0;
+//    virtual StampedScalar get_control(const std::string& name) const = 0;
 
     // send input data ---------------------------------------------------------
     virtual void send_control(const StampedScalar& control,
@@ -1237,18 +1219,21 @@ public:
     {
         std::string motor_name, content_name;
         parse_name(name, motor_name, content_name);
-        return motors_.at(motor_name)->get_measurement(content_name);
+
+        return motors_.at(motor_name)->measurement(content_name)->current_element();
+//        return motors_.at(motor_name)->get_measurement(content_name);
     }
 
 
 
-    // get input data ----------------------------------------------------------
-    virtual StampedScalar get_control(const std::string& name) const
-    {
-        std::string motor_name, content_name;
-        parse_name(name, motor_name, content_name);
-        return motors_.at(motor_name)->get_control(content_name);
-    }
+//    // get input data ----------------------------------------------------------
+//    virtual StampedScalar get_control(const std::string& name) const
+//    {
+//        std::string motor_name, content_name;
+//        parse_name(name, motor_name, content_name);
+//        return motors_.at(motor_name)->current_target()->cu
+//        return motors_.at(motor_name)->get_control(content_name);
+//    }
 
 
 
@@ -1258,7 +1243,10 @@ public:
     {
         std::string motor_name, content_name;
         parse_name(name, motor_name, content_name);
-        motors_.at(motor_name)->send_control(control, content_name);
+        motors_.at(motor_name)->current_target()->append(control.get_data());
+        motors_.at(motor_name)->send_if_input_changed();
+
+//        motors_.at(motor_name)->send_control(control, content_name);
     }
 };
 

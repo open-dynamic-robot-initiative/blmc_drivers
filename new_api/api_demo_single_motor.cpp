@@ -28,7 +28,10 @@ public:
         while(true)
         {
             double current_target = 0.5;
-            motor_->send_control(StampedData<double>(current_target, -1, -1), "current_target");
+//            motor_->send_control(StampedData<double>(current_target, -1, -1), "current_target");
+
+            motor_->current_target()->append(current_target);
+            motor_->send_if_input_changed();
 
 
             // print -----------------------------------------------------------
