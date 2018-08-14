@@ -15,11 +15,7 @@
 class MotorboardCommand
 {
 public:
-    MotorboardCommand()
-    {
-
-    }
-
+    MotorboardCommand() { }
     MotorboardCommand(uint32_t id, int32_t content)
     {
         id_ = id;
@@ -57,7 +53,6 @@ public:
     uint32_t id_;
     int32_t content_;
 };
-
 
 
 
@@ -104,13 +99,13 @@ public:
 
 
 
-
-
-
 class MotorboardInterface
 {
 public:
     typedef ThreadsafeTimeseriesInterface<double> ScalarTimeseries;
+    typedef ScalarTimeseries::Index Index;
+    typedef ThreadsafeTimeseriesInterface<Index> IndexTimeseries;
+
     typedef ThreadsafeTimeseriesInterface<MotorboardStatus> StatusTimeseries;
     typedef ThreadsafeTimeseriesInterface<MotorboardCommand> CommandTimeseries;
 
@@ -173,13 +168,24 @@ public:
         bool controls_have_changed = false;
         for(size_t i = 0; i < control_names_.size(); i++)
         {
-            long int new_hash =
-                    controls_.at(control_names_[i])->next_timeindex();
-            if(new_hash != control_hashes_.get(control_names_[i]))
+//            long int new_hash =
+//                    controls_.at(control_names_[i])->next_timeindex();
+
+            auto sent_timeindices = sent_timeindices_.at(control_names_[i]);
+
+            Index current_timeindex = sent_timeindices->next_timeindex() - 1;
+
+            if(sent_timeindices->history_length() == 0 ||
+                    sent_timeindices->current_element() < current_timeindex)
             {
-                control_hashes_.set(new_hash, control_names_[i]);
+                sent_timeindices->append(current_timeindex);
                 controls_have_changed = true;
             }
+//            if(new_hash != control_hashes_.get(control_names_[i]))
+//            {
+//                control_hashes_.set(new_hash, control_names_[i]);
+//                controls_have_changed = true;
+//            }
         }
         if(controls_have_changed)
         {
@@ -228,13 +234,15 @@ private:
 
     // inputs ------------------------------------------------------------------
     std::map<std::string, std::shared_ptr<ScalarTimeseries>> controls_;
+    std::map<std::string, std::shared_ptr<IndexTimeseries>> sent_timeindices_;
+
     SingletypeThreadsafeObject<long int, 2> control_hashes_;
     std::shared_ptr<CommandTimeseries> command_;
     SingletypeThreadsafeObject<long int, 1> command_hash_;
 
     enum CanframeIDs
     {
-        COMMAND_ID   = 0x00,
+        COMMAND_ID= 0x00,
         IqRef     = 0x05,
         STATUSMSG = 0x10,
         Iq        = 0x20,
@@ -263,6 +271,8 @@ public:
         {
             controls_[control_names_[i]]
                     = std::make_shared<ThreadsafeTimeseries<double>>(1000);
+            sent_timeindices_[control_names_[i]]
+                    = std::make_shared<ThreadsafeTimeseries<Index>>(1000);
 
             controls_.at(control_names_[i])->append(0);
 
