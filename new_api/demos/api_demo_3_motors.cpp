@@ -28,7 +28,7 @@ public:
 
     void loop()
     {
-        Timer<10> time_logger("controller", 1000);
+        Timer<10> time_logger("controller");
         while(true)
         {
             double analog_measurement = analog_sensor_->measurement()->current_element();
@@ -41,10 +41,10 @@ public:
             // print -----------------------------------------------------------
             Timer<>::sleep_ms(1);
             time_logger.end_and_start_interval();
-            if ((time_logger.count() % 1000) == 0)
-            {
-                osi::print_to_screen("sending current: %f\n", current_target);
-            }
+//            if ((time_logger.count() % 1000) == 0)
+//            {
+//                osi::print_to_screen("sending current: %f\n", current_target);
+//            }
         }
     }
 };

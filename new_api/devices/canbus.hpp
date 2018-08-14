@@ -108,7 +108,7 @@ private:
 
     void loop()
     {
-        Timer<100> loop_time_logger("can bus loop", 4000);
+        Timer<100> loop_time_logger("can bus loop");
 
         while (true)
         {
