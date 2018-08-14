@@ -62,8 +62,8 @@ int main(int argc, char **argv)
     auto can_bus1 = std::make_shared<Canbus>("rtcan0");
     auto can_bus2 = std::make_shared<Canbus>("rtcan1");
 #else
-    auto can_bus1 = std::make_shared<XenomaiCanbus>("can0");
-    auto can_bus2 = std::make_shared<XenomaiCanbus>("can1");
+    auto can_bus1 = std::make_shared<Canbus>("can0");
+    auto can_bus2 = std::make_shared<Canbus>("can1");
 #endif
     auto board1 = std::make_shared<CanMotorboard>(can_bus1);
     auto board2 = std::make_shared<CanMotorboard>(can_bus2);

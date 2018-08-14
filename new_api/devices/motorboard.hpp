@@ -473,7 +473,7 @@ private:
         {
             osi::print_to_screen("%s: ---------------------------------\n",
                                  measurement_names_[i].c_str());
-            if(measurements_.at(measurement_names_[i])->size() > 0)
+            if(measurements_.at(measurement_names_[i])->history_length() > 0)
             {
                 double measurement =
                         measurements_.at(measurement_names_[i])->current_element();
@@ -482,7 +482,7 @@ private:
         }
 
         osi::print_to_screen("status: ---------------------------------\n");
-        if(status_->size() > 0)
+        if(status_->history_length() > 0)
             status_->current_element().print();
 
         osi::print_to_screen("inputs ======================================\n");
@@ -491,7 +491,7 @@ private:
         {
             osi::print_to_screen("%s: ---------------------------------\n",
                                  control_names_[i].c_str());
-            if(controls_.at(control_names_[i])->size() > 0)
+            if(controls_.at(control_names_[i])->history_length() > 0)
             {
                 double control =
                         controls_.at(control_names_[i])->current_element();
@@ -500,7 +500,7 @@ private:
         }
 
         osi::print_to_screen("command: ---------------------------------\n");
-        if(command_->size() > 0)
+        if(command_->history_length() > 0)
             command_->current_element().print();
     }
 
