@@ -122,7 +122,7 @@ void *my_task(void *data)
     bool enabled = false;
 
     FILE *log_file = fopen("/tmp/blmc_can_anticogging.csv","w");
-    fprintf(log_file, "recorded,pos,speed,current,load\n");
+    fprintf(log_file, "recorded,pos,speed,current,load,pos_des\n");
 
 #if defined __RT_PREEMPT__
     struct timespec now;
@@ -174,7 +174,6 @@ void *my_task(void *data)
 
         // Anticogging algorithm.
         float pos_norm = board_data.sync.position.value[0] - board_data.encoder_index[0].value;
-
         if (!enabled && board_data.status.status.motor1_ready) {
             rt_printf("Encoder value=%0.4f\n", board_data.encoder_index[0].value);
             if (board_data.encoder_index[0].value == 0.) {
@@ -186,29 +185,29 @@ void *my_task(void *data)
             }
         }
 
-        float err = pos - pos_norm;
-        if (err < calib_pos_threshold) 
-        {
-            if (fabs(board_data.sync.velocity.value[0]) < calib_vel_threshold) {
-                pos = pos_norm + calib_step;
-                rt_printf("REACHED %0.6f, vel=%0.3f: current=%0.5f, load=%0.5f\n", 
-                        pos_norm, 
-                        board_data.sync.velocity.value[0],
-                        current,
-                        board_data.sync.current.value[0]);
-                fprintf(log_file, "1,%0.6f,%0.5f,%0.5f,%0.5f\n", 
-                        pos_norm, 
-                        board_data.sync.velocity.value[0],
-                        current,
-                        board_data.sync.current.value[0]);
-                current = 0.;
-            } else {
-                current -= 0.002;
-            }
-        }
-
-
         if (enabled) {
+            float err = pos - pos_norm;
+            if (err < calib_pos_threshold) 
+            {
+                // if (fabs(board_data.sync.velocity.value[0]) < calib_vel_threshold) {
+                    pos = pos_norm + calib_step;
+                //     rt_printf("REACHED %0.6f, vel=%0.3f: current=%0.5f, load=%0.5f\n", 
+                //             pos_norm, 
+                //             board_data.sync.velocity.value[0],
+                //             current,
+                //             board_data.sync.current.value[0]);
+                //     fprintf(log_file, "1,%0.6f,%0.5f,%0.5f,%0.5f\n", 
+                //             pos_norm, 
+                //             board_data.sync.velocity.value[0],
+                //             current,
+                //             board_data.sync.current.value[0]);
+                //     current = 0.;
+                // } else {
+                //     current -= 0.002;
+                // }
+                current = 0.;
+            }
+
             if (current < 0.4) {
                 // Ramping this one up slowly.
                 current += 0.00005;
@@ -217,20 +216,27 @@ void *my_task(void *data)
                 current = 0.;
             }
             // Prevent too fast motions.
-            if (board_data.sync.velocity.value[0] > 0.05) {
-                current = 0.;
+            if (board_data.sync.velocity.value[0] > 0.02) {
+                if (current > 0.2 || current < 0.) {
+                    rt_printf("Going too fast: pos=%0.5f, vel=%0.3f\n", pos_norm, board_data.sync.velocity.value[0]);
+                    current = -0.2;
+                } else {
+                   current = 0.;
+               }
             }
             BLMC_sendMotorCurrent(can_handle, current, 0.);
             // rt_printf("Current=%0.3f, des=%0.5f\n", current, pos);
+
+            if (count % 10 == 0) {
+                fprintf(log_file, "0,%0.6f,%0.5f,%0.5f,%0.5f,%0.6f\n", 
+                        pos_norm, 
+                        board_data.sync.velocity.value[0],
+                        current,
+                        board_data.sync.current.value[0],
+                        pos);
+            }
         }
 
-        if (count % 10 == 0) {
-            fprintf(log_file, "0,%0.6f,%0.5f,%0.5f,%0.5f\n", 
-                    pos_norm, 
-                    board_data.sync.velocity.value[0],
-                    current,
-                    board_data.sync.current.value[0]);
-        }
 
         if (print && (count % print) == 0) {
             rt_printf("#%d: (%d)\n", count, can_con.msg_addr.can_ifindex);
