@@ -99,9 +99,26 @@ public:
 
 
 
+
+template<typename Input, typename Output>
+std::map<std::string, Output> copy_map(const std::map<std::string, Input>& input)
+{
+    std::map<std::string, Output> output;
+
+    for(auto& element : input)
+    {
+        output[element.first] = element.second;
+    }
+}
+
+
+
 class MotorboardInterface
 {
 public:
+    template<typename Type> using
+    MapToPointer = const std::map<std::string, std::shared_ptr<Type>>;
+
     typedef ThreadsafeTimeseriesInterface<double> ScalarTimeseries;
     typedef ScalarTimeseries::Index Index;
     typedef ThreadsafeTimeseriesInterface<Index> IndexTimeseries;
@@ -110,23 +127,47 @@ public:
     typedef ThreadsafeTimeseriesInterface<MotorboardCommand> CommandTimeseries;
 
     /// outputs ================================================================
-    std::vector<std::string> measurement_names_ = {"current_0",
-                                                   "current_1",
-                                                   "position_0",
-                                                   "position_1",
-                                                   "velocity_0",
-                                                   "velocity_1",
-                                                   "analog_0",
-                                                   "analog_1",
-                                                   "encoder_0",
-                                                   "encoder_1"};
+    MapToPointer<const ScalarTimeseries> new_measurement;
+    const std::vector<std::string> measurement_names = {"current_0",
+                                                         "current_1",
+                                                         "position_0",
+                                                         "position_1",
+                                                         "velocity_0",
+                                                         "velocity_1",
+                                                         "analog_0",
+                                                         "analog_1",
+                                                         "encoder_0",
+                                                         "encoder_1"};
+
+    MapToPointer<const StatusTimeseries> new_status;
+    const std::vector<std::string> status_names = {"status"};
+
+    /// inputs =================================================================
+    MapToPointer<ScalarTimeseries> new_control;
+    const std::vector<std::string> control_names = {"current_target_0",
+                                                    "current_target_1"};
+
+    MapToPointer<CommandTimeseries> new_command;
+    const std::vector<std::string> command_names = {"command"};
+
+    /// log ====================================================================
+    MapToPointer<const ScalarTimeseries> new_sent_control;
+    MapToPointer<const ScalarTimeseries> new_sent_control_index;
+    MapToPointer<const CommandTimeseries> new_sent_command;
+    MapToPointer<const CommandTimeseries> new_sent_command_index;
+
+
+
+
+
+
+
     virtual std::shared_ptr<const ScalarTimeseries>
     measurement(std::string name) const = 0;
     virtual std::shared_ptr<const StatusTimeseries> status() const = 0;
 
     /// inputs =================================================================
-    std::vector<std::string> control_names_ = {"current_target_0",
-                                               "current_target_1"};
+
     virtual std::shared_ptr<ScalarTimeseries> control(std::string name) = 0;
     virtual std::shared_ptr<CommandTimeseries> command() = 0;
 
@@ -166,12 +207,12 @@ public:
     {
         // initialize outputs --------------------------------------------------
         bool controls_have_changed = false;
-        for(size_t i = 0; i < control_names_.size(); i++)
+        for(size_t i = 0; i < control_names.size(); i++)
         {
 //            long int new_hash =
 //                    controls_.at(control_names_[i])->next_timeindex();
 
-            auto sent_timeindices = sent_timeindices_.at(control_names_[i]);
+            auto sent_timeindices = sent_timeindices_.at(control_names[i]);
 
             Index current_timeindex = sent_timeindices->next_timeindex() - 1;
 
@@ -255,30 +296,30 @@ private:
 public:
     CanMotorboard(std::shared_ptr<CanbusInterface> can_bus):
         can_bus_(can_bus),
-        control_hashes_(control_names_)
+        control_hashes_(control_names)
     {
         // initialize outputs --------------------------------------------------
-        for(size_t i = 0; i < measurement_names_.size(); i++)
+        for(size_t i = 0; i < measurement_names.size(); i++)
         {
-            measurements_[measurement_names_[i]]
+            measurements_[measurement_names[i]]
                     = std::make_shared<ThreadsafeTimeseries<double>>(1000);
         }
         status_ =
                 std::make_shared<ThreadsafeTimeseries<MotorboardStatus>>(1000);
 
         // initialize outputs --------------------------------------------------
-        for(size_t i = 0; i < control_names_.size(); i++)
+        for(size_t i = 0; i < control_names.size(); i++)
         {
-            controls_[control_names_[i]]
+            controls_[control_names[i]]
                     = std::make_shared<ThreadsafeTimeseries<double>>(1000);
-            sent_timeindices_[control_names_[i]]
+            sent_timeindices_[control_names[i]]
                     = std::make_shared<ThreadsafeTimeseries<Index>>(1000);
 
-            controls_.at(control_names_[i])->append(0);
+            controls_.at(control_names[i])->append(0);
 
             control_hashes_.set(
-                        controls_.at(control_names_[i])->next_timeindex(),
-                    control_names_[i]);
+                        controls_.at(control_names[i])->next_timeindex(),
+                    control_names[i]);
         }
         command_ =
                 std::make_shared<ThreadsafeTimeseries<MotorboardCommand>>(1000);
@@ -479,14 +520,14 @@ private:
     {
         osi::print_to_screen("outputs =====================================\n");
 
-        for(size_t i = 0; i < measurement_names_.size(); i++)
+        for(size_t i = 0; i < measurement_names.size(); i++)
         {
             osi::print_to_screen("%s: ---------------------------------\n",
-                                 measurement_names_[i].c_str());
-            if(measurements_.at(measurement_names_[i])->history_length() > 0)
+                                 measurement_names[i].c_str());
+            if(measurements_.at(measurement_names[i])->history_length() > 0)
             {
                 double measurement =
-                        measurements_.at(measurement_names_[i])->current_element();
+                        measurements_.at(measurement_names[i])->current_element();
                 osi::print_to_screen("value %f:\n", measurement);
             }
         }
@@ -497,14 +538,14 @@ private:
 
         osi::print_to_screen("inputs ======================================\n");
 
-        for(size_t i = 0; i < control_names_.size(); i++)
+        for(size_t i = 0; i < control_names.size(); i++)
         {
             osi::print_to_screen("%s: ---------------------------------\n",
-                                 control_names_[i].c_str());
-            if(controls_.at(control_names_[i])->history_length() > 0)
+                                 control_names[i].c_str());
+            if(controls_.at(control_names[i])->history_length() > 0)
             {
                 double control =
-                        controls_.at(control_names_[i])->current_element();
+                        controls_.at(control_names[i])->current_element();
                 osi::print_to_screen("value %f:\n", control);
             }
         }
