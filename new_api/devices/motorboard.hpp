@@ -243,7 +243,8 @@ public:
             if(new_control.at(control_names[i])->history_length() == 0)
                 break;
 
-            Index current_timeindex = new_control.at(control_names[i])->next_timeindex() - 1;
+            Index current_timeindex =
+                    new_control.at(control_names[i])->next_timeindex() - 1;
 
             auto sent_timeindex = new_sent_control_timeindex.at(control_names[i]);
             if(sent_timeindex->history_length() == 0 ||
@@ -258,13 +259,27 @@ public:
             send_controls();
         }
 
-        long int new_hash = new_command.at("command")->next_timeindex();
-        if(new_hash != command_hash_.get())
+        bool commands_have_changed = false;
+        for(size_t i = 0; i < command_names.size(); i++)
         {
-            command_hash_.set(new_hash);
+            if(new_command.at(command_names[i])->history_length() == 0)
+                break;
+
+            Index current_timeindex =
+                    new_command.at(command_names[i])->next_timeindex() - 1;
+
+            auto sent_timeindex = new_sent_command_timeindex.at(command_names[i]);
+            if(sent_timeindex->history_length() == 0 ||
+                    sent_timeindex->current_element() < current_timeindex)
+            {
+                sent_timeindex->append(current_timeindex);
+                commands_have_changed = true;
+            }
+        }
+        if(commands_have_changed)
+        {
             send_command();
         }
-
     }
 
     /// ========================================================================
