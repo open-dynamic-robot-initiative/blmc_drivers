@@ -34,10 +34,10 @@ public:
     typedef ThreadsafeTimeseriesInterface<Canframe> CanframeTimeseries;
 
     /// output =================================================================
-    virtual std::shared_ptr<const CanframeTimeseries> output() const = 0;
+    virtual std::shared_ptr<const CanframeTimeseries> output_frame() const = 0;
 
     /// input ==================================================================
-    virtual std::shared_ptr<CanframeTimeseries> input() = 0;
+    virtual std::shared_ptr<CanframeTimeseries> input_frame() = 0;
     virtual void send_if_input_changed() = 0;
 
     /// ========================================================================
@@ -50,13 +50,13 @@ class Canbus: public CanbusInterface
 public:
 
     /// output =================================================================
-    std::shared_ptr<const CanframeTimeseries> output() const
+    std::shared_ptr<const CanframeTimeseries> output_frame() const
     {
         return output_;
     }
 
     /// input ==================================================================
-    virtual std::shared_ptr<CanframeTimeseries>  input()
+    virtual std::shared_ptr<CanframeTimeseries>  input_frame()
     {
         return input_;
     }

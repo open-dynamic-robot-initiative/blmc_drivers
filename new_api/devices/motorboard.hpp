@@ -348,7 +348,7 @@ private:
         }
         can_frame.dlc = 8;
 
-        can_bus_->input()->append(can_frame);
+        can_bus_->input_frame()->append(can_frame);
         can_bus_->send_if_input_changed();
     }
     void send_command()
@@ -381,7 +381,7 @@ private:
         }
         can_frame.dlc = 8;
 
-        can_bus_->input()->append(can_frame);
+        can_bus_->input_frame()->append(can_frame);
         can_bus_->send_if_input_changed();
     }
 
@@ -397,12 +397,12 @@ private:
     void loop()
     {
 
-        long int timeindex = can_bus_->output()->next_timeindex();
+        long int timeindex = can_bus_->output_frame()->next_timeindex();
         while(true)
         {
 
 //            osi::print_to_screen("waiting for can frame with index %d\n", timeindex);
-            Canframe can_frame = (*can_bus_->output())[timeindex];
+            Canframe can_frame = (*can_bus_->output_frame())[timeindex];
             timeindex++;
 //            osi::print_to_screen("received\n");
 
