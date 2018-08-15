@@ -117,7 +117,7 @@ class MotorboardInterface
 {
 public:
     template<typename Type> using
-    MapToPointer = const std::map<std::string, std::shared_ptr<Type>>;
+    MapToPointer = std::map<std::string, std::shared_ptr<Type>>;
 
     typedef ThreadsafeTimeseriesInterface<double> ScalarTimeseries;
     typedef ScalarTimeseries::Index Index;
@@ -127,7 +127,7 @@ public:
     typedef ThreadsafeTimeseriesInterface<MotorboardCommand> CommandTimeseries;
 
     /// outputs ================================================================
-    MapToPointer<const ScalarTimeseries> new_measurement;
+    const MapToPointer<const ScalarTimeseries> new_measurement;
     const std::vector<std::string> measurement_names = {"current_0",
                                                          "current_1",
                                                          "position_0",
@@ -139,22 +139,22 @@ public:
                                                          "encoder_0",
                                                          "encoder_1"};
 
-    MapToPointer<const StatusTimeseries> new_status;
+    const MapToPointer<const StatusTimeseries> new_status;
     const std::vector<std::string> status_names = {"status"};
 
     /// inputs =================================================================
-    MapToPointer<ScalarTimeseries> new_control;
+    const MapToPointer<ScalarTimeseries> new_control;
     const std::vector<std::string> control_names = {"current_target_0",
                                                     "current_target_1"};
 
-    MapToPointer<CommandTimeseries> new_command;
+    const MapToPointer<CommandTimeseries> new_command;
     const std::vector<std::string> command_names = {"command"};
 
     /// log ====================================================================
-    MapToPointer<const ScalarTimeseries> new_sent_control;
-    MapToPointer<const ScalarTimeseries> new_sent_control_index;
-    MapToPointer<const CommandTimeseries> new_sent_command;
-    MapToPointer<const CommandTimeseries> new_sent_command_index;
+    const MapToPointer<const ScalarTimeseries> new_sent_control;
+    const MapToPointer<const ScalarTimeseries> new_sent_control_timeindex;
+    const MapToPointer<const CommandTimeseries> new_sent_command;
+    const MapToPointer<const CommandTimeseries> new_sent_command_timeindex;
 
 
 
@@ -269,6 +269,8 @@ private:
 private:
     std::shared_ptr<CanbusInterface> can_bus_;
 
+    const MapToPointer<ScalarTimeseries> new_measurement_;
+
     // outputs -----------------------------------------------------------------
     std::map<std::string, std::shared_ptr<ScalarTimeseries>> measurements_;
     std::shared_ptr<StatusTimeseries> status_;
@@ -294,16 +296,33 @@ private:
     };
     /// constructor ============================================================
 public:
+    template<typename Type>
+    MapToPointer<ThreadsafeTimeseriesInterface<Type>> create_map(
+                                          const std::vector<std::string>& names,
+                                                          const size_t& history_length)
+    {
+        MapToPointer<ThreadsafeTimeseriesInterface<Type>> map;
+        for(size_t i = 0; i < names.size(); i++)
+        {
+            map[names[i]] =
+                   std::make_shared<ThreadsafeTimeseries<Type>>(history_length);
+        }
+        return map;
+    }
+
+
+
     CanMotorboard(std::shared_ptr<CanbusInterface> can_bus):
         can_bus_(can_bus),
-        control_hashes_(control_names)
+        control_hashes_(control_names),
+        measurements_(create_map<double>(measurement_names, 1000))
     {
         // initialize outputs --------------------------------------------------
-        for(size_t i = 0; i < measurement_names.size(); i++)
-        {
-            measurements_[measurement_names[i]]
-                    = std::make_shared<ThreadsafeTimeseries<double>>(1000);
-        }
+//        for(size_t i = 0; i < measurement_names.size(); i++)
+//        {
+//            measurements_[measurement_names[i]]
+//                    = std::make_shared<ThreadsafeTimeseries<double>>(1000);
+//        }
         status_ =
                 std::make_shared<ThreadsafeTimeseries<MotorboardStatus>>(1000);
 
