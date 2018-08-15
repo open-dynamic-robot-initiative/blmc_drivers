@@ -232,7 +232,7 @@ public:
     }
     virtual std::shared_ptr<CommandTimeseries> command()
     {
-        return command_;
+        return new_command.at("command");
     }
     virtual void send_if_input_changed()
     {
@@ -245,7 +245,7 @@ public:
 
             Index current_timeindex = new_control.at(control_names[i])->next_timeindex() - 1;
 
-            auto sent_timeindex = sent_timeindices_.at(control_names[i]);
+            auto sent_timeindex = new_sent_control_timeindex.at(control_names[i]);
             if(sent_timeindex->history_length() == 0 ||
                     sent_timeindex->current_element() < current_timeindex)
             {
@@ -258,7 +258,7 @@ public:
             send_controls();
         }
 
-        long int new_hash = command_->next_timeindex();
+        long int new_hash = new_command.at("command")->next_timeindex();
         if(new_hash != command_hash_.get())
         {
             command_hash_.set(new_hash);
@@ -286,7 +286,7 @@ public:
 private:
     void send_command(const MotorboardCommand& command)
     {
-        command_->append(command);
+        new_command.at("command")->append(command);
         send_if_input_changed();
     }
 
@@ -294,11 +294,6 @@ private:
 private:
     std::shared_ptr<CanbusInterface> can_bus_;
 
-
-    // inputs ------------------------------------------------------------------
-    std::map<std::string, std::shared_ptr<IndexTimeseries>> sent_timeindices_;
-
-    std::shared_ptr<CommandTimeseries> command_;
     SingletypeThreadsafeObject<long int, 1> command_hash_;
 
     enum CanframeIDs
@@ -346,14 +341,9 @@ public:
         // initialize outputs --------------------------------------------------
         for(size_t i = 0; i < control_names.size(); i++)
         {
-            sent_timeindices_[control_names[i]]
-                    = std::make_shared<ThreadsafeTimeseries<Index>>(1000);
-
             new_control.at(control_names[i])->append(0);
         }
-        command_ =
-                std::make_shared<ThreadsafeTimeseries<MotorboardCommand>>(1000);
-        command_hash_.set(command_->next_timeindex());
+        command_hash_.set(new_command.at("command")->next_timeindex());
 
         osi::start_thread(&CanMotorboard::loop, this);
     }
@@ -424,7 +414,7 @@ private:
     }
     void send_command()
     {
-        MotorboardCommand command = command_->current_element();
+        MotorboardCommand command = new_command.at("command")->current_element();
 
         uint32_t id = command.id_;
         int32_t content = command.content_;
@@ -581,8 +571,8 @@ private:
         }
 
         osi::print_to_screen("command: ---------------------------------\n");
-        if(command_->history_length() > 0)
-            command_->current_element().print();
+        if(new_command.at("command")->history_length() > 0)
+            new_command.at("command")->current_element().print();
     }
 
     unsigned id_to_index(unsigned motor_id)
