@@ -75,55 +75,87 @@ public:
 };
 
 
+class MotorTemperature
+{
+public:
+    MotorTemperature(double room_temperature):
+        room_temperature_(room_temperature),
+        temperature_(room_temperature)
+    {
+    }
 
-//class SafeMotor: public Motor
-//{
-//public:
-//    SafeMotor(std::shared_ptr<CanMotorboard> board, bool motor_id):
-//        Motor(board, motor_id)
-//    {
-//        temperature_.set(StampedScalar(room_temperature_));
-//        osi::start_thread(&SafeMotor::loop, this);
-//    }
+    void update(double current, double delta_time)
+    {
+        temperature_ =
+                room_temperature_ +
+                exp(-0.003 * delta_time) * (temperature_ - room_temperature_) +
+                0.03 * delta_time * pow(current, 2);
+    }
 
+    double get()
+    {
+        return temperature_;
+    }
 
-//    // send input data ---------------------------------------------------------
-//    virtual void send_control(const StampedScalar& control,
-//                              const std::string& name)
-//    {
-//    }
-
-//private:
-//    ThreadsafeObject<StampedScalar> temperature_;
-
-//    const double room_temperature_ = 30;
-
-//    static void
-//#ifndef __XENO__
-//    *
-//#endif
-//    loop(void* instance_pointer)
-//    {
-//        ((SafeMotor*)(instance_pointer))->loop();
-//    }
-
-//    void loop()
-//    {
-//        Timer<10> time_logger("controller", 1000);
-//        while(true)
-//        {
-//            wait_for_measurement("current");
-//            StampedScalar current = get_measurement("current");
+private:
+    double room_temperature_;
+    double temperature_;
+};
 
 
 
+class SafeMotor: public Motor
+{
+    MotorTemperature temperature_;
 
-//            // print -----------------------------------------------------------
-//            Timer<>::sleep_ms(1);
-//            time_logger.end_and_start_interval();
-//            if ((time_logger.count() % 1000) == 0)
-//            {
-//            }
-//        }
-//    }
-//};
+public:
+    SafeMotor(std::shared_ptr<CanMotorboard> board, bool motor_id):
+        Motor(board, motor_id), temperature_(30)
+    {
+        osi::start_thread(&SafeMotor::loop, this);
+    }
+
+private:
+    static void
+#ifndef __XENO__
+    *
+#endif
+    loop(void* instance_pointer)
+    {
+        ((SafeMotor*)(instance_pointer))->loop();
+    }
+
+    void loop()
+    {
+        Timer<10> time_logger("controller");
+        while(true)
+        {
+            Timer<>::sleep_ms(1);
+            if(measurement("current")->history_length() == 0)
+                continue;
+
+            double current = measurement("current")->current_element();
+            double target_current = current_target()->current_element();
+            double velocity = measurement("velocity")->current_element();
+
+
+
+            temperature_.update(current, 0.001);
+
+            // print -----------------------------------------------------------
+            time_logger.end_and_start_interval();
+            if ((time_logger.count() % 100) == 0)
+            {
+                osi::print_to_screen("--------------------------\n");
+                osi::print_to_screen("current: %f\n", current);
+                osi::print_to_screen("target current: %f\n", target_current);
+                osi::print_to_screen("velocity: %f\n", velocity);
+
+
+                osi::print_to_screen("temperature: %f\n", temperature_.get());
+                osi::print_to_screen("--------------------------\n");
+
+            }
+        }
+    }
+};
