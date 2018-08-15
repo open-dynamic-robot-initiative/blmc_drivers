@@ -111,7 +111,7 @@ else()
     target_link_libraries(blmc_can_sine_demo ${PROJECT_NAME} pthread m)
 
     add_executable(blmc_can_anticogging
-        demo/blmc_can_anticogging.c
+        demo/blmc_can_anticogging.cpp
         src/can.c
         src/blmc_can.c
         src/optoforce_can.c
