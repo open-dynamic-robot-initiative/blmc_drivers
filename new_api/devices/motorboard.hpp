@@ -113,6 +113,8 @@ std::map<std::string, Output> copy_map(const std::map<std::string, Input>& input
 
 
 
+
+
 class MotorboardInterface
 {
 public:
@@ -128,27 +130,11 @@ public:
 
     /// outputs ================================================================
     const MapToPointer<ScalarTimeseries> new_measurement;
-    const std::vector<std::string> measurement_names = {"current_0",
-                                                         "current_1",
-                                                         "position_0",
-                                                         "position_1",
-                                                         "velocity_0",
-                                                         "velocity_1",
-                                                         "analog_0",
-                                                         "analog_1",
-                                                         "encoder_0",
-                                                         "encoder_1"};
-
     const MapToPointer<StatusTimeseries> new_status;
-    const std::vector<std::string> status_names = {"status"};
 
     /// inputs =================================================================
     const MapToPointer<ScalarTimeseries> new_control;
-    const std::vector<std::string> control_names = {"current_target_0",
-                                                    "current_target_1"};
-
     const MapToPointer<CommandTimeseries> new_command;
-    const std::vector<std::string> command_names = {"command"};
 
     /// log ====================================================================
     const MapToPointer<ScalarTimeseries> new_sent_control;
@@ -176,12 +162,38 @@ public:
     /// ========================================================================
     virtual void print_status() = 0;
 
-    MotorboardInterface(const MapToPointer<ScalarTimeseries>& new_measurement_):
-        new_measurement(new_measurement_)
+    MotorboardInterface(const MapToPointer<ScalarTimeseries>& new_measurement):
+
+        new_measurement(new_measurement)
     { }
 
     virtual ~MotorboardInterface() {}
+
+
+    static const std::vector<std::string> measurement_names;
+    static const std::vector<std::string> status_names;
+    static const std::vector<std::string> control_names;
+    static const std::vector<std::string> command_names;
 };
+const std::vector<std::string> MotorboardInterface::measurement_names =
+{"current_0",
+ "current_1",
+ "position_0",
+ "position_1",
+ "velocity_0",
+ "velocity_1",
+ "analog_0",
+ "analog_1",
+ "encoder_0",
+ "encoder_1"};
+const std::vector<std::string> MotorboardInterface::status_names = {"status"};
+const std::vector<std::string> MotorboardInterface::control_names =
+{"current_target_0",
+ "current_target_1"};
+const std::vector<std::string> MotorboardInterface::command_names = {"command"};
+
+
+
 
 
 class CanMotorboard: public  MotorboardInterface
@@ -192,7 +204,7 @@ public:
     virtual std::shared_ptr<const ScalarTimeseries>
     measurement(std::string name) const
     {
-        return measurements_.at(name);
+        return new_measurement.at(name);
     }
     virtual std::shared_ptr<const StatusTimeseries> status() const
     {
@@ -274,10 +286,9 @@ private:
 private:
     std::shared_ptr<CanbusInterface> can_bus_;
 
-    const MapToPointer<ScalarTimeseries> new_measurement_;
 
     // outputs -----------------------------------------------------------------
-    std::map<std::string, std::shared_ptr<ScalarTimeseries>> measurements_;
+//    std::map<std::string, std::shared_ptr<ScalarTimeseries>> new_measurement;
     std::shared_ptr<StatusTimeseries> status_;
 
     // inputs ------------------------------------------------------------------
@@ -312,6 +323,7 @@ public:
             map[names[i]] =
                    std::make_shared<ThreadsafeTimeseries<Type>>(history_length);
         }
+
         return map;
     }
 
@@ -320,16 +332,10 @@ public:
     CanMotorboard(std::shared_ptr<CanbusInterface> can_bus):
         can_bus_(can_bus),
         control_hashes_(control_names),
-        measurements_(create_map<double>(measurement_names, 1000)),
         MotorboardInterface(create_map<double>(measurement_names, 1000))
 
     {
-        // initialize outputs --------------------------------------------------
-//        for(size_t i = 0; i < measurement_names.size(); i++)
-//        {
-//            measurements_[measurement_names[i]]
-//                    = std::make_shared<ThreadsafeTimeseries<double>>(1000);
-//        }
+
         status_ =
                 std::make_shared<ThreadsafeTimeseries<MotorboardStatus>>(1000);
 
@@ -481,20 +487,20 @@ private:
             switch(can_frame.id)
             {
             case CanframeIDs::Iq:
-                measurements_.at("current_0")->append(measurement_0);
-                measurements_.at("current_1")->append(measurement_1);
+                new_measurement.at("current_0")->append(measurement_0);
+                new_measurement.at("current_1")->append(measurement_1);
                 break;
             case CanframeIDs::POS:
-                measurements_.at("position_0")->append(measurement_0);
-                measurements_.at("position_1")->append(measurement_1);
+                new_measurement.at("position_0")->append(measurement_0);
+                new_measurement.at("position_1")->append(measurement_1);
                 break;
             case CanframeIDs::SPEED:
-                measurements_.at("velocity_0")->append(measurement_0);
-                measurements_.at("velocity_1")->append(measurement_1);
+                new_measurement.at("velocity_0")->append(measurement_0);
+                new_measurement.at("velocity_1")->append(measurement_1);
                 break;
             case CanframeIDs::ADC6:
-                measurements_.at("analog_0")->append(measurement_0);
-                measurements_.at("analog_1")->append(measurement_1);
+                new_measurement.at("analog_0")->append(measurement_0);
+                new_measurement.at("analog_1")->append(measurement_1);
                 break;
             case CanframeIDs::ENC_INDEX:
             {
@@ -503,11 +509,11 @@ private:
                 uint8_t motor_index = can_frame.data[4];
                 if(motor_index == 0)
                 {
-                    measurements_.at("encoder_0")->append(measurement_0);
+                    new_measurement.at("encoder_0")->append(measurement_0);
                 }
                 else if(motor_index == 1)
                 {
-                    measurements_.at("encoder_1")->append(measurement_0);
+                    new_measurement.at("encoder_1")->append(measurement_0);
                 }
                 else
                 {
@@ -550,10 +556,10 @@ private:
         {
             osi::print_to_screen("%s: ---------------------------------\n",
                                  measurement_names[i].c_str());
-            if(measurements_.at(measurement_names[i])->history_length() > 0)
+            if(new_measurement.at(measurement_names[i])->history_length() > 0)
             {
                 double measurement =
-                        measurements_.at(measurement_names[i])->current_element();
+                        new_measurement.at(measurement_names[i])->current_element();
                 osi::print_to_screen("value %f:\n", measurement);
             }
         }
