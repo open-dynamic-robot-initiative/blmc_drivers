@@ -127,7 +127,7 @@ public:
     typedef ThreadsafeTimeseriesInterface<MotorboardCommand> CommandTimeseries;
 
     /// outputs ================================================================
-    const MapToPointer<const ScalarTimeseries> new_measurement;
+    const MapToPointer<ScalarTimeseries> new_measurement;
     const std::vector<std::string> measurement_names = {"current_0",
                                                          "current_1",
                                                          "position_0",
@@ -139,7 +139,7 @@ public:
                                                          "encoder_0",
                                                          "encoder_1"};
 
-    const MapToPointer<const StatusTimeseries> new_status;
+    const MapToPointer<StatusTimeseries> new_status;
     const std::vector<std::string> status_names = {"status"};
 
     /// inputs =================================================================
@@ -151,10 +151,10 @@ public:
     const std::vector<std::string> command_names = {"command"};
 
     /// log ====================================================================
-    const MapToPointer<const ScalarTimeseries> new_sent_control;
-    const MapToPointer<const ScalarTimeseries> new_sent_control_timeindex;
-    const MapToPointer<const CommandTimeseries> new_sent_command;
-    const MapToPointer<const CommandTimeseries> new_sent_command_timeindex;
+    const MapToPointer<ScalarTimeseries> new_sent_control;
+    const MapToPointer<ScalarTimeseries> new_sent_control_timeindex;
+    const MapToPointer<CommandTimeseries> new_sent_command;
+    const MapToPointer<CommandTimeseries> new_sent_command_timeindex;
 
 
 
@@ -175,6 +175,11 @@ public:
 
     /// ========================================================================
     virtual void print_status() = 0;
+
+    MotorboardInterface(const MapToPointer<ScalarTimeseries>& new_measurement_):
+        new_measurement(new_measurement_)
+    { }
+
     virtual ~MotorboardInterface() {}
 };
 
@@ -315,7 +320,9 @@ public:
     CanMotorboard(std::shared_ptr<CanbusInterface> can_bus):
         can_bus_(can_bus),
         control_hashes_(control_names),
-        measurements_(create_map<double>(measurement_names, 1000))
+        measurements_(create_map<double>(measurement_names, 1000)),
+        MotorboardInterface(create_map<double>(measurement_names, 1000))
+
     {
         // initialize outputs --------------------------------------------------
 //        for(size_t i = 0; i < measurement_names.size(); i++)
