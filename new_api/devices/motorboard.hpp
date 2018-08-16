@@ -143,6 +143,12 @@ public:
     const MapToPointer<IndexTimeseries> new_sent_command_timeindex;
 
 
+    const MapToPointer<ThreadsafeLoggingTimeseries<double>> sent_control;
+    const MapToPointer<ThreadsafeLoggingTimeseries<MotorboardCommand>> sent_command;
+
+
+
+
 
 
 
@@ -170,7 +176,9 @@ public:
             const MapToPointer<ScalarTimeseries>& new_sent_control_,
             const MapToPointer<IndexTimeseries>& new_sent_control_timeindex_,
             const MapToPointer<CommandTimeseries>& new_sent_command_,
-            const MapToPointer<IndexTimeseries>& new_sent_command_timeindex_):
+            const MapToPointer<IndexTimeseries>& new_sent_command_timeindex_,
+            const MapToPointer<ThreadsafeLoggingTimeseries<double>>& sent_control_,
+            const MapToPointer<ThreadsafeLoggingTimeseries<MotorboardCommand>>& sent_command_):
 
         new_measurement(new_measurement_),
         new_status(new_status_),
@@ -179,7 +187,9 @@ public:
         new_sent_control(new_sent_control_),
         new_sent_control_timeindex(new_sent_control_timeindex_),
         new_sent_command(new_sent_command_),
-        new_sent_command_timeindex(new_sent_command_timeindex_) { }
+        new_sent_command_timeindex(new_sent_command_timeindex_),
+        sent_control(sent_control_),
+        sent_command(sent_command_) { }
 
     virtual ~MotorboardInterface() {}
 
@@ -350,7 +360,9 @@ public:
                             create_map<ScalarTimeseries>(control_names, 1000),
                             create_map<IndexTimeseries>(control_names, 1000),
                             create_map<CommandTimeseries>(command_names, 1000),
-                            create_map<IndexTimeseries>(command_names, 1000))
+                            create_map<IndexTimeseries>(command_names, 1000),
+                            create_map<ThreadsafeLoggingTimeseries<double>>(command_names, 1000),
+                            create_map<ThreadsafeLoggingTimeseries<MotorboardCommand>>(command_names, 1000))
 
     {
         // initialize outputs --------------------------------------------------
