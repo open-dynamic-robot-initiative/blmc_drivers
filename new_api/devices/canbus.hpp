@@ -65,6 +65,7 @@ public:
         long int new_hash = input_->next_timeindex();
         if(new_hash != input_hash_.get())
         {
+
             send_frame(input_->current_element());
             input_hash_.set(new_hash);
         }

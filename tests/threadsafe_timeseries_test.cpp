@@ -30,7 +30,10 @@ timeseries_to_output(void* void_ptr)
 
     for(size_t i = 0; i < length; i++)
     {
-        outputs[output_index][i] = timeseries[i];
+        Type element;
+        ThreadsafeTimeseries<Type>::Index timeindex;
+        std::tie(element, timeindex) = timeseries[i];
+        outputs[output_index][i] = element;
         logger.end_and_start_interval();
     }
 

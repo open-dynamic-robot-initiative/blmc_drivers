@@ -478,7 +478,22 @@ private:
         {
 
 //            osi::print_to_screen("waiting for can frame with index %d\n", timeindex);
-            Canframe can_frame = (*can_bus_->output_frame())[timeindex];
+            Canframe can_frame;
+            Index received_timeindex;
+            std::tie(can_frame, received_timeindex)
+                    = (*can_bus_->output_frame())[timeindex];
+
+
+            if(received_timeindex != timeindex)
+            {
+                osi::print_to_screen("did not get the timeindex we expected! "
+                                     "received_timeindex: %d, "
+                                     "desired_timeindex: %d\n",
+                                     received_timeindex, timeindex);
+
+                exit(-1);
+            }
+
             timeindex++;
 //            osi::print_to_screen("received\n");
 

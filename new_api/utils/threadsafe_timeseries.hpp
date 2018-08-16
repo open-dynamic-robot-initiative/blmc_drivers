@@ -14,9 +14,11 @@ public:
     typedef long int Index;
     typedef long double Timestamp;
 
-    virtual Type operator[](Index timeindex) const = 0;
+    virtual std::tuple<Type, Index>
+    operator[](const Index& desired_timeindex) const = 0;
 
-    virtual Timestamp timestamp(Index timeindex) const = 0;
+    virtual std::tuple<Timestamp, Index>
+    timestamp(const Index& desired_timeindex) const = 0;
 
     virtual void append(const Type& element) = 0;
 
@@ -25,7 +27,7 @@ public:
     // waits if empty
     virtual Type current_element() const
     {
-        return (*this)[next_timeindex()-1];
+        return std::get<0>((*this)[next_timeindex()-1]);
     }
 
     virtual size_t history_length() const = 0;
@@ -36,6 +38,7 @@ public:
 template<typename Type>
 class ThreadsafeTimeseries: public ThreadsafeTimeseriesInterface<Type>
 {
+public:
     typedef typename ThreadsafeTimeseriesInterface<Type>::Index Index;
     typedef typename ThreadsafeTimeseriesInterface<Type>::Timestamp Timestamp;
 
@@ -64,9 +67,12 @@ public:
         mutex_ = std::make_shared<osi::Mutex>();
     }
 
-    Type operator[](Index timeindex) const
+    virtual std::tuple<Type, Index>
+    operator[](const Index& desired_timeindex) const
     {
         std::unique_lock<osi::Mutex> lock(*mutex_);
+
+        Index timeindex = desired_timeindex;
 
         while(newest_timeindex_ < timeindex ||
               newest_timeindex_ < oldest_timeindex_)
@@ -76,23 +82,20 @@ public:
 
         if(timeindex < oldest_timeindex_)
         {
-            osi::print_to_screen("WARNING: you are trying to access a "
-                                 "timeseries element which is not in our "
-                                 "history (anymore). returning oldest existing "
-                                 "element.\n");
-
-            osi::print_to_screen("some info: %s \n", __PRETTY_FUNCTION__ );
-            /// \todo we will get rid of this exit, just for now to not miss
-            /// this case
-            exit(-1);
             timeindex = oldest_timeindex_;
         }
+        Type element
+            = (*history_elements_)[timeindex % history_elements_->size()];
 
-        return (*history_elements_)[timeindex % history_elements_->size()];
+        return std::make_tuple(element, timeindex);
     }
-    Timestamp timestamp(Index timeindex) const
+
+    virtual std::tuple<Timestamp, Index>
+    timestamp(const Index& desired_timeindex) const
     {
         std::unique_lock<osi::Mutex> lock(*mutex_);
+
+        Index timeindex = desired_timeindex;
 
         while(newest_timeindex_ < timeindex ||
               newest_timeindex_ < oldest_timeindex_)
@@ -102,21 +105,13 @@ public:
 
         if(timeindex < oldest_timeindex_)
         {
-            osi::print_to_screen("WARNING: you are trying to access a "
-                                 "timeseries element which is not in our "
-                                 "history (anymore). returning oldest existing "
-                                 "element.\n");
-
-            osi::print_to_screen("some info: %s \n", __PRETTY_FUNCTION__ );
-            /// \todo we will get rid of this exit, just for now to not miss
-            /// this case
-            exit(-1);
             timeindex = oldest_timeindex_;
         }
+        Timestamp timestamp
+            = (*history_timestamps_)[timeindex % history_timestamps_->size()];
 
-        return (*history_timestamps_)[timeindex % history_timestamps_->size()];
+        return std::make_tuple(timestamp, timeindex);
     }
-
 
     void append(const Type& element)
     {
