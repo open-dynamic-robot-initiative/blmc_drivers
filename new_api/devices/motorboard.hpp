@@ -183,23 +183,7 @@ const std::vector<std::string> MotorboardInterface::command_names = {"command"};
 
 class CanMotorboard: public  MotorboardInterface
 {
-    /// outputs ================================================================
-    MapToPointer<ScalarTimeseries> new_measurement;
-    MapToPointer<StatusTimeseries> new_status;
 
-    /// inputs =================================================================
-    MapToPointer<ScalarTimeseries> new_control;
-    MapToPointer<CommandTimeseries> new_command;
-
-    /// log ====================================================================
-    MapToPointer<ScalarTimeseries> new_sent_control;
-    MapToPointer<IndexTimeseries> new_sent_control_timeindex;
-    MapToPointer<CommandTimeseries> new_sent_command;
-    MapToPointer<IndexTimeseries> new_sent_command_timeindex;
-
-
-    MapToPointer<ThreadsafeLoggingTimeseries<double>> sent_control;
-    MapToPointer<ThreadsafeLoggingTimeseries<MotorboardCommand>> sent_command;
 
 
 
@@ -229,31 +213,51 @@ public:
     {
         // initialize outputs --------------------------------------------------
         bool controls_have_changed = false;
-        for(size_t i = 0; i < control_names.size(); i++)
-        { 
-            if(sent_control.at(control_names[i])
-                    ->has_changed(*new_control.at(control_names[i])))
-            {
+
+        for(auto element : new_control)
+        {
+            if(element.second->has_changed_since_tag())
                 controls_have_changed = true;
-            }
+        }
 
-//            if(new_control.at(control_names[i])->history_length() == 0)
-//                break;
 
-//            Index current_timeindex =
-//                    new_control.at(control_names[i])->next_timeindex() - 1;
 
-//            auto sent_timeindex = new_sent_control_timeindex.at(control_names[i]);
-//            if(sent_timeindex->history_length() == 0 ||
-//                    sent_timeindex->current_element() < current_timeindex)
+
+//        for(size_t i = 0; i < control_names.size(); i++)
+//        {
+//            if(sent_control.at(control_names[i])
+//                    ->has_changed(*new_control.at(control_names[i])))
 //            {
-//                sent_timeindex->append(current_timeindex);
 //                controls_have_changed = true;
 //            }
-        }
+
+////            if(new_control.at(control_names[i])->history_length() == 0)
+////                break;
+
+////            Index current_timeindex =
+////                    new_control.at(control_names[i])->next_timeindex() - 1;
+
+////            auto sent_timeindex = new_sent_control_timeindex.at(control_names[i]);
+////            if(sent_timeindex->history_length() == 0 ||
+////                    sent_timeindex->current_element() < current_timeindex)
+////            {
+////                sent_timeindex->append(current_timeindex);
+////                controls_have_changed = true;
+////            }
+//        }
         if(controls_have_changed)
         {
-            send_controls();
+            std::array<double, 2> controls_to_send;
+            for(size_t i = 0; i < control_names.size(); i++)
+            {
+                Index timeindex_to_send =
+                        new_control.at(control_names[i])->newest_timeindex();
+                controls_to_send[i] =
+                        std::get<0>((*new_control.at(control_names[i]))[timeindex_to_send]);
+                new_sent_control.at(control_names[i])
+                        ->append(controls_to_send[i]);
+            }
+            send_controls(controls_to_send);
         }
 
         bool commands_have_changed = false;
@@ -319,6 +323,25 @@ private:
         ADC6      = 0x50,
         ENC_INDEX = 0x60
     };
+
+
+    /// outputs ================================================================
+    MapToPointer<ScalarTimeseries> new_measurement;
+    MapToPointer<StatusTimeseries> new_status;
+
+    /// inputs =================================================================
+    MapToPointer<ScalarTimeseries> new_control;
+    MapToPointer<CommandTimeseries> new_command;
+
+    /// log ====================================================================
+    MapToPointer<ScalarTimeseries> new_sent_control;
+    MapToPointer<IndexTimeseries> new_sent_control_timeindex;
+    MapToPointer<CommandTimeseries> new_sent_command;
+    MapToPointer<IndexTimeseries> new_sent_command_timeindex;
+
+
+    MapToPointer<ThreadsafeLoggingTimeseries<double>> sent_control;
+    MapToPointer<ThreadsafeLoggingTimeseries<MotorboardCommand>> sent_command;
     /// constructor ============================================================
 public:
     template<typename Type>
@@ -402,6 +425,43 @@ private:
     template<typename T> float qbytes_to_float(T qbytes)
     {
         return q24_to_float(bytes_to_int32(qbytes));
+    }
+
+
+    void send_controls(std::array<double, 2> controls)
+    {
+        float current_mtr1 = controls[0];
+        float current_mtr2 = controls[1];
+
+        uint8_t data[8];
+        uint32_t q_current1, q_current2;
+
+        // Convert floats to Q24 values
+        q_current1 = float_to_q24(current_mtr1);
+        q_current2 = float_to_q24(current_mtr2);
+
+        // Motor 1
+        data[0] = (q_current1 >> 24) & 0xFF;
+        data[1] = (q_current1 >> 16) & 0xFF;
+        data[2] = (q_current1 >> 8) & 0xFF;
+        data[3] =  q_current1 & 0xFF;
+
+        // Motor 2
+        data[4] = (q_current2 >> 24) & 0xFF;
+        data[5] = (q_current2 >> 16) & 0xFF;
+        data[6] = (q_current2 >> 8) & 0xFF;
+        data[7] =  q_current2 & 0xFF;
+
+        Canframe can_frame;
+        can_frame.id = BLMC_CAN_ID_IqRef;
+        for(size_t i = 0; i < 7; i++)
+        {
+            can_frame.data[i] = data[i];
+        }
+        can_frame.dlc = 8;
+
+        can_bus_->input_frame()->append(can_frame);
+        can_bus_->send_if_input_changed();
     }
 
     void send_controls()
