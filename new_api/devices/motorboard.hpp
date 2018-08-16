@@ -128,23 +128,7 @@ public:
     typedef ThreadsafeTimeseries<MotorboardStatus> StatusTimeseries;
     typedef ThreadsafeTimeseries<MotorboardCommand> CommandTimeseries;
 
-    /// outputs ================================================================
-    const MapToPointer<ScalarTimeseries> new_measurement;
-    const MapToPointer<StatusTimeseries> new_status;
 
-    /// inputs =================================================================
-    const MapToPointer<ScalarTimeseries> new_control;
-    const MapToPointer<CommandTimeseries> new_command;
-
-    /// log ====================================================================
-    const MapToPointer<ScalarTimeseries> new_sent_control;
-    const MapToPointer<IndexTimeseries> new_sent_control_timeindex;
-    const MapToPointer<CommandTimeseries> new_sent_command;
-    const MapToPointer<IndexTimeseries> new_sent_command_timeindex;
-
-
-    const MapToPointer<ThreadsafeLoggingTimeseries<double>> sent_control;
-    const MapToPointer<ThreadsafeLoggingTimeseries<MotorboardCommand>> sent_command;
 
 
 
@@ -167,29 +151,6 @@ public:
 
     /// ========================================================================
     virtual void print_status() = 0;
-
-    MotorboardInterface(
-            const MapToPointer<ScalarTimeseries>& new_measurement_,
-            const MapToPointer<StatusTimeseries>& new_status_,
-            const MapToPointer<ScalarTimeseries>& new_control_,
-            const MapToPointer<CommandTimeseries>& new_command_,
-            const MapToPointer<ScalarTimeseries>& new_sent_control_,
-            const MapToPointer<IndexTimeseries>& new_sent_control_timeindex_,
-            const MapToPointer<CommandTimeseries>& new_sent_command_,
-            const MapToPointer<IndexTimeseries>& new_sent_command_timeindex_,
-            const MapToPointer<ThreadsafeLoggingTimeseries<double>>& sent_control_,
-            const MapToPointer<ThreadsafeLoggingTimeseries<MotorboardCommand>>& sent_command_):
-
-        new_measurement(new_measurement_),
-        new_status(new_status_),
-        new_control(new_control_),
-        new_command(new_command_),
-        new_sent_control(new_sent_control_),
-        new_sent_control_timeindex(new_sent_control_timeindex_),
-        new_sent_command(new_sent_command_),
-        new_sent_command_timeindex(new_sent_command_timeindex_),
-        sent_control(sent_control_),
-        sent_command(sent_command_) { }
 
     virtual ~MotorboardInterface() {}
 
@@ -222,6 +183,26 @@ const std::vector<std::string> MotorboardInterface::command_names = {"command"};
 
 class CanMotorboard: public  MotorboardInterface
 {
+    /// outputs ================================================================
+    MapToPointer<ScalarTimeseries> new_measurement;
+    MapToPointer<StatusTimeseries> new_status;
+
+    /// inputs =================================================================
+    MapToPointer<ScalarTimeseries> new_control;
+    MapToPointer<CommandTimeseries> new_command;
+
+    /// log ====================================================================
+    MapToPointer<ScalarTimeseries> new_sent_control;
+    MapToPointer<IndexTimeseries> new_sent_control_timeindex;
+    MapToPointer<CommandTimeseries> new_sent_command;
+    MapToPointer<IndexTimeseries> new_sent_command_timeindex;
+
+
+    MapToPointer<ThreadsafeLoggingTimeseries<double>> sent_control;
+    MapToPointer<ThreadsafeLoggingTimeseries<MotorboardCommand>> sent_command;
+
+
+
     /// public interface =======================================================
 public:
     /// outputs ================================================================
@@ -358,19 +339,32 @@ public:
 
 
     CanMotorboard(std::shared_ptr<CanbusInterface> can_bus):
-        can_bus_(can_bus),
-        MotorboardInterface(create_map<ScalarTimeseries>(measurement_names, 1000),
-                            create_map<StatusTimeseries>(status_names, 1000),
-                            create_map<ScalarTimeseries>(control_names, 1000),
-                            create_map<CommandTimeseries>(command_names, 1000),
-                            create_map<ScalarTimeseries>(control_names, 1000),
-                            create_map<IndexTimeseries>(control_names, 1000),
-                            create_map<CommandTimeseries>(command_names, 1000),
-                            create_map<IndexTimeseries>(command_names, 1000),
-                            create_map<ThreadsafeLoggingTimeseries<double>>(control_names, 1000),
-                            create_map<ThreadsafeLoggingTimeseries<MotorboardCommand>>(command_names, 1000))
-
+        can_bus_(can_bus)
     {
+
+
+        new_measurement             = create_map<ScalarTimeseries>(measurement_names, 1000);
+        new_status                  = create_map<StatusTimeseries>(status_names, 1000);
+        new_control                 = create_map<ScalarTimeseries>(control_names, 1000);
+        new_command                 = create_map<CommandTimeseries>(command_names, 1000);
+        new_sent_control            = create_map<ScalarTimeseries>(control_names, 1000);
+        new_sent_control_timeindex  = create_map<IndexTimeseries>(control_names, 1000);
+        new_sent_command            = create_map<CommandTimeseries>(command_names, 1000);
+        new_sent_command_timeindex  = create_map<IndexTimeseries>(command_names, 1000);
+        sent_control                = create_map<ThreadsafeLoggingTimeseries<double>>(control_names, 1000);
+        sent_command                = create_map<ThreadsafeLoggingTimeseries<MotorboardCommand>>(command_names, 1000);
+
+
+
+
+
+
+
+
+
+
+
+
         // initialize outputs --------------------------------------------------
         for(size_t i = 0; i < control_names.size(); i++)
         {
