@@ -203,11 +203,11 @@ void BLMC_printSensorData(BLMC_SensorData_t const *data)
     for (i = 0; i < 2; ++i) {
         rt_printf("Motor %d\n", i+1);
         if (data->current.timestamp)
-            rt_printf("\tCurrent: %f\n", data->current.value[i]);
+            rt_printf("\tCurrent [A]: %f\n", data->current.value[i]);
         if (data->position.timestamp)
-            rt_printf("\tPosition: %f\n", data->position.value[i]);
+            rt_printf("\tPosition [rot]: %f\n", data->position.value[i]);
         if (data->velocity.timestamp)
-            rt_printf("\tVelocity: %f\n", data->velocity.value[i]);
+            rt_printf("\tVelocity [rot/s]: %f\n", data->velocity.value[i]);
     }
 
     rt_printf("ADC\n\tA6: %f\n\tB6: %f\n", data->adc6.value[0],
@@ -219,10 +219,10 @@ void BLMC_printEncoderIndex(BLMC_StampedSingleValue_t const data[2])
 {
     rt_printf("Encoder Position:\n");
     if (data[BLMC_MTR1].timestamp) {
-        rt_printf("\tMotor 1: %f\n", data[BLMC_MTR1].value);
+        rt_printf("\tMotor 1 [rot]: %f\n", data[BLMC_MTR1].value);
     }
     if (data[BLMC_MTR2].timestamp) {
-        rt_printf("\tMotor 2: %f\n", data[BLMC_MTR2].value);
+        rt_printf("\tMotor 2 [rot]: %f\n", data[BLMC_MTR2].value);
     }
 }
 
