@@ -57,6 +57,8 @@ private:
     Index oldest_timeindex_;
     Index newest_timeindex_;
 
+    Index tagged_timeindex_;
+
     mutable std::shared_ptr<osi::ConditionVariable> condition_;
     mutable std::shared_ptr<osi::Mutex> mutex_;
 
@@ -67,11 +69,36 @@ public:
         oldest_timeindex_ = start_timeindex;
         newest_timeindex_ = oldest_timeindex_ - 1;
 
+        tagged_timeindex_ = newest_timeindex_;
+
         history_elements_ = std::make_shared<std::vector<Type>>(size);
         history_timestamps_ = std::make_shared<std::vector<Timestamp>>(size);
 
         condition_ = std::make_shared<osi::ConditionVariable>();
         mutex_ = std::make_shared<osi::Mutex>();
+    }
+
+    void tag(const Index& timeindex)
+    {
+        std::unique_lock<osi::Mutex> lock(*mutex_);
+        tagged_timeindex_ = timeindex;
+    }
+
+    bool has_changed_since_tag() const
+    {
+        std::unique_lock<osi::Mutex> lock(*mutex_);
+        return tagged_timeindex_ != newest_timeindex_;
+    }
+
+    virtual Index newest_timeindex() const
+    {
+        std::unique_lock<osi::Mutex> lock(*mutex_);
+        while(newest_timeindex_ < oldest_timeindex_)
+        {
+            condition_->wait(lock);
+        }
+
+        return newest_timeindex_;
     }
 
     virtual std::tuple<Type, Index>
