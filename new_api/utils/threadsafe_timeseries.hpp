@@ -14,11 +14,9 @@ public:
     typedef long int Index;
     typedef long double Timestamp;
 
-    virtual std::tuple<Type, Index>
-    operator[](const Index& desired_timeindex) const = 0;
+    virtual Type operator[](Index& desired_timeindex) const = 0;
 
-    virtual std::tuple<Timestamp, Index>
-    timestamp(const Index& desired_timeindex) const = 0;
+    virtual Timestamp timestamp(Index& desired_timeindex) const = 0;
 
     virtual void append(const Type& element) = 0;
 
@@ -27,15 +25,12 @@ public:
     // waits if empty
     virtual Type current_element() const
     {
-        return std::get<0>((*this)[next_timeindex()-1]);
+        Index timeindex = next_timeindex()-1;
+        return (*this)[timeindex];
     }
 
 
 
-    virtual std::tuple<Type, Index> current_element2() const
-    {
-        return (*this)[next_timeindex()-1];
-    }
 
     virtual size_t history_length() const = 0;
 };
@@ -78,13 +73,13 @@ public:
         mutex_ = std::make_shared<osi::Mutex>();
     }
 
-    void tag(const Index& timeindex)
+    virtual void tag(const Index& timeindex)
     {
         std::unique_lock<osi::Mutex> lock(*mutex_);
         tagged_timeindex_ = timeindex;
     }
 
-    bool has_changed_since_tag() const
+    virtual bool has_changed_since_tag() const
     {
         std::unique_lock<osi::Mutex> lock(*mutex_);
         return tagged_timeindex_ != newest_timeindex_;
@@ -101,12 +96,9 @@ public:
         return newest_timeindex_;
     }
 
-    virtual std::tuple<Type, Index>
-    operator[](const Index& desired_timeindex) const
+    virtual Type operator[](Index& timeindex) const
     {
         std::unique_lock<osi::Mutex> lock(*mutex_);
-
-        Index timeindex = desired_timeindex;
 
         while(newest_timeindex_ < timeindex ||
               newest_timeindex_ < oldest_timeindex_)
@@ -121,15 +113,12 @@ public:
         Type element
             = (*history_elements_)[timeindex % history_elements_->size()];
 
-        return std::make_tuple(element, timeindex);
+        return element;
     }
 
-    virtual std::tuple<Timestamp, Index>
-    timestamp(const Index& desired_timeindex) const
+    virtual Timestamp timestamp(Index& timeindex) const
     {
         std::unique_lock<osi::Mutex> lock(*mutex_);
-
-        Index timeindex = desired_timeindex;
 
         while(newest_timeindex_ < timeindex ||
               newest_timeindex_ < oldest_timeindex_)
@@ -144,10 +133,10 @@ public:
         Timestamp timestamp
             = (*history_timestamps_)[timeindex % history_timestamps_->size()];
 
-        return std::make_tuple(timestamp, timeindex);
+        return timestamp;
     }
 
-    void append(const Type& element)
+    virtual void append(const Type& element)
     {
         {
             std::unique_lock<osi::Mutex> lock(*mutex_);
@@ -164,13 +153,13 @@ public:
         condition_->notify_all();
     }
 
-    Index next_timeindex() const
+    virtual Index next_timeindex() const
     {
         std::unique_lock<osi::Mutex> lock(*mutex_);
         return newest_timeindex_ + 1;
     }
 
-    size_t history_length() const
+    virtual size_t history_length() const
     {
         std::unique_lock<osi::Mutex> lock(*mutex_);
         return newest_timeindex_ - oldest_timeindex_ + 1;
@@ -179,48 +168,6 @@ public:
 
 
 
-
-template<typename Type>
-class ThreadsafeLoggingTimeseries:
-        public ThreadsafeTimeseries<
-        std::tuple<Type, ThreadsafeTimeseries<>::Index>>
-{
-public:
-    typedef ThreadsafeTimeseries<Type> LoggedTimeseries;
-    typedef typename ThreadsafeTimeseries<Type>::Index Index;
-
-
-    ThreadsafeLoggingTimeseries(size_t size, Index start_timeindex = 0):
-        ThreadsafeTimeseries< std::tuple<Type, Index>>(size, start_timeindex) {}
-
-    bool has_changed(const LoggedTimeseries& logged_timeseries)
-    {
-        if(logged_timeseries.history_length() == 0)
-        {
-            return false;
-        }
-        if(this->history_length() == 0)
-        {
-            return true;
-        }
-
-        Index current_timeindex = logged_timeseries.next_timeindex() - 1;
-        Index logged_timeindex = std::get<1>(this->current_element());
-
-        return (current_timeindex != logged_timeindex);
-    }
-
-    void update_if_changed(const LoggedTimeseries& logged_timeseries)
-    {
-        if(!this->has_changed(logged_timeseries))
-        {
-            return;
-        }
-
-        this->append(logged_timeseries.current_element2());
-    }
-
-};
 
 
 

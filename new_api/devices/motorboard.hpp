@@ -253,7 +253,7 @@ public:
                 Index timeindex_to_send =
                         new_control.at(control_names[i])->newest_timeindex();
                 controls_to_send[i] =
-                        std::get<0>((*new_control.at(control_names[i]))[timeindex_to_send]);
+                        (*new_control.at(control_names[i]))[timeindex_to_send];
                 new_sent_control.at(control_names[i])
                         ->append(controls_to_send[i]);
             }
@@ -340,8 +340,6 @@ private:
     MapToPointer<IndexTimeseries> new_sent_command_timeindex;
 
 
-    MapToPointer<ThreadsafeLoggingTimeseries<double>> sent_control;
-    MapToPointer<ThreadsafeLoggingTimeseries<MotorboardCommand>> sent_command;
     /// constructor ============================================================
 public:
     template<typename Type>
@@ -374,8 +372,6 @@ public:
         new_sent_control_timeindex  = create_map<IndexTimeseries>(control_names, 1000);
         new_sent_command            = create_map<CommandTimeseries>(command_names, 1000);
         new_sent_command_timeindex  = create_map<IndexTimeseries>(command_names, 1000);
-        sent_control                = create_map<ThreadsafeLoggingTimeseries<double>>(control_names, 1000);
-        sent_command                = create_map<ThreadsafeLoggingTimeseries<MotorboardCommand>>(command_names, 1000);
 
 
 
@@ -464,47 +460,7 @@ private:
         can_bus_->send_if_input_changed();
     }
 
-    void send_controls()
-    {
-        for(auto element : sent_control)
-        {
-            element.second->update_if_changed(*new_control.at(element.first));
-        }
 
-
-        float current_mtr1 = new_control.at("current_target_0")->current_element();
-        float current_mtr2 = new_control.at("current_target_1")->current_element();
-
-        uint8_t data[8];
-        uint32_t q_current1, q_current2;
-
-        // Convert floats to Q24 values
-        q_current1 = float_to_q24(current_mtr1);
-        q_current2 = float_to_q24(current_mtr2);
-
-        // Motor 1
-        data[0] = (q_current1 >> 24) & 0xFF;
-        data[1] = (q_current1 >> 16) & 0xFF;
-        data[2] = (q_current1 >> 8) & 0xFF;
-        data[3] =  q_current1 & 0xFF;
-
-        // Motor 2
-        data[4] = (q_current2 >> 24) & 0xFF;
-        data[5] = (q_current2 >> 16) & 0xFF;
-        data[6] = (q_current2 >> 8) & 0xFF;
-        data[7] =  q_current2 & 0xFF;
-
-        Canframe can_frame;
-        can_frame.id = BLMC_CAN_ID_IqRef;
-        for(size_t i = 0; i < 7; i++)
-        {
-            can_frame.data[i] = data[i];
-        }
-        can_frame.dlc = 8;
-
-        can_bus_->input_frame()->append(can_frame);
-        can_bus_->send_if_input_changed();
-    }
     void send_command()
     {
         MotorboardCommand command = new_command.at("command")->current_element();
@@ -554,13 +510,9 @@ private:
         long int timeindex = can_bus_->output_frame()->next_timeindex();
         while(true)
         {
-
-//            osi::print_to_screen("waiting for can frame with index %d\n", timeindex);
             Canframe can_frame;
-            Index received_timeindex;
-            std::tie(can_frame, received_timeindex)
-                    = (*can_bus_->output_frame())[timeindex];
-
+            Index received_timeindex = timeindex;
+            can_frame = (*can_bus_->output_frame())[received_timeindex];
 
             if(received_timeindex != timeindex)
             {
@@ -568,12 +520,10 @@ private:
                                      "received_timeindex: %d, "
                                      "desired_timeindex: %d\n",
                                      received_timeindex, timeindex);
-
                 exit(-1);
             }
 
             timeindex++;
-//            osi::print_to_screen("received\n");
 
             // convert to measurement ------------------------------------------
             double measurement_0 = qbytes_to_float(can_frame.data.begin());
