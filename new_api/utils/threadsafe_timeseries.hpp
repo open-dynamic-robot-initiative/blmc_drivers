@@ -8,7 +8,7 @@
 #include <utils/timer.hpp>
 #include <utils/os_interface.hpp>
 
-template<typename Type> class ThreadsafeTimeseriesInterface
+template<typename Type = int> class ThreadsafeTimeseriesInterface
 {
 public:
     typedef long int Index;
@@ -28,6 +28,13 @@ public:
     virtual Type current_element() const
     {
         return std::get<0>((*this)[next_timeindex()-1]);
+    }
+
+
+
+    virtual std::tuple<Type, Index> current_element2() const
+    {
+        return (*this)[next_timeindex()-1];
     }
 
     virtual size_t history_length() const = 0;
@@ -141,6 +148,48 @@ public:
         std::unique_lock<osi::Mutex> lock(*mutex_);
         return newest_timeindex_ - oldest_timeindex_ + 1;
     }
+};
+
+
+
+
+template<typename Type>
+class ThreadsafeLoggingTimeseries:
+        public ThreadsafeTimeseries<
+        std::tuple<Type, ThreadsafeTimeseriesInterface<>::Index>>
+{
+public:
+    typedef ThreadsafeTimeseries<Type> LoggedTimeseries;
+    typedef typename ThreadsafeTimeseriesInterface<Type>::Index Index;
+
+
+    bool has_changed(const LoggedTimeseries& logged_timeseries)
+    {
+        if(logged_timeseries.history_length() == 0)
+        {
+            return false;
+        }
+        if(this->history_length() == 0)
+        {
+            return true;
+        }
+
+        Index current_timeindex = logged_timeseries.next_timeindex() - 1;
+        Index logged_timeindex = std::get<1>(this->current_element());
+
+        return (current_timeindex != logged_timeindex);
+    }
+
+    void update_if_changed(const LoggedTimeseries& logged_timeseries)
+    {
+        if(!this->has_changed(logged_timeseries))
+        {
+            return;
+        }
+
+        this->append(logged_timeseries.current_element2());
+    }
+
 };
 
 
