@@ -250,19 +250,25 @@ public:
         bool controls_have_changed = false;
         for(size_t i = 0; i < control_names.size(); i++)
         { 
-            if(new_control.at(control_names[i])->history_length() == 0)
-                break;
-
-            Index current_timeindex =
-                    new_control.at(control_names[i])->next_timeindex() - 1;
-
-            auto sent_timeindex = new_sent_control_timeindex.at(control_names[i]);
-            if(sent_timeindex->history_length() == 0 ||
-                    sent_timeindex->current_element() < current_timeindex)
+            if(sent_control.at(control_names[i])
+                    ->has_changed(*new_control.at(control_names[i])))
             {
-                sent_timeindex->append(current_timeindex);
                 controls_have_changed = true;
             }
+
+//            if(new_control.at(control_names[i])->history_length() == 0)
+//                break;
+
+//            Index current_timeindex =
+//                    new_control.at(control_names[i])->next_timeindex() - 1;
+
+//            auto sent_timeindex = new_sent_control_timeindex.at(control_names[i]);
+//            if(sent_timeindex->history_length() == 0 ||
+//                    sent_timeindex->current_element() < current_timeindex)
+//            {
+//                sent_timeindex->append(current_timeindex);
+//                controls_have_changed = true;
+//            }
         }
         if(controls_have_changed)
         {
@@ -361,7 +367,7 @@ public:
                             create_map<IndexTimeseries>(control_names, 1000),
                             create_map<CommandTimeseries>(command_names, 1000),
                             create_map<IndexTimeseries>(command_names, 1000),
-                            create_map<ThreadsafeLoggingTimeseries<double>>(command_names, 1000),
+                            create_map<ThreadsafeLoggingTimeseries<double>>(control_names, 1000),
                             create_map<ThreadsafeLoggingTimeseries<MotorboardCommand>>(command_names, 1000))
 
     {
@@ -406,6 +412,12 @@ private:
 
     void send_controls()
     {
+        for(auto element : sent_control)
+        {
+            element.second->update_if_changed(*new_control.at(element.first));
+        }
+
+
         float current_mtr1 = new_control.at("current_target_0")->current_element();
         float current_mtr2 = new_control.at("current_target_1")->current_element();
 
