@@ -15,7 +15,7 @@
 class MotorInterface
 {
 public:
-    typedef ThreadsafeTimeseriesInterface<double> ScalarTimeseries;
+    typedef ThreadsafeTimeseries<double> ScalarTimeseries;
 
     /// outputs ================================================================
     std::vector<std::string> measurement_names_ = {"current",

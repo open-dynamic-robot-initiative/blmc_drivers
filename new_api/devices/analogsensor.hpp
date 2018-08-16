@@ -14,7 +14,7 @@
 class AnalogsensorInterface
 {
 public:
-    typedef ThreadsafeTimeseriesInterface<double> ScalarTimeseries;
+    typedef ThreadsafeTimeseries<double> ScalarTimeseries;
 
     virtual std::shared_ptr<const ScalarTimeseries> measurement() const = 0;
 

@@ -42,12 +42,12 @@ public:
 
 
 
-template<typename Type>
+template<typename Type=int>
 class ThreadsafeTimeseries: public ThreadsafeTimeseriesInterface<Type>
 {
 public:
-    typedef typename ThreadsafeTimeseriesInterface<Type>::Index Index;
-    typedef typename ThreadsafeTimeseriesInterface<Type>::Timestamp Timestamp;
+    typedef typename ThreadsafeTimeseries<Type>::Index Index;
+    typedef typename ThreadsafeTimeseries<Type>::Timestamp Timestamp;
 
 
 private:
@@ -156,12 +156,15 @@ public:
 template<typename Type>
 class ThreadsafeLoggingTimeseries:
         public ThreadsafeTimeseries<
-        std::tuple<Type, ThreadsafeTimeseriesInterface<>::Index>>
+        std::tuple<Type, ThreadsafeTimeseries<>::Index>>
 {
 public:
     typedef ThreadsafeTimeseries<Type> LoggedTimeseries;
-    typedef typename ThreadsafeTimeseriesInterface<Type>::Index Index;
+    typedef typename ThreadsafeTimeseries<Type>::Index Index;
 
+
+    ThreadsafeLoggingTimeseries(size_t size, Index start_timeindex = 0):
+        ThreadsafeTimeseries< std::tuple<Type, Index>>(size, start_timeindex) {}
 
     bool has_changed(const LoggedTimeseries& logged_timeseries)
     {

@@ -31,7 +31,7 @@ public:
 class CanbusInterface
 {
 public:
-    typedef ThreadsafeTimeseriesInterface<Canframe> CanframeTimeseries;
+    typedef ThreadsafeTimeseries<Canframe> CanframeTimeseries;
 
     /// output =================================================================
     virtual std::shared_ptr<const CanframeTimeseries> output_frame() const = 0;
@@ -93,9 +93,9 @@ private:
     // attributes --------------------------------------------------------------
     SingletypeThreadsafeObject<CanConnection, 1> can_connection_;
 
-    std::shared_ptr<ThreadsafeTimeseriesInterface<Canframe>> input_;
+    std::shared_ptr<ThreadsafeTimeseries<Canframe>> input_;
     SingletypeThreadsafeObject<long int, 1> input_hash_;
-    std::shared_ptr<ThreadsafeTimeseriesInterface<Canframe>> output_;
+    std::shared_ptr<ThreadsafeTimeseries<Canframe>> output_;
 
     // methods -----------------------------------------------------------------
     static void

@@ -121,12 +121,12 @@ public:
     template<typename Type> using
     MapToPointer = std::map<std::string, std::shared_ptr<Type>>;
 
-    typedef ThreadsafeTimeseriesInterface<double> ScalarTimeseries;
+    typedef ThreadsafeTimeseries<double> ScalarTimeseries;
     typedef ScalarTimeseries::Index Index;
-    typedef ThreadsafeTimeseriesInterface<Index> IndexTimeseries;
+    typedef ThreadsafeTimeseries<Index> IndexTimeseries;
 
-    typedef ThreadsafeTimeseriesInterface<MotorboardStatus> StatusTimeseries;
-    typedef ThreadsafeTimeseriesInterface<MotorboardCommand> CommandTimeseries;
+    typedef ThreadsafeTimeseries<MotorboardStatus> StatusTimeseries;
+    typedef ThreadsafeTimeseries<MotorboardCommand> CommandTimeseries;
 
     /// outputs ================================================================
     const MapToPointer<ScalarTimeseries> new_measurement;
@@ -325,15 +325,15 @@ private:
     /// constructor ============================================================
 public:
     template<typename Type>
-    MapToPointer<ThreadsafeTimeseriesInterface<Type>> create_map(
-                                          const std::vector<std::string>& names,
-                                                          const size_t& history_length)
+    MapToPointer<Type> create_map(
+            const std::vector<std::string>& names,
+            const size_t& history_length)
     {
-        MapToPointer<ThreadsafeTimeseriesInterface<Type>> map;
+        MapToPointer<Type> map;
         for(size_t i = 0; i < names.size(); i++)
         {
             map[names[i]] =
-                   std::make_shared<ThreadsafeTimeseries<Type>>(history_length);
+                    std::make_shared<Type>(history_length);
         }
 
         return map;
@@ -343,14 +343,14 @@ public:
 
     CanMotorboard(std::shared_ptr<CanbusInterface> can_bus):
         can_bus_(can_bus),
-        MotorboardInterface(create_map<double>(measurement_names, 1000),
-                            create_map<MotorboardStatus>(status_names, 1000),
-                            create_map<double>(control_names, 1000),
-                            create_map<MotorboardCommand>(command_names, 1000),
-                            create_map<double>(control_names, 1000),
-                            create_map<Index>(control_names, 1000),
-                            create_map<MotorboardCommand>(command_names, 1000),
-                            create_map<Index>(command_names, 1000))
+        MotorboardInterface(create_map<ScalarTimeseries>(measurement_names, 1000),
+                            create_map<StatusTimeseries>(status_names, 1000),
+                            create_map<ScalarTimeseries>(control_names, 1000),
+                            create_map<CommandTimeseries>(command_names, 1000),
+                            create_map<ScalarTimeseries>(control_names, 1000),
+                            create_map<IndexTimeseries>(control_names, 1000),
+                            create_map<CommandTimeseries>(command_names, 1000),
+                            create_map<IndexTimeseries>(command_names, 1000))
 
     {
         // initialize outputs --------------------------------------------------
