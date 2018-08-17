@@ -52,9 +52,9 @@ public:
             switch(index)
             {
             case current: return board_->measurement(CanMotorboard::current_0);
-            case position: board_->measurement(CanMotorboard::position_0);
-            case velocity: board_->measurement(CanMotorboard::velocity_0);
-            case encoder: board_->measurement(CanMotorboard::encoder_0);
+            case position: return board_->measurement(CanMotorboard::position_0);
+            case velocity: return board_->measurement(CanMotorboard::velocity_0);
+            case encoder: return board_->measurement(CanMotorboard::encoder_0);
             }
         }
         else
@@ -62,9 +62,9 @@ public:
             switch(index)
             {
             case current: return board_->measurement(CanMotorboard::current_1);
-            case position: board_->measurement(CanMotorboard::position_1);
-            case velocity: board_->measurement(CanMotorboard::velocity_1);
-            case encoder: board_->measurement(CanMotorboard::encoder_1);
+            case position: return board_->measurement(CanMotorboard::position_1);
+            case velocity: return board_->measurement(CanMotorboard::velocity_1);
+            case encoder: return board_->measurement(CanMotorboard::encoder_1);
             }
         }
     }
@@ -136,6 +136,10 @@ public:
     {
         double safe_control = std::min(control, max_control_);
         safe_control = std::max(safe_control, -max_control_);
+
+        if(measurement(velocity)->history_length() > 0 &&
+                std::fabs(measurement(velocity)->current_element()) > 0.2)
+            safe_control = 0;
 
         Motor::set_control(safe_control);
     }
