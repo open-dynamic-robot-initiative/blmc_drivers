@@ -219,32 +219,6 @@ public:
             if(element.second->has_changed_since_tag())
                 controls_have_changed = true;
         }
-
-
-
-
-//        for(size_t i = 0; i < control_names.size(); i++)
-//        {
-//            if(sent_control.at(control_names[i])
-//                    ->has_changed(*new_control.at(control_names[i])))
-//            {
-//                controls_have_changed = true;
-//            }
-
-////            if(new_control.at(control_names[i])->history_length() == 0)
-////                break;
-
-////            Index current_timeindex =
-////                    new_control.at(control_names[i])->next_timeindex() - 1;
-
-////            auto sent_timeindex = new_sent_control_timeindex.at(control_names[i]);
-////            if(sent_timeindex->history_length() == 0 ||
-////                    sent_timeindex->current_element() < current_timeindex)
-////            {
-////                sent_timeindex->append(current_timeindex);
-////                controls_have_changed = true;
-////            }
-//        }
         if(controls_have_changed)
         {
             std::array<double, 2> controls_to_send;
@@ -254,32 +228,25 @@ public:
                         new_control.at(control_names[i])->newest_timeindex();
                 controls_to_send[i] =
                         (*new_control.at(control_names[i]))[timeindex_to_send];
+                new_control.at(control_names[i])->tag(timeindex_to_send);
+
                 new_sent_control.at(control_names[i])
                         ->append(controls_to_send[i]);
             }
             send_controls(controls_to_send);
         }
 
-        bool commands_have_changed = false;
-        for(size_t i = 0; i < command_names.size(); i++)
+        if(new_command.at(command_names[0])->has_changed_since_tag())
         {
-            if(new_command.at(command_names[i])->history_length() == 0)
-                break;
+            Index timeindex_to_send =
+                    new_command.at(command_names[0])->newest_timeindex();
+            MotorboardCommand command_to_send =
+                    (*new_command.at(command_names[0]))[timeindex_to_send];
+            new_command.at(command_names[0])->tag(timeindex_to_send);
+            new_sent_command.at(command_names[0])
+                    ->append(command_to_send);
 
-            Index current_timeindex =
-                    new_command.at(command_names[i])->next_timeindex() - 1;
-
-            auto sent_timeindex = new_sent_command_timeindex.at(command_names[i]);
-            if(sent_timeindex->history_length() == 0 ||
-                    sent_timeindex->current_element() < current_timeindex)
-            {
-                sent_timeindex->append(current_timeindex);
-                commands_have_changed = true;
-            }
-        }
-        if(commands_have_changed)
-        {
-            send_command();
+            send_command(command_to_send);
         }
     }
 
@@ -287,20 +254,20 @@ public:
     // todo: this should go away
     void enable()
     {
-        send_command(MotorboardCommand(MotorboardCommand::IDs::ENABLE_SYS,
+        append_and_send_command(MotorboardCommand(MotorboardCommand::IDs::ENABLE_SYS,
                                        MotorboardCommand::Contents::ENABLE));
-        send_command(MotorboardCommand(MotorboardCommand::IDs::SEND_ALL,
+        append_and_send_command(MotorboardCommand(MotorboardCommand::IDs::SEND_ALL,
                                        MotorboardCommand::Contents::ENABLE));
-        send_command(MotorboardCommand(MotorboardCommand::IDs::ENABLE_MTR1,
+        append_and_send_command(MotorboardCommand(MotorboardCommand::IDs::ENABLE_MTR1,
                                        MotorboardCommand::Contents::ENABLE));
-        send_command(MotorboardCommand(MotorboardCommand::IDs::ENABLE_MTR2,
+        append_and_send_command(MotorboardCommand(MotorboardCommand::IDs::ENABLE_MTR2,
                                        MotorboardCommand::Contents::ENABLE));
-        send_command(MotorboardCommand(MotorboardCommand::IDs::SET_CAN_RECV_TIMEOUT,
+        append_and_send_command(MotorboardCommand(MotorboardCommand::IDs::SET_CAN_RECV_TIMEOUT,
                                                       100));
     }
 
 private:
-    void send_command(const MotorboardCommand& command)
+    void append_and_send_command(const MotorboardCommand& command)
     {
         new_command.at("command")->append(command);
         send_if_input_changed();
@@ -396,7 +363,7 @@ public:
 
     ~CanMotorboard()
     {
-        send_command(MotorboardCommand(MotorboardCommand::IDs::ENABLE_SYS,
+        append_and_send_command(MotorboardCommand(MotorboardCommand::IDs::ENABLE_SYS,
                                        MotorboardCommand::Contents::DISABLE));
     }
 
@@ -461,13 +428,10 @@ private:
     }
 
 
-    void send_command()
+    void send_command(MotorboardCommand command)
     {
-        MotorboardCommand command = new_command.at("command")->current_element();
-
         uint32_t id = command.id_;
         int32_t content = command.content_;
-
 
         uint8_t data[8];
 
