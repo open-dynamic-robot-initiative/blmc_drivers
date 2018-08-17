@@ -131,6 +131,21 @@ public:
     template<typename Type> using
     Ptr = std::shared_ptr<Type>;
 
+
+    enum class Measurement {current_0, current_1,
+                            position_0, position_1,
+                            velocity_0, velocity_1,
+                            analog_0, analog_1,
+                            encoder_0, encoder_1};
+
+    enum class Status {board_status};
+
+    enum class Control {current_0, current_1};
+
+    enum class Command {board_command};
+
+
+
     const std::vector<std::string> measurement_names = {"current_0",
                                                         "current_1",
                                                         "position_0",
