@@ -154,16 +154,18 @@ public:
     virtual Ptr<const StatusTimeseries> status(const int& index = 0) const = 0;
 
     /// inputs =================================================================
-    virtual Ptr<ScalarTimeseries> control(const int& index = 0) = 0;
-    virtual Ptr<CommandTimeseries> command(const int& index = 0) = 0;
-
-    virtual void send_if_input_changed() = 0;
+    virtual Ptr<const ScalarTimeseries> control(const int& index = 0) const = 0;
+    virtual Ptr<const CommandTimeseries> command(const int& index = 0) const = 0;
 
     /// log ====================================================================
-    virtual Ptr<const ScalarTimeseries> sent_control(const int& index = 0) = 0;
-    virtual Ptr<const CommandTimeseries> sent_command(const int& index = 0) = 0;
+    virtual Ptr<const ScalarTimeseries> sent_control(const int& index = 0) const = 0;
+    virtual Ptr<const CommandTimeseries> sent_command(const int& index = 0) const = 0;
 
     /// ========================================================================
+    virtual void set_control(const double& control, const int& index = 0) = 0;
+    virtual void set_command(const MotorboardCommand& command, const int& index = 0) = 0;
+
+    virtual void send_if_input_changed() = 0;
 
     virtual void print_status() = 0;
 
@@ -189,14 +191,36 @@ public:
     }
 
     /// inputs =================================================================
-    virtual std::shared_ptr<ScalarTimeseries> control(const int& index = 0)
+    virtual std::shared_ptr<const ScalarTimeseries> control(const int& index = 0) const
     {
         return control_[index];
     }
-    virtual std::shared_ptr<CommandTimeseries> command(const int& index = 0)
+    virtual std::shared_ptr<const CommandTimeseries> command(const int& index = 0) const
     {
         return command_[index];
     }
+    /// log ====================================================================
+    virtual Ptr<const ScalarTimeseries> sent_control(const int& index = 0) const
+    {
+        return control_[index];
+    }
+
+    virtual Ptr<const CommandTimeseries> sent_command(const int& index = 0) const
+    {
+        return command_[index];
+    }
+
+    /// ========================================================================
+    virtual void set_control(const double& control, const int& index = 0)
+    {
+        control_[index]->append(control);
+    }
+
+    virtual void set_command(const MotorboardCommand& command, const int& index = 0)
+    {
+        command_[index]->append(command);
+    }
+
     virtual void send_if_input_changed()
     {
         // initialize outputs --------------------------------------------------
@@ -232,18 +256,7 @@ public:
         }
     }
 
-    /// log ====================================================================
-    virtual Ptr<const ScalarTimeseries> sent_control(const int& index = 0)
-    {
-        return control_[index];
-    }
 
-    virtual Ptr<const CommandTimeseries> sent_command(const int& index = 0)
-    {
-        return command_[index];
-    }
-
-    /// ========================================================================
     // todo: this should go away
     void enable()
     {

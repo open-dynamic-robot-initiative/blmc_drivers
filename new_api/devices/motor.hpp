@@ -18,48 +18,101 @@ public:
     typedef ThreadsafeTimeseries<double> ScalarTimeseries;
 
     enum Measurement {current, position, velocity, encoder, measurement_count};
-    enum Control {current_target, control_count};
 
     /// outputs ================================================================
     virtual std::shared_ptr<const ScalarTimeseries> measurement(const size_t& index = 0) const = 0;
 
     /// inputs =================================================================
-    virtual std::shared_ptr<ScalarTimeseries> control(const size_t& index = 0) = 0;
-    virtual void send_if_input_changed() = 0;
+    virtual std::shared_ptr<const ScalarTimeseries> control() const = 0;
 
     /// log ====================================================================
-    virtual std::shared_ptr<const ScalarTimeseries> sent_control(const size_t& index = 0) const = 0;
+    virtual std::shared_ptr<const ScalarTimeseries> sent_control() const = 0;
 
     /// ========================================================================
-    ///
+    virtual void set_control(const double& control) = 0;
+    virtual void set_command(const MotorboardCommand& command) = 0;
+
+    virtual void send_if_input_changed() = 0;
+
     virtual ~MotorInterface() {}
 };
 
 class Motor: public MotorInterface
 {
-    std::map<std::string, std::string> motor_to_board_name_;
-
-    std::vector<size_t> motor_to_board_index_;
-
     std::shared_ptr<CanMotorboard> board_;
-
+    bool motor_id_;
 
     std::vector<std::shared_ptr<const ThreadsafeTimeseries<double>>> measurement_;
-    std::vector<std::shared_ptr<ThreadsafeTimeseries<double>>> control_;
+    std::vector<std::shared_ptr<const ThreadsafeTimeseries<double>>> control_;
     std::vector<std::shared_ptr<const ThreadsafeTimeseries<double>>> sent_control_;
-
 
 public:
     /// outputs ================================================================
     virtual std::shared_ptr<const ScalarTimeseries> measurement(const size_t& index = 0) const
     {
-        return measurement_[index];
+        if(motor_id_ == 0)
+        {
+            switch(index)
+            {
+            case current: return board_->measurement(CanMotorboard::current_0);
+            case position: board_->measurement(CanMotorboard::position_0);
+            case velocity: board_->measurement(CanMotorboard::velocity_0);
+            case encoder: board_->measurement(CanMotorboard::encoder_0);
+            }
+        }
+        else
+        {
+            switch(index)
+            {
+            case current: return board_->measurement(CanMotorboard::current_1);
+            case position: board_->measurement(CanMotorboard::position_1);
+            case velocity: board_->measurement(CanMotorboard::velocity_1);
+            case encoder: board_->measurement(CanMotorboard::encoder_1);
+            }
+        }
     }
 
     /// inputs =================================================================
-    virtual std::shared_ptr<ScalarTimeseries> control(const size_t& index = 0)
+    virtual std::shared_ptr<const ScalarTimeseries> control() const
     {
-        return control_[index];
+        if(motor_id_ == 0)
+        {
+            return board_->control(CanMotorboard::current_target_0);
+        }
+        else
+        {
+            return board_->control(CanMotorboard::current_target_1);
+        }
+    }
+
+    /// log ====================================================================
+    virtual std::shared_ptr<const ScalarTimeseries> sent_control() const
+    {
+        if(motor_id_ == 0)
+        {
+           return board_->sent_control(CanMotorboard::current_target_0);
+        }
+        else
+        {
+            return board_->sent_control(CanMotorboard::current_target_1);
+        }    }
+
+    /// ========================================================================
+    virtual void set_control(const double& control)
+    {
+        if(motor_id_ == 0)
+        {
+            board_->set_control(control, MotorboardInterface::current_target_0);
+        }
+        else
+        {
+            board_->set_control(control, MotorboardInterface::current_target_1);
+        }
+    }
+
+    virtual void set_command(const MotorboardCommand& command)
+    {
+        board_->set_command(command);
     }
 
     virtual void send_if_input_changed()
@@ -67,55 +120,10 @@ public:
         board_->send_if_input_changed();
     }
 
-    /// log ====================================================================
-    virtual std::shared_ptr<const ScalarTimeseries> sent_control(const size_t& index = 0) const
-    {
-        return sent_control_[index];
-    }
-
-    /// ========================================================================
-
 
     Motor(std::shared_ptr<CanMotorboard> board, bool motor_id):
-        board_(board)
-    {
-        measurement_.resize(measurement_count);
-        if(motor_id == 0)
-        {
-            measurement_[current] = board_->measurement(CanMotorboard::current_0);
-            measurement_[position] = board_->measurement(CanMotorboard::position_0);
-            measurement_[velocity] = board_->measurement(CanMotorboard::velocity_0);
-            measurement_[encoder] = board_->measurement(CanMotorboard::encoder_0);
-        }
-        else
-        {
-            measurement_[current] = board_->measurement(CanMotorboard::current_1);
-            measurement_[position] = board_->measurement(CanMotorboard::position_1);
-            measurement_[velocity] = board_->measurement(CanMotorboard::velocity_1);
-            measurement_[encoder] = board_->measurement(CanMotorboard::encoder_1);
-        }
-
-
-        sent_control_.resize(control_count);
-        if(motor_id == 0)
-        {
-            sent_control_[current_target] = board_->sent_control(CanMotorboard::current_target_0);
-        }
-        else
-        {
-            sent_control_[current_target] = board_->sent_control(CanMotorboard::current_target_1);
-        }
-
-        control_.resize(control_count);
-        if(motor_id == 0)
-        {
-            control_[current_target] = board_->control(CanMotorboard::current_target_0);
-        }
-        else
-        {
-            control_[current_target] = board_->control(CanMotorboard::current_target_1);
-        }
-    }
+        board_(board),
+        motor_id_(motor_id) { }
 };
 
 

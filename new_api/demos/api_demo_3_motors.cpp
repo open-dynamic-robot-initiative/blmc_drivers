@@ -35,7 +35,7 @@ public:
             double current_target = 2 * (analog_measurement - 0.5);
 //            motor_->send_control(StampedData<double>(current_target, -1, -1), "current_target");
 
-            motor_->control()->append(current_target);
+            motor_->set_control(current_target);
             motor_->send_if_input_changed();
 
             // print -----------------------------------------------------------
