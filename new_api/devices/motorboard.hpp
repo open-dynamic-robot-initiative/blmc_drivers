@@ -128,54 +128,45 @@ public:
     typedef ThreadsafeTimeseries<MotorboardStatus> StatusTimeseries;
     typedef ThreadsafeTimeseries<MotorboardCommand> CommandTimeseries;
 
+    template<typename Type> using
+    Ptr = std::shared_ptr<Type>;
 
+    const std::vector<std::string> measurement_names = {"current_0",
+                                                        "current_1",
+                                                        "position_0",
+                                                        "position_1",
+                                                        "velocity_0",
+                                                        "velocity_1",
+                                                        "analog_0",
+                                                        "analog_1",
+                                                        "encoder_0",
+                                                        "encoder_1"};
+    const std::vector<std::string> status_names = {"status"};
+    const std::vector<std::string> control_names = {"current_target_0",
+                                                    "current_target_1"};
+    const std::vector<std::string> command_names = {"command"};
 
-
-
-
-
-
-
-
-
-    virtual std::shared_ptr<const ScalarTimeseries>
-    measurement(std::string name) const = 0;
-    virtual std::shared_ptr<const StatusTimeseries> status() const = 0;
+    /// outputs ================================================================
+    virtual Ptr<const ScalarTimeseries> measurement(std::string name) const = 0;
+    virtual Ptr<const StatusTimeseries> status(std::string name = "status") const = 0;
 
     /// inputs =================================================================
-
-    virtual std::shared_ptr<ScalarTimeseries> control(std::string name) = 0;
-    virtual std::shared_ptr<CommandTimeseries> command() = 0;
+    virtual Ptr<ScalarTimeseries> control(std::string name) = 0;
+    virtual Ptr<CommandTimeseries> command(std::string name = "command") = 0;
 
     virtual void send_if_input_changed() = 0;
 
+    /// log ====================================================================
+    virtual Ptr<const ScalarTimeseries> sent_control(std::string name) = 0;
+    virtual Ptr<const CommandTimeseries> sent_command(std::string name = "command") = 0;
+
     /// ========================================================================
+
     virtual void print_status() = 0;
 
     virtual ~MotorboardInterface() {}
-
-
-    static const std::vector<std::string> measurement_names;
-    static const std::vector<std::string> status_names;
-    static const std::vector<std::string> control_names;
-    static const std::vector<std::string> command_names;
 };
-const std::vector<std::string> MotorboardInterface::measurement_names =
-{"current_0",
- "current_1",
- "position_0",
- "position_1",
- "velocity_0",
- "velocity_1",
- "analog_0",
- "analog_1",
- "encoder_0",
- "encoder_1"};
-const std::vector<std::string> MotorboardInterface::status_names = {"status"};
-const std::vector<std::string> MotorboardInterface::control_names =
-{"current_target_0",
- "current_target_1"};
-const std::vector<std::string> MotorboardInterface::command_names = {"command"};
+
 
 
 
@@ -183,38 +174,33 @@ const std::vector<std::string> MotorboardInterface::command_names = {"command"};
 
 class CanMotorboard: public  MotorboardInterface
 {
-
-
-
-
-    /// public interface =======================================================
 public:
     /// outputs ================================================================
     virtual std::shared_ptr<const ScalarTimeseries>
     measurement(std::string name) const
     {
-        return new_measurement.at(name);
+        return measurement_.at(name);
     }
-    virtual std::shared_ptr<const StatusTimeseries> status() const
+    virtual std::shared_ptr<const StatusTimeseries> status(std::string name = "status") const
     {
-        return new_status.at("status");
+        return status_.at(name);
     }
 
     /// inputs =================================================================
     virtual std::shared_ptr<ScalarTimeseries> control(std::string name)
     {
-        return new_control.at(name);
+        return control_.at(name);
     }
-    virtual std::shared_ptr<CommandTimeseries> command()
+    virtual std::shared_ptr<CommandTimeseries> command(std::string name = "command")
     {
-        return new_command.at("command");
+        return command_.at(name);
     }
     virtual void send_if_input_changed()
     {
         // initialize outputs --------------------------------------------------
         bool controls_have_changed = false;
 
-        for(auto element : new_control)
+        for(auto element : control_)
         {
             if(element.second->has_changed_since_tag())
                 controls_have_changed = true;
@@ -225,29 +211,40 @@ public:
             for(size_t i = 0; i < control_names.size(); i++)
             {
                 Index timeindex_to_send =
-                        new_control.at(control_names[i])->newest_timeindex();
+                        control_.at(control_names[i])->newest_timeindex();
                 controls_to_send[i] =
-                        (*new_control.at(control_names[i]))[timeindex_to_send];
-                new_control.at(control_names[i])->tag(timeindex_to_send);
+                        (*control_.at(control_names[i]))[timeindex_to_send];
+                control_.at(control_names[i])->tag(timeindex_to_send);
 
-                new_sent_control.at(control_names[i])
+                sent_control_.at(control_names[i])
                         ->append(controls_to_send[i]);
             }
             send_controls(controls_to_send);
         }
 
-        if(new_command.at(command_names[0])->has_changed_since_tag())
+        if(command_.at(command_names[0])->has_changed_since_tag())
         {
             Index timeindex_to_send =
-                    new_command.at(command_names[0])->newest_timeindex();
+                    command_.at(command_names[0])->newest_timeindex();
             MotorboardCommand command_to_send =
-                    (*new_command.at(command_names[0]))[timeindex_to_send];
-            new_command.at(command_names[0])->tag(timeindex_to_send);
-            new_sent_command.at(command_names[0])
+                    (*command_.at(command_names[0]))[timeindex_to_send];
+            command_.at(command_names[0])->tag(timeindex_to_send);
+            sent_command_.at(command_names[0])
                     ->append(command_to_send);
 
             send_command(command_to_send);
         }
+    }
+
+    /// log ====================================================================
+    virtual Ptr<const ScalarTimeseries> sent_control(std::string name)
+    {
+        return control_.at(name);
+    }
+
+    virtual Ptr<const CommandTimeseries> sent_command(std::string name = "command")
+    {
+        return command_.at(name);
     }
 
     /// ========================================================================
@@ -269,15 +266,13 @@ public:
 private:
     void append_and_send_command(const MotorboardCommand& command)
     {
-        new_command.at("command")->append(command);
+        command_.at("command")->append(command);
         send_if_input_changed();
     }
 
     /// private members ========================================================
 private:
     std::shared_ptr<CanbusInterface> can_bus_;
-
-    SingletypeThreadsafeObject<long int, 1> command_hash_;
 
     enum CanframeIDs
     {
@@ -291,20 +286,17 @@ private:
         ENC_INDEX = 0x60
     };
 
-
     /// outputs ================================================================
-    MapToPointer<ScalarTimeseries> new_measurement;
-    MapToPointer<StatusTimeseries> new_status;
+    MapToPointer<ScalarTimeseries> measurement_;
+    MapToPointer<StatusTimeseries> status_;
 
     /// inputs =================================================================
-    MapToPointer<ScalarTimeseries> new_control;
-    MapToPointer<CommandTimeseries> new_command;
+    MapToPointer<ScalarTimeseries> control_;
+    MapToPointer<CommandTimeseries> command_;
 
     /// log ====================================================================
-    MapToPointer<ScalarTimeseries> new_sent_control;
-    MapToPointer<IndexTimeseries> new_sent_control_timeindex;
-    MapToPointer<CommandTimeseries> new_sent_command;
-    MapToPointer<IndexTimeseries> new_sent_command_timeindex;
+    MapToPointer<ScalarTimeseries> sent_control_;
+    MapToPointer<CommandTimeseries> sent_command_;
 
 
     /// constructor ============================================================
@@ -329,34 +321,16 @@ public:
     CanMotorboard(std::shared_ptr<CanbusInterface> can_bus):
         can_bus_(can_bus)
     {
-
-
-        new_measurement             = create_map<ScalarTimeseries>(measurement_names, 1000);
-        new_status                  = create_map<StatusTimeseries>(status_names, 1000);
-        new_control                 = create_map<ScalarTimeseries>(control_names, 1000);
-        new_command                 = create_map<CommandTimeseries>(command_names, 1000);
-        new_sent_control            = create_map<ScalarTimeseries>(control_names, 1000);
-        new_sent_control_timeindex  = create_map<IndexTimeseries>(control_names, 1000);
-        new_sent_command            = create_map<CommandTimeseries>(command_names, 1000);
-        new_sent_command_timeindex  = create_map<IndexTimeseries>(command_names, 1000);
-
-
-
-
-
-
-
-
-
-
-
+        measurement_  = create_map<ScalarTimeseries>(measurement_names, 1000);
+        status_       = create_map<StatusTimeseries>(status_names, 1000);
+        control_      = create_map<ScalarTimeseries>(control_names, 1000);
+        command_      = create_map<CommandTimeseries>(command_names, 1000);
+        sent_control_ = create_map<ScalarTimeseries>(control_names, 1000);
+        sent_command_ = create_map<CommandTimeseries>(command_names, 1000);
 
         // initialize outputs --------------------------------------------------
         for(size_t i = 0; i < control_names.size(); i++)
-        {
-            new_control.at(control_names[i])->append(0);
-        }
-        command_hash_.set(new_command.at("command")->next_timeindex());
+            control_.at(control_names[i])->append(0);
 
         osi::start_thread(&CanMotorboard::loop, this);
     }
@@ -497,20 +471,20 @@ private:
             switch(can_frame.id)
             {
             case CanframeIDs::Iq:
-                new_measurement.at("current_0")->append(measurement_0);
-                new_measurement.at("current_1")->append(measurement_1);
+                measurement_.at("current_0")->append(measurement_0);
+                measurement_.at("current_1")->append(measurement_1);
                 break;
             case CanframeIDs::POS:
-                new_measurement.at("position_0")->append(measurement_0);
-                new_measurement.at("position_1")->append(measurement_1);
+                measurement_.at("position_0")->append(measurement_0);
+                measurement_.at("position_1")->append(measurement_1);
                 break;
             case CanframeIDs::SPEED:
-                new_measurement.at("velocity_0")->append(measurement_0);
-                new_measurement.at("velocity_1")->append(measurement_1);
+                measurement_.at("velocity_0")->append(measurement_0);
+                measurement_.at("velocity_1")->append(measurement_1);
                 break;
             case CanframeIDs::ADC6:
-                new_measurement.at("analog_0")->append(measurement_0);
-                new_measurement.at("analog_1")->append(measurement_1);
+                measurement_.at("analog_0")->append(measurement_0);
+                measurement_.at("analog_1")->append(measurement_1);
                 break;
             case CanframeIDs::ENC_INDEX:
             {
@@ -519,11 +493,11 @@ private:
                 uint8_t motor_index = can_frame.data[4];
                 if(motor_index == 0)
                 {
-                    new_measurement.at("encoder_0")->append(measurement_0);
+                    measurement_.at("encoder_0")->append(measurement_0);
                 }
                 else if(motor_index == 1)
                 {
-                    new_measurement.at("encoder_1")->append(measurement_0);
+                    measurement_.at("encoder_1")->append(measurement_0);
                 }
                 else
                 {
@@ -544,7 +518,7 @@ private:
                 status.motor2_ready   = data >> 4;
                 status.error_code     = data >> 5;
 
-                new_status.at("status")->append(status);
+                status_.at("status")->append(status);
                 break;
             }
             }
@@ -566,17 +540,17 @@ private:
         {
             osi::print_to_screen("%s: ---------------------------------\n",
                                  measurement_names[i].c_str());
-            if(new_measurement.at(measurement_names[i])->history_length() > 0)
+            if(measurement_.at(measurement_names[i])->history_length() > 0)
             {
                 double measurement =
-                        new_measurement.at(measurement_names[i])->current_element();
+                        measurement_.at(measurement_names[i])->current_element();
                 osi::print_to_screen("value %f:\n", measurement);
             }
         }
 
         osi::print_to_screen("status: ---------------------------------\n");
-        if(new_status.at("status")->history_length() > 0)
-            new_status.at("status")->current_element().print();
+        if(status_.at("status")->history_length() > 0)
+            status_.at("status")->current_element().print();
 
         osi::print_to_screen("inputs ======================================\n");
 
@@ -584,17 +558,17 @@ private:
         {
             osi::print_to_screen("%s: ---------------------------------\n",
                                  control_names[i].c_str());
-            if(new_control.at(control_names[i])->history_length() > 0)
+            if(control_.at(control_names[i])->history_length() > 0)
             {
                 double control =
-                        new_control.at(control_names[i])->current_element();
+                        control_.at(control_names[i])->current_element();
                 osi::print_to_screen("value %f:\n", control);
             }
         }
 
         osi::print_to_screen("command: ---------------------------------\n");
-        if(new_command.at("command")->history_length() > 0)
-            new_command.at("command")->current_element().print();
+        if(command_.at("command")->history_length() > 0)
+            command_.at("command")->current_element().print();
     }
 
     unsigned id_to_index(unsigned motor_id)
