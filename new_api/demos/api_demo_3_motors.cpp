@@ -32,8 +32,7 @@ public:
         while(true)
         {
             double analog_measurement = analog_sensor_->measurement()->current_element();
-            double current_target = 2 * (analog_measurement - 0.5);
-//            motor_->send_control(StampedData<double>(current_target, -1, -1), "current_target");
+            double current_target = 4 * (analog_measurement - 0.5);
 
             motor_->set_control(current_target);
             motor_->send_if_input_changed();
@@ -41,10 +40,10 @@ public:
             // print -----------------------------------------------------------
             Timer<>::sleep_ms(1);
             time_logger.end_and_start_interval();
-//            if ((time_logger.count() % 1000) == 0)
-//            {
-//                osi::print_to_screen("sending current: %f\n", current_target);
-//            }
+            if ((time_logger.count() % 1000) == 0)
+            {
+                osi::print_to_screen("sending current: %f\n", current_target);
+            }
         }
     }
 };
@@ -69,9 +68,9 @@ int main(int argc, char **argv)
     auto board2 = std::make_shared<CanMotorboard>(can_bus2);
 
     // create motors and sensors ---------------------------------------------
-    auto motor_1 = std::make_shared<Motor>(board1, BLMC_MTR1);
-    auto motor_2 = std::make_shared<Motor>(board1, BLMC_MTR2);
-    auto motor_3 = std::make_shared<Motor>(board2, BLMC_MTR1);
+    auto motor_1 = std::make_shared<SafeMotor>(board1, BLMC_MTR1);
+    auto motor_2 = std::make_shared<SafeMotor>(board1, BLMC_MTR2);
+    auto motor_3 = std::make_shared<SafeMotor>(board2, BLMC_MTR1);
 
     auto analog_sensor_1 = std::make_shared<Analogsensor>(board1, BLMC_ADC_A);
     auto analog_sensor_2 = std::make_shared<Analogsensor>(board1, BLMC_ADC_B);

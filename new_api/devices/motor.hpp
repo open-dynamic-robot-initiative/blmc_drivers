@@ -39,12 +39,9 @@ public:
 
 class Motor: public MotorInterface
 {
+protected:
     std::shared_ptr<CanMotorboard> board_;
     bool motor_id_;
-
-    std::vector<std::shared_ptr<const ThreadsafeTimeseries<double>>> measurement_;
-    std::vector<std::shared_ptr<const ThreadsafeTimeseries<double>>> control_;
-    std::vector<std::shared_ptr<const ThreadsafeTimeseries<double>>> sent_control_;
 
 public:
     /// outputs ================================================================
@@ -124,8 +121,33 @@ public:
     Motor(std::shared_ptr<CanMotorboard> board, bool motor_id):
         board_(board),
         motor_id_(motor_id) { }
+
+    virtual ~Motor() { }
 };
 
+
+class SafeMotor: public Motor
+{
+    double max_control_ = 1.0;
+public:
+    std::shared_ptr<ScalarTimeseries> control_;
+
+    virtual void set_control(const double& control)
+    {
+        double safe_control = std::min(control, max_control_);
+        safe_control = std::max(safe_control, -max_control_);
+
+        Motor::set_control(safe_control);
+    }
+
+    virtual std::shared_ptr<const ScalarTimeseries> control() const
+    {
+        return control_;
+    }
+
+    SafeMotor(std::shared_ptr<CanMotorboard> board, bool motor_id):
+        Motor(board, motor_id) { }
+};
 
 //class MotorTemperature
 //{
