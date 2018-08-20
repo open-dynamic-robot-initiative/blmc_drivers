@@ -90,14 +90,6 @@ public:
 
             send_frame(frame_to_send);
         }
-
-//        long int new_hash = input_->next_timeindex();
-//        if(new_hash != input_hash_.get())
-//        {
-
-//            send_frame(input_->current_element());
-//            input_hash_.set(new_hash);
-//        }
     }
     /// ========================================================================
 
@@ -107,7 +99,6 @@ public:
         input_ = std::make_shared<ThreadsafeTimeseries<Canframe>>(1000);
         sent_input_ = std::make_shared<ThreadsafeTimeseries<Canframe>>(1000);
         output_ = std::make_shared<ThreadsafeTimeseries<Canframe>>(1000);
-        input_hash_.set(input_->next_timeindex());
 
         can_connection_.set(setup_can(can_interface_name, 0));
 
@@ -127,7 +118,6 @@ private:
     std::shared_ptr<ThreadsafeTimeseries<Canframe>> input_;
     std::shared_ptr<ThreadsafeTimeseries<Canframe>> sent_input_;
 
-    SingletypeThreadsafeObject<long int, 1> input_hash_;
     std::shared_ptr<ThreadsafeTimeseries<Canframe>> output_;
 
     // methods -----------------------------------------------------------------

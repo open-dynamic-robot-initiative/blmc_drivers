@@ -41,7 +41,7 @@ public:
 class Motor: public MotorInterface
 {
 protected:
-    std::shared_ptr<CanMotorboard> board_;
+    std::shared_ptr<MotorboardInterface> board_;
     bool motor_id_;
 
 public:
@@ -53,20 +53,20 @@ public:
         {
             switch(index)
             {
-            case current: return board_->measurement(CanMotorboard::current_0);
-            case position: return board_->measurement(CanMotorboard::position_0);
-            case velocity: return board_->measurement(CanMotorboard::velocity_0);
-            case encoder: return board_->measurement(CanMotorboard::encoder_0);
+            case current: return board_->measurement(MotorboardInterface::current_0);
+            case position: return board_->measurement(MotorboardInterface::position_0);
+            case velocity: return board_->measurement(MotorboardInterface::velocity_0);
+            case encoder: return board_->measurement(MotorboardInterface::encoder_0);
             }
         }
         else
         {
             switch(index)
             {
-            case current: return board_->measurement(CanMotorboard::current_1);
-            case position: return board_->measurement(CanMotorboard::position_1);
-            case velocity: return board_->measurement(CanMotorboard::velocity_1);
-            case encoder: return board_->measurement(CanMotorboard::encoder_1);
+            case current: return board_->measurement(MotorboardInterface::current_1);
+            case position: return board_->measurement(MotorboardInterface::position_1);
+            case velocity: return board_->measurement(MotorboardInterface::velocity_1);
+            case encoder: return board_->measurement(MotorboardInterface::encoder_1);
             }
         }
     }
@@ -76,11 +76,11 @@ public:
     {
         if(motor_id_ == 0)
         {
-            return board_->control(CanMotorboard::current_target_0);
+            return board_->control(MotorboardInterface::current_target_0);
         }
         else
         {
-            return board_->control(CanMotorboard::current_target_1);
+            return board_->control(MotorboardInterface::current_target_1);
         }
     }
 
@@ -89,11 +89,11 @@ public:
     {
         if(motor_id_ == 0)
         {
-           return board_->sent_control(CanMotorboard::current_target_0);
+           return board_->sent_control(MotorboardInterface::current_target_0);
         }
         else
         {
-            return board_->sent_control(CanMotorboard::current_target_1);
+            return board_->sent_control(MotorboardInterface::current_target_1);
         }
     }
 
@@ -121,7 +121,7 @@ public:
     }
 
 
-    Motor(std::shared_ptr<CanMotorboard> board, bool motor_id):
+    Motor(std::shared_ptr<MotorboardInterface> board, bool motor_id):
         board_(board),
         motor_id_(motor_id) { }
 
@@ -157,7 +157,7 @@ public:
         return control_;
     }
 
-    SafeMotor(std::shared_ptr<CanMotorboard> board, bool motor_id):
+    SafeMotor(std::shared_ptr<MotorboardInterface> board, bool motor_id):
         Motor(board, motor_id)
     {
         control_ = std::make_shared<ScalarTimeseries>(1000);
@@ -198,7 +198,7 @@ public:
 //    MotorTemperature temperature_;
 
 //public:
-//    SafeMotor(std::shared_ptr<CanMotorboard> board, bool motor_id):
+//    SafeMotor(std::shared_ptr<MotorboardInterface> board, bool motor_id):
 //        Motor(board, motor_id), temperature_(30)
 //    {
 //        osi::start_thread(&SafeMotor::loop, this);
