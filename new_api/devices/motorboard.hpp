@@ -118,12 +118,6 @@ std::map<std::string, Output> copy_map(const std::map<std::string, Input>& input
 class MotorboardInterface
 {
 public:
-    template<typename Type> using
-    MapToPointer = std::map<std::string, std::shared_ptr<Type>>;
-
-    template<typename Type> using
-    VectorOfPointers = std::vector<std::shared_ptr<Type>>;
-
     typedef ThreadsafeTimeseries<double> ScalarTimeseries;
     typedef ScalarTimeseries::Index Index;
     typedef ThreadsafeTimeseries<Index> IndexTimeseries;
@@ -132,7 +126,6 @@ public:
     typedef ThreadsafeTimeseries<MotorboardCommand> CommandTimeseries;
 
     template<typename Type> using Ptr = std::shared_ptr<Type>;
-
     template<typename Type> using Vector = std::vector<Type>;
 
 
@@ -149,23 +142,25 @@ public:
 
     enum Command {board_command, command_count};
 
-    /// outputs ================================================================
+    /// getters ================================================================
+    // device outputs ----------------------------------------------------------
     virtual Ptr<const ScalarTimeseries> measurement(const int& index = 0) const = 0;
     virtual Ptr<const StatusTimeseries> status(const int& index = 0) const = 0;
 
-    /// inputs =================================================================
+    // input logs --------------------------------------------------------------
     virtual Ptr<const ScalarTimeseries> control(const int& index = 0) const = 0;
     virtual Ptr<const CommandTimeseries> command(const int& index = 0) const = 0;
-
-    /// log ====================================================================
     virtual Ptr<const ScalarTimeseries> sent_control(const int& index = 0) const = 0;
     virtual Ptr<const CommandTimeseries> sent_command(const int& index = 0) const = 0;
 
-    /// ========================================================================
+    /// setters ================================================================
     virtual void set_control(const double& control, const int& index = 0) = 0;
     virtual void set_command(const MotorboardCommand& command, const int& index = 0) = 0;
 
+    /// sender =================================================================
     virtual void send_if_input_changed() = 0;
+
+    /// ========================================================================
 
     virtual void print_status() = 0;
 
@@ -310,23 +305,6 @@ private:
 
     /// constructor ============================================================
 public:
-    template<typename Type>
-    MapToPointer<Type> create_map(
-            const std::vector<std::string>& names,
-            const size_t& history_length)
-    {
-        MapToPointer<Type> map;
-        for(size_t i = 0; i < names.size(); i++)
-        {
-            map[names[i]] =
-                    std::make_shared<Type>(history_length);
-        }
-
-        return map;
-    }
-
-
-
     template<typename Type> Vector<Ptr<Type>> create_vector_of_pointers(
             const size_t& size,
             const size_t& history_length)
