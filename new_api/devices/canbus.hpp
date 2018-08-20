@@ -33,11 +33,18 @@ class CanbusInterface
 public:
     typedef ThreadsafeTimeseries<Canframe> CanframeTimeseries;
 
-    /// output =================================================================
+    /// getters ================================================================
+    // device outputs ----------------------------------------------------------
     virtual std::shared_ptr<const CanframeTimeseries> output_frame() const = 0;
 
-    /// input ==================================================================
-    virtual std::shared_ptr<CanframeTimeseries> input_frame() = 0;
+    // input logs --------------------------------------------------------------
+    virtual std::shared_ptr<const CanframeTimeseries> input_frame() = 0;
+    virtual std::shared_ptr<const CanframeTimeseries> sent_input_frame() = 0;
+
+    /// setters ================================================================
+    virtual void set_input_frame(const Canframe& input_frame) = 0;
+
+    /// sender =================================================================
     virtual void send_if_input_changed() = 0;
 
     /// ========================================================================
@@ -48,33 +55,57 @@ public:
 class Canbus: public CanbusInterface
 {
 public:
-
-    /// output =================================================================
+    /// getters ================================================================
+    // device outputs ----------------------------------------------------------
     std::shared_ptr<const CanframeTimeseries> output_frame() const
     {
         return output_;
     }
-
-    /// input ==================================================================
-    virtual std::shared_ptr<CanframeTimeseries>  input_frame()
+    // input logs --------------------------------------------------------------
+    virtual std::shared_ptr<const CanframeTimeseries>  input_frame()
     {
         return input_;
     }
-    virtual void send_if_input_changed()
+    virtual std::shared_ptr<const CanframeTimeseries> sent_input_frame()
     {
-        long int new_hash = input_->next_timeindex();
-        if(new_hash != input_hash_.get())
-        {
-
-            send_frame(input_->current_element());
-            input_hash_.set(new_hash);
-        }
+        return sent_input_;
     }
 
+    /// setters ================================================================
+    virtual void set_input_frame(const Canframe& input_frame)
+    {
+        input_->append(input_frame);
+    }
+
+    /// sender =================================================================
+    virtual void send_if_input_changed()
+    {
+        if(input_->has_changed_since_tag())
+        {
+            CanframeTimeseries::Index
+                    timeindex_to_send = input_->newest_timeindex();
+            Canframe frame_to_send = (*input_)[timeindex_to_send];
+            input_->tag(timeindex_to_send);
+            sent_input_->append(frame_to_send);
+
+            send_frame(frame_to_send);
+        }
+
+//        long int new_hash = input_->next_timeindex();
+//        if(new_hash != input_hash_.get())
+//        {
+
+//            send_frame(input_->current_element());
+//            input_hash_.set(new_hash);
+//        }
+    }
     /// ========================================================================
+
+
     Canbus(std::string can_interface_name)
     {
         input_ = std::make_shared<ThreadsafeTimeseries<Canframe>>(1000);
+        sent_input_ = std::make_shared<ThreadsafeTimeseries<Canframe>>(1000);
         output_ = std::make_shared<ThreadsafeTimeseries<Canframe>>(1000);
         input_hash_.set(input_->next_timeindex());
 
@@ -94,6 +125,8 @@ private:
     SingletypeThreadsafeObject<CanConnection, 1> can_connection_;
 
     std::shared_ptr<ThreadsafeTimeseries<Canframe>> input_;
+    std::shared_ptr<ThreadsafeTimeseries<Canframe>> sent_input_;
+
     SingletypeThreadsafeObject<long int, 1> input_hash_;
     std::shared_ptr<ThreadsafeTimeseries<Canframe>> output_;
 

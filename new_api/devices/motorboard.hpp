@@ -97,9 +97,6 @@ public:
     }
 };
 
-
-
-
 template<typename Input, typename Output>
 std::map<std::string, Output> copy_map(const std::map<std::string, Input>& input)
 {
@@ -110,10 +107,6 @@ std::map<std::string, Output> copy_map(const std::map<std::string, Input>& input
         output[element.first] = element.second;
     }
 }
-
-
-
-
 
 class MotorboardInterface
 {
@@ -157,8 +150,6 @@ public:
     virtual void send_if_input_changed() = 0;
 
     /// ========================================================================
-
-    virtual void print_status() = 0;
 
     virtual ~MotorboardInterface() {}
 };
@@ -251,16 +242,21 @@ public:
     // todo: this should go away
     void enable()
     {
-        append_and_send_command(MotorboardCommand(MotorboardCommand::IDs::ENABLE_SYS,
-                                       MotorboardCommand::Contents::ENABLE));
-        append_and_send_command(MotorboardCommand(MotorboardCommand::IDs::SEND_ALL,
-                                       MotorboardCommand::Contents::ENABLE));
-        append_and_send_command(MotorboardCommand(MotorboardCommand::IDs::ENABLE_MTR1,
-                                       MotorboardCommand::Contents::ENABLE));
-        append_and_send_command(MotorboardCommand(MotorboardCommand::IDs::ENABLE_MTR2,
-                                       MotorboardCommand::Contents::ENABLE));
-        append_and_send_command(MotorboardCommand(MotorboardCommand::IDs::SET_CAN_RECV_TIMEOUT,
-                                                      100));
+        append_and_send_command(MotorboardCommand(
+                                    MotorboardCommand::IDs::ENABLE_SYS,
+                                    MotorboardCommand::Contents::ENABLE));
+        append_and_send_command(MotorboardCommand(
+                                    MotorboardCommand::IDs::SEND_ALL,
+                                    MotorboardCommand::Contents::ENABLE));
+        append_and_send_command(MotorboardCommand(
+                                    MotorboardCommand::IDs::ENABLE_MTR1,
+                                    MotorboardCommand::Contents::ENABLE));
+        append_and_send_command(MotorboardCommand(
+                                    MotorboardCommand::IDs::ENABLE_MTR2,
+                                    MotorboardCommand::Contents::ENABLE));
+        append_and_send_command(MotorboardCommand(
+                                    MotorboardCommand::IDs::SET_CAN_RECV_TIMEOUT,
+                                    100));
     }
 
 private:
@@ -395,7 +391,7 @@ private:
         }
         can_frame.dlc = 8;
 
-        can_bus_->input_frame()->append(can_frame);
+        can_bus_->set_input_frame(can_frame);
         can_bus_->send_if_input_changed();
     }
 
@@ -427,7 +423,7 @@ private:
         }
         can_frame.dlc = 8;
 
-        can_bus_->input_frame()->append(can_frame);
+        can_bus_->set_input_frame(can_frame);
         can_bus_->send_if_input_changed();
     }
 
