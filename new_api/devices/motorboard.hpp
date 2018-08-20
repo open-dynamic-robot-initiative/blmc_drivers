@@ -136,26 +136,22 @@ public:
                       encoder_0, encoder_1,
                       measurement_count};
 
-    enum Status {board_status, status_count};
-
     enum Control {current_target_0, current_target_1, control_count};
-
-    enum Command {board_command, command_count};
 
     /// getters ================================================================
     // device outputs ----------------------------------------------------------
-    virtual Ptr<const ScalarTimeseries> measurement(const int& index = 0) const = 0;
-    virtual Ptr<const StatusTimeseries> status(const int& index = 0) const = 0;
+    virtual Ptr<const ScalarTimeseries> measurement(const int& index) const = 0;
+    virtual Ptr<const StatusTimeseries> status() const = 0;
 
     // input logs --------------------------------------------------------------
-    virtual Ptr<const ScalarTimeseries> control(const int& index = 0) const = 0;
-    virtual Ptr<const CommandTimeseries> command(const int& index = 0) const = 0;
-    virtual Ptr<const ScalarTimeseries> sent_control(const int& index = 0) const = 0;
-    virtual Ptr<const CommandTimeseries> sent_command(const int& index = 0) const = 0;
+    virtual Ptr<const ScalarTimeseries> control(const int& index) const = 0;
+    virtual Ptr<const CommandTimeseries> command() const = 0;
+    virtual Ptr<const ScalarTimeseries> sent_control(const int& index) const = 0;
+    virtual Ptr<const CommandTimeseries> sent_command() const = 0;
 
     /// setters ================================================================
-    virtual void set_control(const double& control, const int& index = 0) = 0;
-    virtual void set_command(const MotorboardCommand& command, const int& index = 0) = 0;
+    virtual void set_control(const double& control, const int& index) = 0;
+    virtual void set_command(const MotorboardCommand& command) = 0;
 
     /// sender =================================================================
     virtual void send_if_input_changed() = 0;
@@ -176,44 +172,44 @@ class CanMotorboard: public  MotorboardInterface
 {
 public:
     /// outputs ================================================================
-    virtual std::shared_ptr<const ScalarTimeseries> measurement(const int& index = 0) const
+    virtual std::shared_ptr<const ScalarTimeseries> measurement(const int& index) const
     {
         return measurement_[index];
     }
-    virtual std::shared_ptr<const StatusTimeseries> status(const int& index = 0) const
+    virtual std::shared_ptr<const StatusTimeseries> status() const
     {
-        return status_[index];
+        return status_;
     }
 
     /// inputs =================================================================
-    virtual std::shared_ptr<const ScalarTimeseries> control(const int& index = 0) const
+    virtual std::shared_ptr<const ScalarTimeseries> control(const int& index) const
     {
         return control_[index];
     }
-    virtual std::shared_ptr<const CommandTimeseries> command(const int& index = 0) const
+    virtual std::shared_ptr<const CommandTimeseries> command() const
     {
-        return command_[index];
+        return command_;
     }
     /// log ====================================================================
-    virtual Ptr<const ScalarTimeseries> sent_control(const int& index = 0) const
+    virtual Ptr<const ScalarTimeseries> sent_control(const int& index) const
     {
         return control_[index];
     }
 
-    virtual Ptr<const CommandTimeseries> sent_command(const int& index = 0) const
+    virtual Ptr<const CommandTimeseries> sent_command() const
     {
-        return command_[index];
+        return sent_command_;
     }
 
     /// ========================================================================
-    virtual void set_control(const double& control, const int& index = 0)
+    virtual void set_control(const double& control, const int& index)
     {
         control_[index]->append(control);
     }
 
-    virtual void set_command(const MotorboardCommand& command, const int& index = 0)
+    virtual void set_command(const MotorboardCommand& command)
     {
-        command_[index]->append(command);
+        command_->append(command);
     }
 
     virtual void send_if_input_changed()
@@ -240,12 +236,12 @@ public:
             send_controls(controls_to_send);
         }
 
-        if(command_[0]->has_changed_since_tag())
+        if(command_->has_changed_since_tag())
         {
-            Index timeindex_to_send = command_[0]->newest_timeindex();
-            MotorboardCommand command_to_send = (*command_[0])[timeindex_to_send];
-            command_[0]->tag(timeindex_to_send);
-            sent_command_[0]->append(command_to_send);
+            Index timeindex_to_send = command_->newest_timeindex();
+            MotorboardCommand command_to_send = (*command_)[timeindex_to_send];
+            command_->tag(timeindex_to_send);
+            sent_command_->append(command_to_send);
 
             send_command(command_to_send);
         }
@@ -270,7 +266,7 @@ public:
 private:
     void append_and_send_command(const MotorboardCommand& command)
     {
-        command_[0]->append(command);
+        command_->append(command);
         send_if_input_changed();
     }
 
@@ -292,15 +288,15 @@ private:
 
     /// outputs ================================================================
     Vector<Ptr<ScalarTimeseries>> measurement_;
-    Vector<Ptr<StatusTimeseries>> status_;
+    Ptr<StatusTimeseries> status_;
 
     /// inputs =================================================================
     Vector<Ptr<ScalarTimeseries>> control_;
-    Vector<Ptr<CommandTimeseries>> command_;
+    Ptr<CommandTimeseries> command_;
 
     /// log ====================================================================
     Vector<Ptr<ScalarTimeseries>> sent_control_;
-    Vector<Ptr<CommandTimeseries>> sent_command_;
+    Ptr<CommandTimeseries> sent_command_;
 
 
     /// constructor ============================================================
@@ -324,11 +320,11 @@ public:
         can_bus_(can_bus)
     {
         measurement_  = create_vector_of_pointers<ScalarTimeseries>(measurement_count, 1000);
-        status_       = create_vector_of_pointers<StatusTimeseries>(status_count, 1000);
+        status_       = std::make_shared<StatusTimeseries>(1000);
         control_      = create_vector_of_pointers<ScalarTimeseries>(control_count, 1000);
-        command_      = create_vector_of_pointers<CommandTimeseries>(command_count, 1000);
+        command_      = std::make_shared<CommandTimeseries>(1000);
         sent_control_ = create_vector_of_pointers<ScalarTimeseries>(control_count, 1000);
-        sent_command_ = create_vector_of_pointers<CommandTimeseries>(command_count, 1000);
+        sent_command_ = std::make_shared<CommandTimeseries>(1000);
 
         // initialize outputs --------------------------------------------------
         for(size_t i = 0; i < control_.size(); i++)
@@ -520,7 +516,7 @@ private:
                 status.motor2_ready   = data >> 4;
                 status.error_code     = data >> 5;
 
-                status_[0]->append(status);
+                status_->append(status);
                 break;
             }
             }
