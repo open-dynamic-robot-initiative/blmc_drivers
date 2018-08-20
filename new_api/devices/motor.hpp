@@ -53,20 +53,28 @@ public:
         {
             switch(index)
             {
-            case current: return board_->measurement(MotorboardInterface::current_0);
-            case position: return board_->measurement(MotorboardInterface::position_0);
-            case velocity: return board_->measurement(MotorboardInterface::velocity_0);
-            case encoder: return board_->measurement(MotorboardInterface::encoder_0);
+            case current:
+                return board_->measurement(MotorboardInterface::current_0);
+            case position:
+                return board_->measurement(MotorboardInterface::position_0);
+            case velocity:
+                return board_->measurement(MotorboardInterface::velocity_0);
+            case encoder:
+                return board_->measurement(MotorboardInterface::encoder_0);
             }
         }
         else
         {
             switch(index)
             {
-            case current: return board_->measurement(MotorboardInterface::current_1);
-            case position: return board_->measurement(MotorboardInterface::position_1);
-            case velocity: return board_->measurement(MotorboardInterface::velocity_1);
-            case encoder: return board_->measurement(MotorboardInterface::encoder_1);
+            case current:
+                return board_->measurement(MotorboardInterface::current_1);
+            case position:
+                return board_->measurement(MotorboardInterface::position_1);
+            case velocity:
+                return board_->measurement(MotorboardInterface::velocity_1);
+            case encoder:
+                return board_->measurement(MotorboardInterface::encoder_1);
             }
         }
     }
@@ -102,11 +110,13 @@ public:
     {
         if(motor_id_ == 0)
         {
-            board_->set_control(current_target, MotorboardInterface::current_target_0);
+            board_->set_control(current_target,
+                                MotorboardInterface::current_target_0);
         }
         else
         {
-            board_->set_control(current_target, MotorboardInterface::current_target_1);
+            board_->set_control(current_target,
+                                MotorboardInterface::current_target_1);
         }
     }
 
@@ -141,8 +151,10 @@ public:
         current_target_->append(current_target);
 
         // limit current to avoid overheating ----------------------------------
-        double safe_current_target = std::min(current_target, max_current_target_);
-        safe_current_target = std::max(safe_current_target, -max_current_target_);
+        double safe_current_target = std::min(current_target,
+                                              max_current_target_);
+        safe_current_target = std::max(safe_current_target,
+                                       -max_current_target_);
 
         // limit velocity to avoid breaking the robot --------------------------
         if(measurement(velocity)->history_length() > 0 &&
