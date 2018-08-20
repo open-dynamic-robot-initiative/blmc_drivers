@@ -6,7 +6,6 @@
 #include <string>
 
 #include <utils/timer.hpp>
-#include <utils/threadsafe_object.hpp>
 #include <utils/threadsafe_timeseries.hpp>
 
 #include <devices/motorboard.hpp>
