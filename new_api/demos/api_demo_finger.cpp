@@ -31,12 +31,16 @@ public:
         Timer<10> time_logger("controller", 1000);
         while(true)
         {
-            double analog_measurement = analog_sensor_->measurement()->current_element();
+            double analog_measurement =
+                    analog_sensor_->measurement()->current_element();
             double current_target = 2 * (analog_measurement - 0.5);
 
-            finger_->set_current_target(current_target, FingerInterface::interior);
-            finger_->set_current_target(current_target, FingerInterface::center);
-            finger_->set_current_target(current_target, FingerInterface::tip);
+            finger_->set_current_target(current_target,
+                                        FingerInterface::interior);
+            finger_->set_current_target(current_target,
+                                        FingerInterface::center);
+            finger_->set_current_target(current_target,
+                                        FingerInterface::tip);
             finger_->send_if_input_changed();
 
             // print -----------------------------------------------------------
@@ -64,13 +68,18 @@ int main(int argc, char **argv)
     auto board2 = std::make_shared<CanMotorboard>(can_bus2);
 
     // create motors and sensors ---------------------------------------------
-    std::shared_ptr<MotorInterface> motor_1 = std::make_shared<SafeMotor>(board1, 0);
-    std::shared_ptr<MotorInterface> motor_2 = std::make_shared<SafeMotor>(board1, 1);
-    std::shared_ptr<MotorInterface> motor_3 = std::make_shared<SafeMotor>(board2, 0);
+    std::shared_ptr<MotorInterface> motor_1 =
+            std::make_shared<SafeMotor>(board1, 0);
+    std::shared_ptr<MotorInterface> motor_2 =
+            std::make_shared<SafeMotor>(board1, 1);
+    std::shared_ptr<MotorInterface> motor_3 =
+            std::make_shared<SafeMotor>(board2, 0);
 
-    std::shared_ptr<AnalogsensorInterface> analog_sensor_1 = std::make_shared<Analogsensor>(board1, 0);
+    std::shared_ptr<AnalogsensorInterface> analog_sensor_1 =
+            std::make_shared<Analogsensor>(board1, 0);
 
-    std::shared_ptr<FingerInterface> finger = std::make_shared<Finger>(motor_1, motor_2, motor_3);
+    std::shared_ptr<FingerInterface> finger =
+            std::make_shared<Finger>(motor_1, motor_2, motor_3);
 
 
     Controller controller1(finger, analog_sensor_1);

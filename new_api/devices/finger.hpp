@@ -76,19 +76,19 @@ public:
     virtual Ptr<const ScalarTimeseries>
     current_target(const int& motor_index) const
     {
-        return motors_[motor_index]->control();
+        return motors_[motor_index]->current_target();
     }
     virtual Ptr<const ScalarTimeseries>
     sent_current_target(const int& motor_index) const
     {
-        return motors_[motor_index]->sent_control();
+        return motors_[motor_index]->sent_current_target();
     }
 
     /// setters ================================================================
     virtual void set_current_target(const double& current_target,
                                     const int& motor_index)
     {
-        motors_[motor_index]->set_control(current_target);
+        motors_[motor_index]->set_current_target(current_target);
     }
 
     /// sender =================================================================

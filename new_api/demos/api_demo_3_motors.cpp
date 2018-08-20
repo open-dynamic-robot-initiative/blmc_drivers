@@ -31,10 +31,11 @@ public:
         Timer<10> time_logger("controller");
         while(true)
         {
-            double analog_measurement = analog_sensor_->measurement()->current_element();
+            double analog_measurement =
+                    analog_sensor_->measurement()->current_element();
             double current_target = 4 * (analog_measurement - 0.5);
 
-            motor_->set_control(current_target);
+            motor_->set_current_target(current_target);
             motor_->send_if_input_changed();
 
             // print -----------------------------------------------------------

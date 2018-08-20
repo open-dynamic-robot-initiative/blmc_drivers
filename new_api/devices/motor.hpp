@@ -24,13 +24,13 @@ public:
     measurement(const size_t& index = 0) const = 0;
 
     /// inputs =================================================================
-    virtual std::shared_ptr<const ScalarTimeseries> control() const = 0;
+    virtual std::shared_ptr<const ScalarTimeseries> current_target() const = 0;
 
     /// log ====================================================================
-    virtual std::shared_ptr<const ScalarTimeseries> sent_control() const = 0;
+    virtual std::shared_ptr<const ScalarTimeseries> sent_current_target() const = 0;
 
     /// ========================================================================
-    virtual void set_control(const double& control) = 0;
+    virtual void set_current_target(const double& current_target) = 0;
     virtual void set_command(const MotorboardCommand& command) = 0;
 
     virtual void send_if_input_changed() = 0;
@@ -72,7 +72,7 @@ public:
     }
 
     /// inputs =================================================================
-    virtual std::shared_ptr<const ScalarTimeseries> control() const
+    virtual std::shared_ptr<const ScalarTimeseries> current_target() const
     {
         if(motor_id_ == 0)
         {
@@ -85,7 +85,7 @@ public:
     }
 
     /// log ====================================================================
-    virtual std::shared_ptr<const ScalarTimeseries> sent_control() const
+    virtual std::shared_ptr<const ScalarTimeseries> sent_current_target() const
     {
         if(motor_id_ == 0)
         {
@@ -98,15 +98,15 @@ public:
     }
 
     /// ========================================================================
-    virtual void set_control(const double& control)
+    virtual void set_current_target(const double& current_target)
     {
         if(motor_id_ == 0)
         {
-            board_->set_control(control, MotorboardInterface::current_target_0);
+            board_->set_control(current_target, MotorboardInterface::current_target_0);
         }
         else
         {
-            board_->set_control(control, MotorboardInterface::current_target_1);
+            board_->set_control(current_target, MotorboardInterface::current_target_1);
         }
     }
 
@@ -132,35 +132,35 @@ public:
 /// and the parameters should be passed in the constructor
 class SafeMotor: public Motor
 {
-    double max_control_ = 2.0;
+    double max_current_target_ = 2.0;
 public:
-    std::shared_ptr<ScalarTimeseries> control_;
+    std::shared_ptr<ScalarTimeseries> current_target_;
 
-    virtual void set_control(const double& control)
+    virtual void set_current_target(const double& current_target)
     {
-        control_->append(control);
+        current_target_->append(current_target);
 
         // limit current to avoid overheating ----------------------------------
-        double safe_control = std::min(control, max_control_);
-        safe_control = std::max(safe_control, -max_control_);
+        double safe_current_target = std::min(current_target, max_current_target_);
+        safe_current_target = std::max(safe_current_target, -max_current_target_);
 
         // limit velocity to avoid breaking the robot --------------------------
         if(measurement(velocity)->history_length() > 0 &&
                 std::fabs(measurement(velocity)->current_element()) > 0.5)
-            safe_control = 0;
+            safe_current_target = 0;
 
-        Motor::set_control(safe_control);
+        Motor::set_current_target(safe_current_target);
     }
 
-    virtual std::shared_ptr<const ScalarTimeseries> control() const
+    virtual std::shared_ptr<const ScalarTimeseries> current_target() const
     {
-        return control_;
+        return current_target_;
     }
 
     SafeMotor(std::shared_ptr<MotorboardInterface> board, bool motor_id):
         Motor(board, motor_id)
     {
-        control_ = std::make_shared<ScalarTimeseries>(1000);
+        current_target_ = std::make_shared<ScalarTimeseries>(1000);
     }
 };
 
@@ -216,7 +216,7 @@ public:
 
 //    void loop()
 //    {
-//        Timer<10> time_logger("controller");
+//        Timer<10> time_logger("current_targetler");
 //        while(true)
 //        {
 //            Timer<>::sleep_ms(1);
