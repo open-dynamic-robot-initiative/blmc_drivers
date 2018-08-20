@@ -20,7 +20,8 @@ public:
     enum Measurement {current, position, velocity, encoder, measurement_count};
 
     /// outputs ================================================================
-    virtual std::shared_ptr<const ScalarTimeseries> measurement(const size_t& index = 0) const = 0;
+    virtual std::shared_ptr<const ScalarTimeseries>
+    measurement(const size_t& index = 0) const = 0;
 
     /// inputs =================================================================
     virtual std::shared_ptr<const ScalarTimeseries> control() const = 0;
@@ -45,7 +46,8 @@ protected:
 
 public:
     /// outputs ================================================================
-    virtual std::shared_ptr<const ScalarTimeseries> measurement(const size_t& index = 0) const
+    virtual std::shared_ptr<const ScalarTimeseries>
+    measurement(const size_t& index = 0) const
     {
         if(motor_id_ == 0)
         {
@@ -92,7 +94,8 @@ public:
         else
         {
             return board_->sent_control(CanMotorboard::current_target_1);
-        }    }
+        }
+    }
 
     /// ========================================================================
     virtual void set_control(const double& control)
@@ -125,20 +128,25 @@ public:
     virtual ~Motor() { }
 };
 
-
+/// \todo: the velocity limit should be implemented in a smoother way,
+/// and the parameters should be passed in the constructor
 class SafeMotor: public Motor
 {
-    double max_control_ = 1.0;
+    double max_control_ = 2.0;
 public:
     std::shared_ptr<ScalarTimeseries> control_;
 
     virtual void set_control(const double& control)
     {
+        control_->append(control);
+
+        // limit current to avoid overheating ----------------------------------
         double safe_control = std::min(control, max_control_);
         safe_control = std::max(safe_control, -max_control_);
 
+        // limit velocity to avoid breaking the robot --------------------------
         if(measurement(velocity)->history_length() > 0 &&
-                std::fabs(measurement(velocity)->current_element()) > 0.2)
+                std::fabs(measurement(velocity)->current_element()) > 0.5)
             safe_control = 0;
 
         Motor::set_control(safe_control);
@@ -150,7 +158,10 @@ public:
     }
 
     SafeMotor(std::shared_ptr<CanMotorboard> board, bool motor_id):
-        Motor(board, motor_id) { }
+        Motor(board, motor_id)
+    {
+        control_ = std::make_shared<ScalarTimeseries>(1000);
+    }
 };
 
 //class MotorTemperature
