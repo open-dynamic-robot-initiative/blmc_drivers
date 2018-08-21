@@ -17,15 +17,6 @@ add_custom_target(headers SOURCES ${LibFiles})
 execute_process(COMMAND uname -v OUTPUT_VARIABLE uname_OUTPUT)
 
 
-
-
-
-
-
-
-
-
-
 # Do nothing if Xenomai and RT_PREEMPT is not found
 if(Xenomai_FOUND)
     add_definitions(${Xenomai_DEFINITIONS})
@@ -36,7 +27,6 @@ if(Xenomai_FOUND)
         ${Xenomai_INCLUDE_DIR}
         )
 
-
     catkin_package(
       INCLUDE_DIRS ./include ${Xenomai_INCLUDE_DIR}
       LIBRARIES ${PROJECT_NAME}
@@ -44,8 +34,7 @@ if(Xenomai_FOUND)
       DEPENDS Xenomai
     )
 
-
-    # The CAN API library
+    # libraries ################################################################
     add_library(${PROJECT_NAME}
         src/can.c
         src/blmc_can.c
@@ -58,89 +47,44 @@ if(Xenomai_FOUND)
         )
 
 
-    ####################################################################################
-    #                       example of unit tests                                      #
-    ####################################################################################
-
-    # to compile and run:
-    # after calling catkin_make, source ./devel/setup.bash
-    # then after typing "catkin_make run_", you may press "tab" for autocompletion
-    # selecting "catkin_make run_tests" will results in all found tests to be compiled
-    # and run, but you may select specific test
-
+    # unit tests ###############################################################
     catkin_add_gtest(threadsafe_object_test
       tests/main.cpp
       tests/threadsafe_object_test.cpp
-
-      src/can.c ### i have no idea why, but without this it gives a linking error...
     )
     target_link_libraries(threadsafe_object_test ${PROJECT_NAME})
-
 
     catkin_add_gtest(threadsafe_timeseries_test
       tests/main.cpp
       tests/threadsafe_timeseries_test.cpp
-
-
-      src/can.c ### i have no idea why, but without this it gives a linking error...
     )
     target_link_libraries(threadsafe_timeseries_test ${PROJECT_NAME})
 
-#    catkin_add_gtest(blmc_can_tests
-#      tests/main.cpp
-#      tests/threadsafe_timeseries_test.cpp
 
-#      src/can.c ### i have no idea why, but without this it gives a linking error...
-#    )
-#    target_link_libraries(blmc_can_tests ${PROJECT_NAME})
+    # demos ####################################################################
 
-
-
-    # Demo executable
-    add_executable(blmc_can_demo
-        demo/blmc_can_demo.c
-        src/can.c
-        src/blmc_can.c
-        src/optoforce_can.c
-        )
-    target_link_libraries(blmc_can_demo ${PROJECT_NAME})
-
-
-
+    # new api ------------------------------------------------------------------
     add_executable(api_demo_finger
         new_api/demos/api_demo_finger.cpp
-        src/can.c
-        src/blmc_can.c
-        src/optoforce_can.c
         )
     target_link_libraries(api_demo_finger ${PROJECT_NAME})
 
     add_executable(api_demo_3_motors
         new_api/demos/api_demo_3_motors.cpp
-        src/can.c
-        src/blmc_can.c
-        src/optoforce_can.c
         )
     target_link_libraries(api_demo_3_motors ${PROJECT_NAME})
 
-
     add_executable(api_demo_single_motor
         new_api/demos/api_demo_single_motor.cpp
-        src/can.c
-        src/blmc_can.c
-        src/optoforce_can.c
         )
     target_link_libraries(api_demo_single_motor ${PROJECT_NAME})
 
-#    add_executable(blmc_can_latency_demo
-#        demo/blmc_can_latency_demo.c
-#        src/can.c
-#        src/blmc_can.c
-#        src/optoforce_can.c
-#    )
-#    target_link_libraries(blmc_can_latency_demo ${PROJECT_NAME})
+    # old api ------------------------------------------------------------------
+    add_executable(blmc_can_demo
+        demo/blmc_can_demo.c
+        )
+    target_link_libraries(blmc_can_demo ${PROJECT_NAME})
 
-    # Demo executable
     add_executable(blmc_can_demo_optoforce_dumper
         demo/blmc_can_demo_optoforce_dumper.c
         src/can.c

@@ -17,7 +17,8 @@ class MotorInterface
 public:
     typedef ThreadsafeTimeseries<double> ScalarTimeseries;
 
-    enum Measurement {current, position, velocity, encoder_index, measurement_count};
+    enum Measurement {current, position, velocity, encoder_index,
+                      measurement_count};
 
     /// outputs ================================================================
     virtual std::shared_ptr<const ScalarTimeseries>
