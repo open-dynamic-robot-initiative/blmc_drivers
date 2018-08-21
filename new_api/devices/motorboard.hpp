@@ -299,12 +299,12 @@ private:
 public:
     template<typename Type> Vector<Ptr<Type>> create_vector_of_pointers(
             const size_t& size,
-            const size_t& history_length)
+            const size_t& length)
     {
         Vector<Ptr<Type>> vector(size);
         for(size_t i = 0; i < size; i++)
         {
-        vector[i] = std::make_shared<Type>(history_length);
+        vector[i] = std::make_shared<Type>(length);
         }
 
         return vector;
@@ -439,7 +439,7 @@ private:
     void loop()
     {
 
-        long int timeindex = can_bus_->output_frame()->next_timeindex();
+        long int timeindex = can_bus_->output_frame()->newest_timeindex();
         while(true)
         {
             Canframe can_frame;
@@ -534,7 +534,7 @@ private:
         for(size_t i = 0; i < measurement_.size(); i++)
         {
             osi::print_to_screen("%d: ---------------------------------\n", i);
-            if(measurement_[i]->history_length() > 0)
+            if(measurement_[i]->length() > 0)
             {
                 double measurement = measurement_[i]->newest_element();
                 osi::print_to_screen("value %f:\n", measurement);
@@ -542,7 +542,7 @@ private:
         }
 
 //        osi::print_to_screen("status: ---------------------------------\n");
-//        if(status_[status]->history_length() > 0)
+//        if(status_[status]->length() > 0)
 //            status_[status]->newest_element().print();
 
 //        osi::print_to_screen("inputs ======================================\n");
@@ -551,7 +551,7 @@ private:
 //        {
 //            osi::print_to_screen("%s: ---------------------------------\n",
 //                                 control_names[i].c_str());
-//            if(control_.at(control_names[i])->history_length() > 0)
+//            if(control_.at(control_names[i])->length() > 0)
 //            {
 //                double control =
 //                        control_.at(control_names[i])->newest_element();
@@ -560,7 +560,7 @@ private:
 //        }
 
 //        osi::print_to_screen("command: ---------------------------------\n");
-//        if(command_[command]->history_length() > 0)
+//        if(command_[command]->length() > 0)
 //            command_[command]->newest_element().print();
     }
 

@@ -158,7 +158,7 @@ public:
                                        -max_current_target_);
 
         // limit velocity to avoid breaking the robot --------------------------
-        if(measurement(velocity)->history_length() > 0 &&
+        if(measurement(velocity)->length() > 0 &&
                 std::fabs(measurement(velocity)->newest_element()) > 0.5)
             safe_current_target = 0;
 
@@ -233,7 +233,7 @@ public:
 //        while(true)
 //        {
 //            Timer<>::sleep_ms(1);
-//            if(measurement("current")->history_length() == 0)
+//            if(measurement("current")->length() == 0)
 //                continue;
 
 //            double current = measurement("current")->newest_element();
