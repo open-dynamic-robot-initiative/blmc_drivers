@@ -536,14 +536,14 @@ private:
             osi::print_to_screen("%d: ---------------------------------\n", i);
             if(measurement_[i]->history_length() > 0)
             {
-                double measurement = measurement_[i]->current_element();
+                double measurement = measurement_[i]->newest_element();
                 osi::print_to_screen("value %f:\n", measurement);
             }
         }
 
 //        osi::print_to_screen("status: ---------------------------------\n");
 //        if(status_[status]->history_length() > 0)
-//            status_[status]->current_element().print();
+//            status_[status]->newest_element().print();
 
 //        osi::print_to_screen("inputs ======================================\n");
 
@@ -554,14 +554,14 @@ private:
 //            if(control_.at(control_names[i])->history_length() > 0)
 //            {
 //                double control =
-//                        control_.at(control_names[i])->current_element();
+//                        control_.at(control_names[i])->newest_element();
 //                osi::print_to_screen("value %f:\n", control);
 //            }
 //        }
 
 //        osi::print_to_screen("command: ---------------------------------\n");
 //        if(command_[command]->history_length() > 0)
-//            command_[command]->current_element().print();
+//            command_[command]->newest_element().print();
     }
 
     unsigned id_to_index(unsigned motor_id)

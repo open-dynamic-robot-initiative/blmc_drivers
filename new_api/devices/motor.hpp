@@ -158,7 +158,7 @@ public:
 
         // limit velocity to avoid breaking the robot --------------------------
         if(measurement(velocity)->history_length() > 0 &&
-                std::fabs(measurement(velocity)->current_element()) > 0.5)
+                std::fabs(measurement(velocity)->newest_element()) > 0.5)
             safe_current_target = 0;
 
         Motor::set_current_target(safe_current_target);
@@ -235,9 +235,9 @@ public:
 //            if(measurement("current")->history_length() == 0)
 //                continue;
 
-//            double current = measurement("current")->current_element();
-//            double target_current = current_target()->current_element();
-//            double velocity = measurement("velocity")->current_element();
+//            double current = measurement("current")->newest_element();
+//            double target_current = current_target()->newest_element();
+//            double velocity = measurement("velocity")->newest_element();
 
 
 

@@ -8,42 +8,12 @@
 #include <utils/timer.hpp>
 #include <utils/os_interface.hpp>
 
-template<typename Type = int> class ThreadsafeTimeseriesInterface
+
+template<typename Type=int> class ThreadsafeTimeseries
 {
 public:
     typedef long int Index;
     typedef long double Timestamp;
-
-    virtual Type operator[](Index& desired_timeindex) const = 0;
-
-    virtual Timestamp timestamp(Index& desired_timeindex) const = 0;
-
-    virtual void append(const Type& element) = 0;
-
-    virtual Index next_timeindex() const = 0;
-
-    // waits if empty
-    virtual Type current_element() const
-    {
-        Index timeindex = next_timeindex()-1;
-        return (*this)[timeindex];
-    }
-
-
-
-
-    virtual size_t history_length() const = 0;
-};
-
-
-
-template<typename Type=int>
-class ThreadsafeTimeseries: public ThreadsafeTimeseriesInterface<Type>
-{
-public:
-    typedef typename ThreadsafeTimeseries<Type>::Index Index;
-    typedef typename ThreadsafeTimeseries<Type>::Timestamp Timestamp;
-
 
 private:
     std::shared_ptr<std::vector<Type>> history_elements_;
@@ -51,14 +21,12 @@ private:
 
     Index oldest_timeindex_;
     Index newest_timeindex_;
-
     Index tagged_timeindex_;
 
     mutable std::shared_ptr<osi::ConditionVariable> condition_;
     mutable std::shared_ptr<osi::Mutex> mutex_;
 
 public:
-
     ThreadsafeTimeseries(size_t size, Index start_timeindex = 0)
     {
         oldest_timeindex_ = start_timeindex;
@@ -94,6 +62,12 @@ public:
         }
 
         return newest_timeindex_;
+    }
+
+    virtual Type newest_element() const
+    {
+        Index timeindex = next_timeindex()-1;
+        return (*this)[timeindex];
     }
 
     virtual Type operator[](Index& timeindex) const
