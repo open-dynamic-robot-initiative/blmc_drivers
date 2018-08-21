@@ -214,7 +214,7 @@ private:
 
     CanConnection setup_can(std::string name, uint32_t err_mask)
     {
-        int socket;
+        int socket_number;
         sockaddr_can recv_addr;
         sockaddr_can send_addr;
         struct ifreq ifr;
@@ -227,27 +227,27 @@ private:
             osi::print_to_screen("Couldn't setup CAN connection. Exit.");
             exit(-1);
         }
-        socket = ret;
+        socket_number = ret;
 
         strncpy(ifr.ifr_name, name.c_str(), IFNAMSIZ);
-        ret = rt_dev_ioctl(socket, SIOCGIFINDEX, &ifr);
+        ret = rt_dev_ioctl(socket_number, SIOCGIFINDEX, &ifr);
         if (ret < 0)
         {
             rt_fprintf(stderr, "rt_dev_ioctl GET_IFINDEX: %s\n",
                        strerror(-ret));
-            osi::close_can_device(socket);
+            osi::close_can_device(socket_number);
             osi::print_to_screen("Couldn't setup CAN connection. Exit.");
             exit(-1);
         }
 
         // Set error mask
         if (err_mask) {
-            ret = rt_dev_setsockopt(socket, SOL_CAN_RAW, CAN_RAW_ERR_FILTER,
+            ret = rt_dev_setsockopt(socket_number, SOL_CAN_RAW, CAN_RAW_ERR_FILTER,
                                     &err_mask, sizeof(err_mask));
             if (ret < 0)
             {
                 rt_fprintf(stderr, "rt_dev_setsockopt: %s\n", strerror(-ret));
-                osi::close_can_device(socket);
+                osi::close_can_device(socket_number);
                 osi::print_to_screen("Couldn't setup CAN connection. Exit.");
                 exit(-1);
             }
@@ -256,12 +256,12 @@ private:
         // Bind to socket
         recv_addr.can_family = AF_CAN;
         recv_addr.can_ifindex = ifr.ifr_ifindex;
-        ret = rt_dev_bind(socket, (struct sockaddr *)&recv_addr,
+        ret = rt_dev_bind(socket_number, (struct sockaddr *)&recv_addr,
                           sizeof(struct sockaddr_can));
         if (ret < 0)
         {
             rt_fprintf(stderr, "rt_dev_bind: %s\n", strerror(-ret));
-            osi::close_can_device(socket);
+            osi::close_can_device(socket_number);
             osi::print_to_screen("Couldn't setup CAN connection. Exit.");
             exit(-1);
         }
@@ -288,7 +288,7 @@ private:
 
         CanConnection can_connection;
         can_connection.send_addr = send_addr;
-        can_connection.socket = socket;
+        can_connection.socket = socket_number;
 
         return can_connection;
     }
