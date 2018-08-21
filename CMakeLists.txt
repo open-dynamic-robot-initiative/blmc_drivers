@@ -46,7 +46,6 @@ if(Xenomai_FOUND)
         ${Xenomai_LIBRARY_RTDM}
         )
 
-
     # unit tests ###############################################################
     catkin_add_gtest(threadsafe_object_test
       tests/main.cpp
@@ -62,7 +61,6 @@ if(Xenomai_FOUND)
 
 
     # demos ####################################################################
-
     # new api ------------------------------------------------------------------
     add_executable(api_demo_finger
         new_api/demos/api_demo_finger.cpp
