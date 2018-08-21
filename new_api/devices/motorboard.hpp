@@ -126,7 +126,7 @@ public:
                       position_0, position_1,
                       velocity_0, velocity_1,
                       analog_0, analog_1,
-                      encoder_0, encoder_1,
+                      encoder_index_0, encoder_index_1,
                       measurement_count};
 
     enum Control {current_target_0, current_target_1, control_count};
@@ -487,11 +487,11 @@ private:
                 uint8_t motor_index = can_frame.data[4];
                 if(motor_index == 0)
                 {
-                    measurement_[encoder_0]->append(measurement_0);
+                    measurement_[encoder_index_0]->append(measurement_0);
                 }
                 else if(motor_index == 1)
                 {
-                    measurement_[encoder_1]->append(measurement_0);
+                    measurement_[encoder_index_1]->append(measurement_0);
                 }
                 else
                 {

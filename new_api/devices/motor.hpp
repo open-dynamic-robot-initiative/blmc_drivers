@@ -17,7 +17,7 @@ class MotorInterface
 public:
     typedef ThreadsafeTimeseries<double> ScalarTimeseries;
 
-    enum Measurement {current, position, velocity, encoder, measurement_count};
+    enum Measurement {current, position, velocity, encoder_index, measurement_count};
 
     /// outputs ================================================================
     virtual std::shared_ptr<const ScalarTimeseries>
@@ -59,8 +59,8 @@ public:
                 return board_->measurement(MotorboardInterface::position_0);
             case velocity:
                 return board_->measurement(MotorboardInterface::velocity_0);
-            case encoder:
-                return board_->measurement(MotorboardInterface::encoder_0);
+            case encoder_index:
+                return board_->measurement(MotorboardInterface::encoder_index_0);
             }
         }
         else
@@ -73,8 +73,8 @@ public:
                 return board_->measurement(MotorboardInterface::position_1);
             case velocity:
                 return board_->measurement(MotorboardInterface::velocity_1);
-            case encoder:
-                return board_->measurement(MotorboardInterface::encoder_1);
+            case encoder_index:
+                return board_->measurement(MotorboardInterface::encoder_index_1);
             }
         }
     }
