@@ -17,6 +17,11 @@ public:
         osi::start_thread(&Controller::loop, this);
     }
 
+private:
+    /**
+     * @brief this function is just a wrapper around the actual loop function,
+     * such that it can be spawned as a posix thread.
+     */
     static void
 #ifndef __XENO__
     *
@@ -26,6 +31,14 @@ public:
         ((Controller*)(instance_pointer))->loop();
     }
 
+
+    /**
+     * @brief this is a simple control loop which runs at a kilohertz.
+     *
+     * it reads the measurement from the analog sensor, in this case the
+     * slider. then it scales it and sends it as the current target to
+     * the motor.
+     */
     void loop()
     {
         Timer<10> time_logger("controller");
@@ -57,7 +70,6 @@ int main(int argc, char **argv)
     osi::initialize_realtime_printing();
 
     // create bus and boards -------------------------------------------------
-
 #ifdef __XENO__
     auto can_bus1 = std::make_shared<Canbus>("rtcan0");
     auto can_bus2 = std::make_shared<Canbus>("rtcan1");
@@ -69,22 +81,17 @@ int main(int argc, char **argv)
     auto board2 = std::make_shared<CanMotorboard>(can_bus2);
 
     // create motors and sensors ---------------------------------------------
-    auto motor_1 = std::make_shared<SafeMotor>(board1, BLMC_MTR1);
-    auto motor_2 = std::make_shared<SafeMotor>(board1, BLMC_MTR2);
-    auto motor_3 = std::make_shared<SafeMotor>(board2, BLMC_MTR1);
+    auto motor_1 = std::make_shared<SafeMotor>(board1, 0);
+    auto motor_2 = std::make_shared<SafeMotor>(board1, 1);
+    auto motor_3 = std::make_shared<SafeMotor>(board2, 0);
 
-    auto analog_sensor_1 = std::make_shared<Analogsensor>(board1, BLMC_ADC_A);
-    auto analog_sensor_2 = std::make_shared<Analogsensor>(board1, BLMC_ADC_B);
-    auto analog_sensor_3 = std::make_shared<Analogsensor>(board2, BLMC_ADC_A);
+    auto analog_sensor_1 = std::make_shared<Analogsensor>(board1, 0);
+    auto analog_sensor_2 = std::make_shared<Analogsensor>(board1, 1);
+    auto analog_sensor_3 = std::make_shared<Analogsensor>(board2, 0);
 
     Controller controller1(motor_1, analog_sensor_1);
     Controller controller2(motor_2, analog_sensor_2);
     Controller controller3(motor_3, analog_sensor_3);
-
-    // somehow this is necessary to be able to use some of the functionality
-    osi::make_this_thread_realtime();
-    board1->enable();
-    board2->enable();
 
     controller1.start_loop();
     controller2.start_loop();

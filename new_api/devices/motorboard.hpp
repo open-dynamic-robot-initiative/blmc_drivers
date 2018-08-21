@@ -165,7 +165,8 @@ class CanMotorboard: public  MotorboardInterface
 {
 public:
     /// outputs ================================================================
-    virtual std::shared_ptr<const ScalarTimeseries> measurement(const int& index) const
+    virtual std::shared_ptr<const ScalarTimeseries>
+    measurement(const int& index) const
     {
         return measurement_[index];
     }
@@ -175,7 +176,8 @@ public:
     }
 
     /// inputs =================================================================
-    virtual std::shared_ptr<const ScalarTimeseries> control(const int& index) const
+    virtual std::shared_ptr<const ScalarTimeseries>
+    control(const int& index) const
     {
         return control_[index];
     }
@@ -241,25 +243,7 @@ public:
     }
 
 
-    // todo: this should go away
-    void enable()
-    {
-        append_and_send_command(MotorboardCommand(
-                                    MotorboardCommand::IDs::ENABLE_SYS,
-                                    MotorboardCommand::Contents::ENABLE));
-        append_and_send_command(MotorboardCommand(
-                                    MotorboardCommand::IDs::SEND_ALL,
-                                    MotorboardCommand::Contents::ENABLE));
-        append_and_send_command(MotorboardCommand(
-                                    MotorboardCommand::IDs::ENABLE_MTR1,
-                                    MotorboardCommand::Contents::ENABLE));
-        append_and_send_command(MotorboardCommand(
-                                    MotorboardCommand::IDs::ENABLE_MTR2,
-                                    MotorboardCommand::Contents::ENABLE));
-        append_and_send_command(MotorboardCommand(
-                                    MotorboardCommand::IDs::SET_CAN_RECV_TIMEOUT,
-                                    100));
-    }
+
 
 private:
     void append_and_send_command(const MotorboardCommand& command)
@@ -331,6 +315,10 @@ public:
         osi::start_thread(&CanMotorboard::loop, this);
     }
 
+
+
+
+
     ~CanMotorboard()
     {
         append_and_send_command(MotorboardCommand(MotorboardCommand::IDs::ENABLE_SYS,
@@ -339,6 +327,28 @@ public:
 
     /// private methods ========================================================
 private:
+// todo: this should go away
+void enable()
+{
+    append_and_send_command(MotorboardCommand(
+                                MotorboardCommand::IDs::ENABLE_SYS,
+                                MotorboardCommand::Contents::ENABLE));
+    append_and_send_command(MotorboardCommand(
+                                MotorboardCommand::IDs::SEND_ALL,
+                                MotorboardCommand::Contents::ENABLE));
+    append_and_send_command(MotorboardCommand(
+                                MotorboardCommand::IDs::ENABLE_MTR1,
+                                MotorboardCommand::Contents::ENABLE));
+    append_and_send_command(MotorboardCommand(
+                                MotorboardCommand::IDs::ENABLE_MTR2,
+                                MotorboardCommand::Contents::ENABLE));
+    append_and_send_command(MotorboardCommand(
+                                MotorboardCommand::IDs::SET_CAN_RECV_TIMEOUT,
+                                100));
+}
+
+
+
     template<typename T> int32_t bytes_to_int32(T bytes)
     {
         return (int32_t) bytes[3] + ((int32_t)bytes[2] << 8) +
@@ -440,6 +450,7 @@ private:
 
     void loop()
     {
+        enable();
 
         long int timeindex = can_bus_->output_frame()->newest_timeindex();
         while(true)

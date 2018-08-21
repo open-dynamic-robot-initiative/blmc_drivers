@@ -17,6 +17,11 @@ public:
         osi::start_thread(&Controller::loop, this);
     }
 
+private:
+    /**
+     * @brief this function is just a wrapper around the actual loop function,
+     * such that it can be spawned as a posix thread.
+     */
     static void
 #ifndef __XENO__
     *
@@ -26,6 +31,13 @@ public:
         ((Controller*)(instance_pointer))->loop();
     }
 
+    /**
+     * @brief this is a simple control loop which runs at a kilohertz.
+     *
+     * it reads the measurement from the analog sensor, in this case the
+     * slider. then it scales it and sends it as the current target to
+     * each motor of the finger robot.
+     */
     void loop()
     {
         Timer<10> time_logger("controller", 1000);
@@ -55,43 +67,33 @@ public:
 };
 
 
-
-
 int main(int argc, char **argv)
 {
     osi::initialize_realtime_printing();
 
     // create bus and boards -------------------------------------------------
+#ifdef __XENO__
     auto can_bus1 = std::make_shared<Canbus>("rtcan0");
     auto can_bus2 = std::make_shared<Canbus>("rtcan1");
+#else
+    auto can_bus1 = std::make_shared<Canbus>("can0");
+    auto can_bus2 = std::make_shared<Canbus>("can1");
+#endif
     auto board1 = std::make_shared<CanMotorboard>(can_bus1);
     auto board2 = std::make_shared<CanMotorboard>(can_bus2);
 
     // create motors and sensors ---------------------------------------------
-    std::shared_ptr<MotorInterface> motor_1 =
-            std::make_shared<SafeMotor>(board1, 0);
-    std::shared_ptr<MotorInterface> motor_2 =
-            std::make_shared<SafeMotor>(board1, 1);
-    std::shared_ptr<MotorInterface> motor_3 =
-            std::make_shared<SafeMotor>(board2, 0);
+    auto motor_1 = std::make_shared<SafeMotor>(board1, 0);
+    auto motor_2 = std::make_shared<SafeMotor>(board1, 1);
+    auto motor_3 = std::make_shared<SafeMotor>(board2, 0);
+    auto analog_sensor = std::make_shared<Analogsensor>(board1, 0);
 
-    std::shared_ptr<AnalogsensorInterface> analog_sensor_1 =
-            std::make_shared<Analogsensor>(board1, 0);
+    // create finger -----------------------------------------------------------
+    auto finger = std::make_shared<Finger>(motor_1, motor_2, motor_3);
 
-    std::shared_ptr<FingerInterface> finger =
-            std::make_shared<Finger>(motor_1, motor_2, motor_3);
-
-
-    Controller controller1(finger, analog_sensor_1);
-
-
-    // somehow this is necessary to be able to use some of the functionality
-    osi::make_this_thread_realtime();
-    board1->enable();
-    board2->enable();
-
-    controller1.start_loop();
-
+    // create controller and start control loop --------------------------------
+    Controller controller(finger, analog_sensor);
+    controller.start_loop();
 
     while(true)
     {
