@@ -145,8 +145,6 @@ else()
     )
     target_link_libraries(blmc_can_sine_demo ${PROJECT_NAME} pthread m)
 
-
-
     add_executable(api_demo_finger
         new_api/demos/api_demo_finger.cpp
         src/can.c
@@ -171,6 +169,14 @@ else()
         src/optoforce_can.c
         )
     target_link_libraries(api_demo_single_motor ${PROJECT_NAME} pthread)
+
+    add_executable(blmc_can_anticogging
+        demo/blmc_can_anticogging.cpp
+        src/can.c
+        src/blmc_can.c
+        src/optoforce_can.c
+    )
+    target_link_libraries(blmc_can_anticogging ${PROJECT_NAME} pthread m)
 
   # Demo executable
 #  add_executable(blmc_can_demo_optoforce_dumper
