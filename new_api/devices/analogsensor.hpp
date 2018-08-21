@@ -8,9 +8,10 @@
 #include <utils/timer.hpp>
 #include <utils/threadsafe_timeseries.hpp>
 
+#include <devices/device_interface.hpp>
 #include <devices/motorboard.hpp>
 
-class AnalogsensorInterface
+class AnalogsensorInterface: public DeviceInterface
 {
 public:
     typedef ThreadsafeTimeseries<double> ScalarTimeseries;

@@ -9,9 +9,11 @@
 #include <utils/threadsafe_timeseries.hpp>
 
 #include <devices/motor.hpp>
+#include <devices/device_interface.hpp>
 
 
-class FingerInterface
+
+class FingerInterface: public DeviceInterface
 {
 public:
     typedef ThreadsafeTimeseries<double> ScalarTimeseries;

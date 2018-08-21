@@ -10,6 +10,8 @@
 #include <utils/threadsafe_timeseries.hpp>
 
 #include <utils/os_interface.hpp>
+#include <devices/device_interface.hpp>
+
 
 
 
@@ -28,7 +30,7 @@ public:
     int socket;
 };
 
-class CanbusInterface
+class CanbusInterface: public DeviceInterface
 {
 public:
     typedef ThreadsafeTimeseries<Canframe> CanframeTimeseries;

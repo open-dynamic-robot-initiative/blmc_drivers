@@ -10,6 +10,8 @@
 #include <utils/os_interface.hpp>
 #include <devices/canbus.hpp>
 
+#include <devices/device_interface.hpp>
+
 
 
 class MotorboardCommand
@@ -108,7 +110,7 @@ std::map<std::string, Output> copy_map(const std::map<std::string, Input>& input
     }
 }
 
-class MotorboardInterface
+class MotorboardInterface: public DeviceInterface
 {
 public:
     typedef ThreadsafeTimeseries<double> ScalarTimeseries;

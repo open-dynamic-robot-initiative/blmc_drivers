@@ -10,9 +10,11 @@
 #include <utils/threadsafe_timeseries.hpp>
 
 #include <devices/motorboard.hpp>
+#include <devices/device_interface.hpp>
 
 
-class MotorInterface
+
+class MotorInterface: public DeviceInterface
 {
 public:
     typedef ThreadsafeTimeseries<double> ScalarTimeseries;
