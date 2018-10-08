@@ -9,7 +9,7 @@
 #include <utils/threadsafe_object.hpp>
 #include <utils/threadsafe_timeseries.hpp>
 
-#include <devices/motorboard.hpp>
+#include <devices/motor_board.hpp>
 #include <devices/device_interface.hpp>
 
 
@@ -34,7 +34,7 @@ public:
 
     /// ========================================================================
     virtual void set_current_target(const double& current_target) = 0;
-    virtual void set_command(const MotorboardCommand& command) = 0;
+    virtual void set_command(const MotorBoardCommand& command) = 0;
 
     virtual void send_if_input_changed() = 0;
 
@@ -44,7 +44,7 @@ public:
 class Motor: public MotorInterface
 {
 protected:
-    std::shared_ptr<MotorboardInterface> board_;
+    std::shared_ptr<MotorBoardInterface> board_;
     bool motor_id_;
 
 public:
@@ -57,13 +57,13 @@ public:
             switch(index)
             {
             case current:
-                return board_->measurement(MotorboardInterface::current_0);
+                return board_->measurement(MotorBoardInterface::current_0);
             case position:
-                return board_->measurement(MotorboardInterface::position_0);
+                return board_->measurement(MotorBoardInterface::position_0);
             case velocity:
-                return board_->measurement(MotorboardInterface::velocity_0);
+                return board_->measurement(MotorBoardInterface::velocity_0);
             case encoder_index:
-                return board_->measurement(MotorboardInterface::encoder_index_0);
+                return board_->measurement(MotorBoardInterface::encoder_index_0);
             }
         }
         else
@@ -71,13 +71,13 @@ public:
             switch(index)
             {
             case current:
-                return board_->measurement(MotorboardInterface::current_1);
+                return board_->measurement(MotorBoardInterface::current_1);
             case position:
-                return board_->measurement(MotorboardInterface::position_1);
+                return board_->measurement(MotorBoardInterface::position_1);
             case velocity:
-                return board_->measurement(MotorboardInterface::velocity_1);
+                return board_->measurement(MotorBoardInterface::velocity_1);
             case encoder_index:
-                return board_->measurement(MotorboardInterface::encoder_index_1);
+                return board_->measurement(MotorBoardInterface::encoder_index_1);
             }
         }
     }
@@ -87,11 +87,11 @@ public:
     {
         if(motor_id_ == 0)
         {
-            return board_->control(MotorboardInterface::current_target_0);
+            return board_->control(MotorBoardInterface::current_target_0);
         }
         else
         {
-            return board_->control(MotorboardInterface::current_target_1);
+            return board_->control(MotorBoardInterface::current_target_1);
         }
     }
 
@@ -100,11 +100,11 @@ public:
     {
         if(motor_id_ == 0)
         {
-           return board_->sent_control(MotorboardInterface::current_target_0);
+           return board_->sent_control(MotorBoardInterface::current_target_0);
         }
         else
         {
-            return board_->sent_control(MotorboardInterface::current_target_1);
+            return board_->sent_control(MotorBoardInterface::current_target_1);
         }
     }
 
@@ -114,16 +114,16 @@ public:
         if(motor_id_ == 0)
         {
             board_->set_control(current_target,
-                                MotorboardInterface::current_target_0);
+                                MotorBoardInterface::current_target_0);
         }
         else
         {
             board_->set_control(current_target,
-                                MotorboardInterface::current_target_1);
+                                MotorBoardInterface::current_target_1);
         }
     }
 
-    virtual void set_command(const MotorboardCommand& command)
+    virtual void set_command(const MotorBoardCommand& command)
     {
         board_->set_command(command);
     }
@@ -134,7 +134,7 @@ public:
     }
 
 
-    Motor(std::shared_ptr<MotorboardInterface> board, bool motor_id):
+    Motor(std::shared_ptr<MotorBoardInterface> board, bool motor_id):
         board_(board),
         motor_id_(motor_id) { }
 
@@ -172,7 +172,7 @@ public:
         return current_target_;
     }
 
-    SafeMotor(std::shared_ptr<MotorboardInterface> board, bool motor_id):
+    SafeMotor(std::shared_ptr<MotorBoardInterface> board, bool motor_id):
         Motor(board, motor_id)
     {
         current_target_ = std::make_shared<ScalarTimeseries>(1000);
@@ -213,7 +213,7 @@ public:
 //    MotorTemperature temperature_;
 
 //public:
-//    SafeMotor(std::shared_ptr<MotorboardInterface> board, bool motor_id):
+//    SafeMotor(std::shared_ptr<MotorBoardInterface> board, bool motor_id):
 //        Motor(board, motor_id), temperature_(30)
 //    {
 //        osi::start_thread(&SafeMotor::loop, this);

@@ -15,7 +15,7 @@
 
 
 
-class Canframe
+class CanBusFrame
 {
 public:
     std::array<uint8_t, 8> data;
@@ -23,17 +23,17 @@ public:
     can_id_t id;
 };
 
-class CanConnection
+class CanBusConnection
 {
 public:
     struct sockaddr_can send_addr;
     int socket;
 };
 
-class CanbusInterface: public DeviceInterface
+class CanBusInterface: public DeviceInterface
 {
 public:
-    typedef ThreadsafeTimeseries<Canframe> CanframeTimeseries;
+    typedef ThreadsafeTimeseries<CanBusFrame> CanframeTimeseries;
 
     /// getters ================================================================
     // device outputs ----------------------------------------------------------
@@ -44,17 +44,17 @@ public:
     virtual std::shared_ptr<const CanframeTimeseries> sent_input_frame() = 0;
 
     /// setters ================================================================
-    virtual void set_input_frame(const Canframe& input_frame) = 0;
+    virtual void set_input_frame(const CanBusFrame& input_frame) = 0;
 
     /// sender =================================================================
     virtual void send_if_input_changed() = 0;
 
     /// ========================================================================
 
-    virtual ~CanbusInterface() {}
+    virtual ~CanBusInterface() {}
 };
 
-class Canbus: public CanbusInterface
+class CanBus: public CanBusInterface
 {
 public:
     /// getters ================================================================
@@ -74,7 +74,7 @@ public:
     }
 
     /// setters ================================================================
-    virtual void set_input_frame(const Canframe& input_frame)
+    virtual void set_input_frame(const CanBusFrame& input_frame)
     {
         input_->append(input_frame);
     }
@@ -86,7 +86,7 @@ public:
         {
             CanframeTimeseries::Index
                     timeindex_to_send = input_->newest_timeindex();
-            Canframe frame_to_send = (*input_)[timeindex_to_send];
+            CanBusFrame frame_to_send = (*input_)[timeindex_to_send];
             input_->tag(timeindex_to_send);
             sent_input_->append(frame_to_send);
 
@@ -96,18 +96,18 @@ public:
     /// ========================================================================
 
 
-    Canbus(std::string can_interface_name)
+    CanBus(std::string can_interface_name)
     {
-        input_ = std::make_shared<ThreadsafeTimeseries<Canframe>>(1000);
-        sent_input_ = std::make_shared<ThreadsafeTimeseries<Canframe>>(1000);
-        output_ = std::make_shared<ThreadsafeTimeseries<Canframe>>(1000);
+        input_ = std::make_shared<ThreadsafeTimeseries<CanBusFrame>>(1000);
+        sent_input_ = std::make_shared<ThreadsafeTimeseries<CanBusFrame>>(1000);
+        output_ = std::make_shared<ThreadsafeTimeseries<CanBusFrame>>(1000);
 
         can_connection_.set(setup_can(can_interface_name, 0));
 
-        osi::start_thread(&Canbus::loop, this);
+        osi::start_thread(&CanBus::loop, this);
     }
 
-    virtual ~Canbus()
+    virtual ~CanBus()
     {
         osi::close_can_device(can_connection_.get().socket);
     }
@@ -115,12 +115,12 @@ public:
     /// private attributes and methods =========================================
 private:
     // attributes --------------------------------------------------------------
-    SingletypeThreadsafeObject<CanConnection, 1> can_connection_;
+    SingletypeThreadsafeObject<CanBusConnection, 1> can_connection_;
 
-    std::shared_ptr<ThreadsafeTimeseries<Canframe>> input_;
-    std::shared_ptr<ThreadsafeTimeseries<Canframe>> sent_input_;
+    std::shared_ptr<ThreadsafeTimeseries<CanBusFrame>> input_;
+    std::shared_ptr<ThreadsafeTimeseries<CanBusFrame>> sent_input_;
 
-    std::shared_ptr<ThreadsafeTimeseries<Canframe>> output_;
+    std::shared_ptr<ThreadsafeTimeseries<CanBusFrame>> output_;
 
     // methods -----------------------------------------------------------------
     static void
@@ -129,7 +129,7 @@ private:
 #endif
     loop(void* instance_pointer)
     {
-        ((Canbus*)(instance_pointer))->loop();
+        ((CanBus*)(instance_pointer))->loop();
     }
 
     void loop()
@@ -144,7 +144,7 @@ private:
     }
 
     // send input data ---------------------------------------------------------
-    void send_frame(const Canframe& unstamped_can_frame)
+    void send_frame(const CanBusFrame& unstamped_can_frame)
     {
         // get address ---------------------------------------------------------
         int socket = can_connection_.get().socket;
@@ -168,7 +168,7 @@ private:
     }
 
 
-    Canframe receive_frame()
+    CanBusFrame receive_frame()
     {
         int socket = can_connection_.get().socket;
 
@@ -201,7 +201,7 @@ private:
             timestamp = 0;
         }
 
-        Canframe out_frame;
+        CanBusFrame out_frame;
         out_frame.id = can_frame.can_id;
         out_frame.dlc = can_frame.can_dlc;
         for(size_t i = 0; i < can_frame.can_dlc; i++)
@@ -212,7 +212,7 @@ private:
         return out_frame;
     }
 
-    CanConnection setup_can(std::string name, uint32_t err_mask)
+    CanBusConnection setup_can(std::string name, uint32_t err_mask)
     {
         int socket_number;
         sockaddr_can recv_addr;
@@ -286,7 +286,7 @@ private:
         send_addr.can_family = AF_CAN;
         send_addr.can_ifindex = ifr.ifr_ifindex;
 
-        CanConnection can_connection;
+        CanBusConnection can_connection;
         can_connection.send_addr = send_addr;
         can_connection.socket = socket_number;
 

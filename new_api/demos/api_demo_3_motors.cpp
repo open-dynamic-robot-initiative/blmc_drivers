@@ -1,15 +1,15 @@
 #include <devices/motor.hpp>
-#include <devices/analogsensor.hpp>
+#include <devices/analog_sensor.hpp>
 
 class Controller
 {
 private:
     std::shared_ptr<Motor> motor_;
-    std::shared_ptr<Analogsensor> analog_sensor_;
+    std::shared_ptr<AnalogSensor> analog_sensor_;
 
 public:
     Controller(std::shared_ptr<Motor> motor,
-               std::shared_ptr<Analogsensor> analog_sensor):
+               std::shared_ptr<AnalogSensor> analog_sensor):
         motor_(motor), analog_sensor_(analog_sensor) { }
 
     void start_loop()
@@ -71,23 +71,23 @@ int main(int argc, char **argv)
 
     // create bus and boards -------------------------------------------------
 #ifdef __XENO__
-    auto can_bus1 = std::make_shared<Canbus>("rtcan0");
-    auto can_bus2 = std::make_shared<Canbus>("rtcan1");
+    auto can_bus1 = std::make_shared<CanBus>("rtcan0");
+    auto can_bus2 = std::make_shared<CanBus>("rtcan1");
 #else
-    auto can_bus1 = std::make_shared<Canbus>("can0");
-    auto can_bus2 = std::make_shared<Canbus>("can1");
+    auto can_bus1 = std::make_shared<CanBus>("can0");
+    auto can_bus2 = std::make_shared<CanBus>("can1");
 #endif
-    auto board1 = std::make_shared<CanMotorboard>(can_bus1);
-    auto board2 = std::make_shared<CanMotorboard>(can_bus2);
+    auto board1 = std::make_shared<CanBusMotorBoard>(can_bus1);
+    auto board2 = std::make_shared<CanBusMotorBoard>(can_bus2);
 
     // create motors and sensors ---------------------------------------------
     auto motor_1 = std::make_shared<SafeMotor>(board1, 0);
     auto motor_2 = std::make_shared<SafeMotor>(board1, 1);
     auto motor_3 = std::make_shared<SafeMotor>(board2, 0);
 
-    auto analog_sensor_1 = std::make_shared<Analogsensor>(board1, 0);
-    auto analog_sensor_2 = std::make_shared<Analogsensor>(board1, 1);
-    auto analog_sensor_3 = std::make_shared<Analogsensor>(board2, 0);
+    auto analog_sensor_1 = std::make_shared<AnalogSensor>(board1, 0);
+    auto analog_sensor_2 = std::make_shared<AnalogSensor>(board1, 1);
+    auto analog_sensor_3 = std::make_shared<AnalogSensor>(board2, 0);
 
     Controller controller1(motor_1, analog_sensor_1);
     Controller controller2(motor_2, analog_sensor_2);

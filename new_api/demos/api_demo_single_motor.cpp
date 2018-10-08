@@ -53,8 +53,8 @@ int main(int argc, char **argv)
 //    osi::initialize_realtime_printing();
 
 //    // create bus and boards -------------------------------------------------
-//    auto can_bus1 = std::make_shared<Canbus>("rtcan0");
-//    auto board1 = std::make_shared<CanMotorboard>(can_bus1);
+//    auto can_bus1 = std::make_shared<CanBus>("rtcan0");
+//    auto board1 = std::make_shared<CanBusMotorBoard>(can_bus1);
 
 //    // create motors and sensors ---------------------------------------------
 //    auto motor_1 = std::make_shared<Motor>(board1, BLMC_MTR1);

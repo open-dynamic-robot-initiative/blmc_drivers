@@ -8,17 +8,17 @@
 #include <utils/threadsafe_timeseries.hpp>
 
 #include <utils/os_interface.hpp>
-#include <devices/canbus.hpp>
+#include <devices/can_bus.hpp>
 
 #include <devices/device_interface.hpp>
 
 
 
-class MotorboardCommand
+class MotorBoardCommand
 {
 public:
-    MotorboardCommand() { }
-    MotorboardCommand(uint32_t id, int32_t content)
+    MotorBoardCommand() { }
+    MotorBoardCommand(uint32_t id, int32_t content)
     {
         id_ = id;
         content_ = content;
@@ -58,7 +58,7 @@ public:
 
 
 
-class MotorboardStatus
+class MotorBoardStatus
 {
 public:
     // bits
@@ -110,15 +110,15 @@ std::map<std::string, Output> copy_map(const std::map<std::string, Input>& input
     }
 }
 
-class MotorboardInterface: public DeviceInterface
+class MotorBoardInterface: public DeviceInterface
 {
 public:
     typedef ThreadsafeTimeseries<double> ScalarTimeseries;
     typedef ScalarTimeseries::Index Index;
     typedef ThreadsafeTimeseries<Index> IndexTimeseries;
 
-    typedef ThreadsafeTimeseries<MotorboardStatus> StatusTimeseries;
-    typedef ThreadsafeTimeseries<MotorboardCommand> CommandTimeseries;
+    typedef ThreadsafeTimeseries<MotorBoardStatus> StatusTimeseries;
+    typedef ThreadsafeTimeseries<MotorBoardCommand> CommandTimeseries;
 
     template<typename Type> using Ptr = std::shared_ptr<Type>;
     template<typename Type> using Vector = std::vector<Type>;
@@ -146,14 +146,14 @@ public:
 
     /// setters ================================================================
     virtual void set_control(const double& control, const int& index) = 0;
-    virtual void set_command(const MotorboardCommand& command) = 0;
+    virtual void set_command(const MotorBoardCommand& command) = 0;
 
     /// sender =================================================================
     virtual void send_if_input_changed() = 0;
 
     /// ========================================================================
 
-    virtual ~MotorboardInterface() {}
+    virtual ~MotorBoardInterface() {}
 };
 
 
@@ -161,7 +161,7 @@ public:
 
 
 
-class CanMotorboard: public  MotorboardInterface
+class CanBusMotorBoard: public  MotorBoardInterface
 {
 public:
     /// outputs ================================================================
@@ -202,7 +202,7 @@ public:
         control_[index]->append(control);
     }
 
-    virtual void set_command(const MotorboardCommand& command)
+    virtual void set_command(const MotorBoardCommand& command)
     {
         command_->append(command);
     }
@@ -234,7 +234,7 @@ public:
         if(command_->has_changed_since_tag())
         {
             Index timeindex_to_send = command_->newest_timeindex();
-            MotorboardCommand command_to_send = (*command_)[timeindex_to_send];
+            MotorBoardCommand command_to_send = (*command_)[timeindex_to_send];
             command_->tag(timeindex_to_send);
             sent_command_->append(command_to_send);
 
@@ -246,7 +246,7 @@ public:
 
 
 private:
-    void append_and_send_command(const MotorboardCommand& command)
+    void append_and_send_command(const MotorBoardCommand& command)
     {
         command_->append(command);
         send_if_input_changed();
@@ -254,7 +254,7 @@ private:
 
     /// private members ========================================================
 private:
-    std::shared_ptr<CanbusInterface> can_bus_;
+    std::shared_ptr<CanBusInterface> can_bus_;
 
     enum CanframeIDs
     {
@@ -298,7 +298,7 @@ public:
 
 
 
-    CanMotorboard(std::shared_ptr<CanbusInterface> can_bus):
+    CanBusMotorBoard(std::shared_ptr<CanBusInterface> can_bus):
         can_bus_(can_bus)
     {
         measurement_  = create_vector_of_pointers<ScalarTimeseries>(measurement_count, 1000);
@@ -312,17 +312,17 @@ public:
         for(size_t i = 0; i < control_.size(); i++)
             control_[i]->append(0);
 
-        osi::start_thread(&CanMotorboard::loop, this);
+        osi::start_thread(&CanBusMotorBoard::loop, this);
     }
 
 
 
 
 
-    ~CanMotorboard()
+    ~CanBusMotorBoard()
     {
-        append_and_send_command(MotorboardCommand(MotorboardCommand::IDs::ENABLE_SYS,
-                                       MotorboardCommand::Contents::DISABLE));
+        append_and_send_command(MotorBoardCommand(MotorBoardCommand::IDs::ENABLE_SYS,
+                                       MotorBoardCommand::Contents::DISABLE));
     }
 
     /// private methods ========================================================
@@ -330,20 +330,20 @@ private:
 // todo: this should go away
 void enable()
 {
-    append_and_send_command(MotorboardCommand(
-                                MotorboardCommand::IDs::ENABLE_SYS,
-                                MotorboardCommand::Contents::ENABLE));
-    append_and_send_command(MotorboardCommand(
-                                MotorboardCommand::IDs::SEND_ALL,
-                                MotorboardCommand::Contents::ENABLE));
-    append_and_send_command(MotorboardCommand(
-                                MotorboardCommand::IDs::ENABLE_MTR1,
-                                MotorboardCommand::Contents::ENABLE));
-    append_and_send_command(MotorboardCommand(
-                                MotorboardCommand::IDs::ENABLE_MTR2,
-                                MotorboardCommand::Contents::ENABLE));
-    append_and_send_command(MotorboardCommand(
-                                MotorboardCommand::IDs::SET_CAN_RECV_TIMEOUT,
+    append_and_send_command(MotorBoardCommand(
+                                MotorBoardCommand::IDs::ENABLE_SYS,
+                                MotorBoardCommand::Contents::ENABLE));
+    append_and_send_command(MotorBoardCommand(
+                                MotorBoardCommand::IDs::SEND_ALL,
+                                MotorBoardCommand::Contents::ENABLE));
+    append_and_send_command(MotorBoardCommand(
+                                MotorBoardCommand::IDs::ENABLE_MTR1,
+                                MotorBoardCommand::Contents::ENABLE));
+    append_and_send_command(MotorBoardCommand(
+                                MotorBoardCommand::IDs::ENABLE_MTR2,
+                                MotorBoardCommand::Contents::ENABLE));
+    append_and_send_command(MotorBoardCommand(
+                                MotorBoardCommand::IDs::SET_CAN_RECV_TIMEOUT,
                                 100));
 }
 
@@ -395,7 +395,7 @@ void enable()
         data[6] = (q_current2 >> 8) & 0xFF;
         data[7] =  q_current2 & 0xFF;
 
-        Canframe can_frame;
+        CanBusFrame can_frame;
         can_frame.id = BLMC_CAN_ID_IqRef;
         for(size_t i = 0; i < 7; i++)
         {
@@ -408,7 +408,7 @@ void enable()
     }
 
 
-    void send_command(MotorboardCommand command)
+    void send_command(MotorBoardCommand command)
     {
         uint32_t id = command.id_;
         int32_t content = command.content_;
@@ -427,7 +427,7 @@ void enable()
         data[6] = (id >> 8) & 0xFF;
         data[7] = id & 0xFF;
 
-        Canframe can_frame;
+        CanBusFrame can_frame;
         can_frame.id = CanframeIDs::COMMAND_ID;
         for(size_t i = 0; i < 8; i++)
         {
@@ -445,7 +445,7 @@ void enable()
 #endif
     loop(void* instance_pointer)
     {
-        ((CanMotorboard*)(instance_pointer))->loop();
+        ((CanBusMotorBoard*)(instance_pointer))->loop();
     }
 
     void loop()
@@ -455,7 +455,7 @@ void enable()
         long int timeindex = can_bus_->output_frame()->newest_timeindex();
         while(true)
         {
-            Canframe can_frame;
+            CanBusFrame can_frame;
             Index received_timeindex = timeindex;
             can_frame = (*can_bus_->output_frame())[received_timeindex];
 
@@ -516,7 +516,7 @@ void enable()
             }
             case CanframeIDs::STATUSMSG:
             {
-                MotorboardStatus status;
+                MotorBoardStatus status;
                 uint8_t data = can_frame.data[0];
                 status.system_enabled = data >> 0;
                 status.motor1_enabled = data >> 1;
