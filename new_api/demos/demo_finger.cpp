@@ -1,4 +1,4 @@
-#include <devices/finger.hpp>
+#include <demos/finger.hpp>
 #include <devices/analog_sensor.hpp>
 
 class Controller

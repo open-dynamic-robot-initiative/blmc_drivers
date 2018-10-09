@@ -62,20 +62,20 @@ if(Xenomai_FOUND)
 
     # demos ####################################################################
     # new api ------------------------------------------------------------------
-    add_executable(api_demo_finger
-        new_api/demos/api_demo_finger.cpp
+    add_executable(demo_finger
+        new_api/demos/demo_finger.cpp
         )
-    target_link_libraries(api_demo_finger ${PROJECT_NAME})
+    target_link_libraries(demo_finger ${PROJECT_NAME})
 
-    add_executable(api_demo_3_motors
-        new_api/demos/api_demo_3_motors.cpp
+    add_executable(demo_3_motors
+        new_api/demos/demo_3_motors.cpp
         )
-    target_link_libraries(api_demo_3_motors ${PROJECT_NAME})
+    target_link_libraries(demo_3_motors ${PROJECT_NAME})
 
-    add_executable(api_demo_single_motor
-        new_api/demos/api_demo_single_motor.cpp
+    add_executable(demo_single_motor
+        new_api/demos/demo_single_motor.cpp
         )
-    target_link_libraries(api_demo_single_motor ${PROJECT_NAME})
+    target_link_libraries(demo_single_motor ${PROJECT_NAME})
 
     # old api ------------------------------------------------------------------
     add_executable(blmc_can_demo
@@ -145,30 +145,30 @@ else()
     )
     target_link_libraries(blmc_can_sine_demo ${PROJECT_NAME} pthread m)
 
-    add_executable(api_demo_finger
-        new_api/demos/api_demo_finger.cpp
+    add_executable(demo_finger
+        new_api/demos/demo_finger.cpp
         src/can.c
         src/blmc_can.c
         src/optoforce_can.c
         )
-    target_link_libraries(api_demo_finger ${PROJECT_NAME} pthread)
+    target_link_libraries(demo_finger ${PROJECT_NAME} pthread)
 
-    add_executable(api_demo_3_motors
-        new_api/demos/api_demo_3_motors.cpp
+    add_executable(demo_3_motors
+        new_api/demos/demo_3_motors.cpp
         src/can.c
         src/blmc_can.c
         src/optoforce_can.c
         )
-    target_link_libraries(api_demo_3_motors ${PROJECT_NAME} pthread)
+    target_link_libraries(demo_3_motors ${PROJECT_NAME} pthread)
 
 
-    add_executable(api_demo_single_motor
-        new_api/demos/api_demo_single_motor.cpp
+    add_executable(demo_single_motor
+        new_api/demos/demo_single_motor.cpp
         src/can.c
         src/blmc_can.c
         src/optoforce_can.c
         )
-    target_link_libraries(api_demo_single_motor ${PROJECT_NAME} pthread)
+    target_link_libraries(demo_single_motor ${PROJECT_NAME} pthread)
 
     add_executable(blmc_can_anticogging
         demo/blmc_can_anticogging.cpp
