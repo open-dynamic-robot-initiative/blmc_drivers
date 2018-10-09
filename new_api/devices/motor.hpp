@@ -30,7 +30,8 @@ public:
     virtual std::shared_ptr<const ScalarTimeseries> current_target() const = 0;
 
     /// log ====================================================================
-    virtual std::shared_ptr<const ScalarTimeseries> sent_current_target() const = 0;
+    virtual
+    std::shared_ptr<const ScalarTimeseries> sent_current_target() const = 0;
 
     /// ========================================================================
     virtual void set_current_target(const double& current_target) = 0;
@@ -145,10 +146,11 @@ public:
 /// and the parameters should be passed in the constructor
 class SafeMotor: public Motor
 {
-    double max_current_target_ = 2.0;
-public:
+private:
+    double max_current_target_;
     std::shared_ptr<ScalarTimeseries> current_target_;
 
+public:
     virtual void set_current_target(const double& current_target)
     {
         current_target_->append(current_target);
@@ -172,8 +174,10 @@ public:
         return current_target_;
     }
 
-    SafeMotor(std::shared_ptr<MotorBoardInterface> board, bool motor_id):
-        Motor(board, motor_id)
+    SafeMotor(std::shared_ptr<MotorBoardInterface> board, bool motor_id,
+              const double& max_current_target = 2.0):
+        Motor(board, motor_id),
+        max_current_target_(max_current_target)
     {
         current_target_ = std::make_shared<ScalarTimeseries>(1000);
     }
