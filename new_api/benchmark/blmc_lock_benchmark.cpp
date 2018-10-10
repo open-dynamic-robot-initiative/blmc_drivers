@@ -21,6 +21,7 @@ void timespec_sub(struct timespec *target, struct timespec *a, struct timespec *
     }
 }
 
+ThreadsafeTimeseries<double> series(1000);
 
 static void
 #ifndef __XENO__
@@ -34,8 +35,7 @@ thread_body_locking(void* instance_pointer)
 
   double d = 0.;
   long long i = 0;
-  int print_counter = 100000;
-  ThreadsafeTimeseries<double> series(1000);
+  int print_counter = 10000000;
 
   clock_gettime(CLOCK_REALTIME, &now);
 
