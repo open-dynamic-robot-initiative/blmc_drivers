@@ -19,12 +19,12 @@ class MotorInterface: public DeviceInterface
 public:
     typedef ThreadsafeTimeseries<double> ScalarTimeseries;
 
-    enum Measurement {current, position, velocity, encoder_index,
-                      measurement_count};
+    enum MeasurementIndex {current, position, velocity, encoder_index,
+                           measurement_count};
 
     /// outputs ================================================================
     virtual std::shared_ptr<const ScalarTimeseries>
-    measurement(const size_t& index = 0) const = 0;
+    measurement(const int& index = 0) const = 0;
 
     /// inputs =================================================================
     virtual std::shared_ptr<const ScalarTimeseries> current_target() const = 0;
@@ -51,7 +51,7 @@ protected:
 public:
     /// outputs ================================================================
     virtual std::shared_ptr<const ScalarTimeseries>
-    measurement(const size_t& index = 0) const
+    measurement(const int& index = 0) const
     {
         if(motor_id_ == 0)
         {

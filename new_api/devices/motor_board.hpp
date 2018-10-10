@@ -99,16 +99,6 @@ public:
     }
 };
 
-template<typename Input, typename Output>
-std::map<std::string, Output> copy_map(const std::map<std::string, Input>& input)
-{
-    std::map<std::string, Output> output;
-
-    for(auto& element : input)
-    {
-        output[element.first] = element.second;
-    }
-}
 
 class MotorBoardInterface: public DeviceInterface
 {
@@ -135,21 +125,17 @@ public:
 
     /// getters ================================================================
     // device outputs ----------------------------------------------------------
-    virtual Ptr<const ScalarTimeseries> measurement(
-            const MeasurementIndex& index) const = 0;
+    virtual Ptr<const ScalarTimeseries> measurement(const int& index) const = 0;
     virtual Ptr<const StatusTimeseries> status() const = 0;
 
     // input logs --------------------------------------------------------------
-    virtual Ptr<const ScalarTimeseries> control(
-            const ControlIndex& index) const = 0;
+    virtual Ptr<const ScalarTimeseries> control(const int& index) const = 0;
     virtual Ptr<const CommandTimeseries> command() const = 0;
-    virtual Ptr<const ScalarTimeseries> sent_control(
-            const ControlIndex& index) const = 0;
+    virtual Ptr<const ScalarTimeseries> sent_control(const int& index) const = 0;
     virtual Ptr<const CommandTimeseries> sent_command() const = 0;
 
     /// setters ================================================================
-    virtual void set_control(const double& control,
-                             const ControlIndex& index) = 0;
+    virtual void set_control(const double& control, const int& index) = 0;
     virtual void set_command(const MotorBoardCommand& command) = 0;
 
     /// sender =================================================================
@@ -168,30 +154,28 @@ public:
 class CanBusMotorBoard: public  MotorBoardInterface
 {
 public:
-    /// outputs ================================================================
-    virtual std::shared_ptr<const ScalarTimeseries>
-    measurement(const MeasurementIndex& index) const
+    /// getters ================================================================
+    // device outputs ----------------------------------------------------------
+    virtual Ptr<const ScalarTimeseries> measurement(const int& index) const
     {
         return measurement_[index];
     }
-    virtual std::shared_ptr<const StatusTimeseries> status() const
+    virtual Ptr<const StatusTimeseries> status() const
     {
         return status_;
     }
 
-    /// inputs =================================================================
-    virtual std::shared_ptr<const ScalarTimeseries>
-    control(const ControlIndex& index) const
+    // input logs --------------------------------------------------------------
+    virtual Ptr<const ScalarTimeseries> control(const int& index) const
     {
         return control_[index];
     }
-    virtual std::shared_ptr<const CommandTimeseries> command() const
+    virtual Ptr<const CommandTimeseries> command() const
     {
         return command_;
     }
-    /// log ====================================================================
     virtual Ptr<const ScalarTimeseries> sent_control(
-            const ControlIndex& index) const
+            const int& index) const
     {
         return control_[index];
     }
@@ -201,8 +185,8 @@ public:
         return sent_command_;
     }
 
-    /// ========================================================================
-    virtual void set_control(const double& control, const ControlIndex& index)
+    /// setters ================================================================
+    virtual void set_control(const double& control, const int& index)
     {
         control_[index]->append(control);
     }
@@ -212,6 +196,7 @@ public:
         command_->append(command);
     }
 
+    /// sender =================================================================
     virtual void send_if_input_changed()
     {
         // initialize outputs --------------------------------------------------
@@ -247,7 +232,7 @@ public:
         }
     }
 
-
+    /// ========================================================================
 
 
 private:

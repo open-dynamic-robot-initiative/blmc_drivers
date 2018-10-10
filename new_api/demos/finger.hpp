@@ -19,9 +19,9 @@ public:
     typedef ThreadsafeTimeseries<double> ScalarTimeseries;
     template<typename Type> using Ptr = std::shared_ptr<Type>;
 
-    enum MotorMeasurementIndexing {current, position, velocity, encoder_index,
+    enum MeasurementIndex {current, position, velocity, encoder_index,
                                    motor_measurement_count};
-    enum MotorIndexing {interior, center, tip, motor_count};
+    enum MotorIndex {interior, center, tip, motor_count};
 
     /// getters ================================================================
     // device outputs ----------------------------------------------------------
