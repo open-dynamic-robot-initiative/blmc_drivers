@@ -124,28 +124,32 @@ public:
     template<typename Type> using Vector = std::vector<Type>;
 
 
-    enum Measurement {current_0, current_1,
-                      position_0, position_1,
-                      velocity_0, velocity_1,
-                      analog_0, analog_1,
-                      encoder_index_0, encoder_index_1,
-                      measurement_count};
+    enum MeasurementIndex {current_0, current_1,
+                           position_0, position_1,
+                           velocity_0, velocity_1,
+                           analog_0, analog_1,
+                           encoder_index_0, encoder_index_1,
+                           measurement_count};
 
-    enum Control {current_target_0, current_target_1, control_count};
+    enum ControlIndex {current_target_0, current_target_1, control_count};
 
     /// getters ================================================================
     // device outputs ----------------------------------------------------------
-    virtual Ptr<const ScalarTimeseries> measurement(const int& index) const = 0;
+    virtual Ptr<const ScalarTimeseries> measurement(
+            const MeasurementIndex& index) const = 0;
     virtual Ptr<const StatusTimeseries> status() const = 0;
 
     // input logs --------------------------------------------------------------
-    virtual Ptr<const ScalarTimeseries> control(const int& index) const = 0;
+    virtual Ptr<const ScalarTimeseries> control(
+            const ControlIndex& index) const = 0;
     virtual Ptr<const CommandTimeseries> command() const = 0;
-    virtual Ptr<const ScalarTimeseries> sent_control(const int& index) const = 0;
+    virtual Ptr<const ScalarTimeseries> sent_control(
+            const ControlIndex& index) const = 0;
     virtual Ptr<const CommandTimeseries> sent_command() const = 0;
 
     /// setters ================================================================
-    virtual void set_control(const double& control, const int& index) = 0;
+    virtual void set_control(const double& control,
+                             const ControlIndex& index) = 0;
     virtual void set_command(const MotorBoardCommand& command) = 0;
 
     /// sender =================================================================
@@ -166,7 +170,7 @@ class CanBusMotorBoard: public  MotorBoardInterface
 public:
     /// outputs ================================================================
     virtual std::shared_ptr<const ScalarTimeseries>
-    measurement(const int& index) const
+    measurement(const MeasurementIndex& index) const
     {
         return measurement_[index];
     }
@@ -177,7 +181,7 @@ public:
 
     /// inputs =================================================================
     virtual std::shared_ptr<const ScalarTimeseries>
-    control(const int& index) const
+    control(const ControlIndex& index) const
     {
         return control_[index];
     }
@@ -186,7 +190,8 @@ public:
         return command_;
     }
     /// log ====================================================================
-    virtual Ptr<const ScalarTimeseries> sent_control(const int& index) const
+    virtual Ptr<const ScalarTimeseries> sent_control(
+            const ControlIndex& index) const
     {
         return control_[index];
     }
@@ -197,7 +202,7 @@ public:
     }
 
     /// ========================================================================
-    virtual void set_control(const double& control, const int& index)
+    virtual void set_control(const double& control, const ControlIndex& index)
     {
         control_[index]->append(control);
     }
@@ -290,7 +295,7 @@ public:
         Vector<Ptr<Type>> vector(size);
         for(size_t i = 0; i < size; i++)
         {
-        vector[i] = std::make_shared<Type>(length);
+            vector[i] = std::make_shared<Type>(length);
         }
 
         return vector;
@@ -322,30 +327,30 @@ public:
     ~CanBusMotorBoard()
     {
         append_and_send_command(MotorBoardCommand(MotorBoardCommand::IDs::ENABLE_SYS,
-                                       MotorBoardCommand::Contents::DISABLE));
+                                                  MotorBoardCommand::Contents::DISABLE));
     }
 
     /// private methods ========================================================
 private:
-// todo: this should go away
-void enable()
-{
-    append_and_send_command(MotorBoardCommand(
-                                MotorBoardCommand::IDs::ENABLE_SYS,
-                                MotorBoardCommand::Contents::ENABLE));
-    append_and_send_command(MotorBoardCommand(
-                                MotorBoardCommand::IDs::SEND_ALL,
-                                MotorBoardCommand::Contents::ENABLE));
-    append_and_send_command(MotorBoardCommand(
-                                MotorBoardCommand::IDs::ENABLE_MTR1,
-                                MotorBoardCommand::Contents::ENABLE));
-    append_and_send_command(MotorBoardCommand(
-                                MotorBoardCommand::IDs::ENABLE_MTR2,
-                                MotorBoardCommand::Contents::ENABLE));
-    append_and_send_command(MotorBoardCommand(
-                                MotorBoardCommand::IDs::SET_CAN_RECV_TIMEOUT,
-                                100));
-}
+    // todo: this should go away
+    void enable()
+    {
+        append_and_send_command(MotorBoardCommand(
+                                    MotorBoardCommand::IDs::ENABLE_SYS,
+                                    MotorBoardCommand::Contents::ENABLE));
+        append_and_send_command(MotorBoardCommand(
+                                    MotorBoardCommand::IDs::SEND_ALL,
+                                    MotorBoardCommand::Contents::ENABLE));
+        append_and_send_command(MotorBoardCommand(
+                                    MotorBoardCommand::IDs::ENABLE_MTR1,
+                                    MotorBoardCommand::Contents::ENABLE));
+        append_and_send_command(MotorBoardCommand(
+                                    MotorBoardCommand::IDs::ENABLE_MTR2,
+                                    MotorBoardCommand::Contents::ENABLE));
+        append_and_send_command(MotorBoardCommand(
+                                    MotorBoardCommand::IDs::SET_CAN_RECV_TIMEOUT,
+                                    100));
+    }
 
 
 
@@ -554,27 +559,27 @@ void enable()
             }
         }
 
-//        osi::print_to_screen("status: ---------------------------------\n");
-//        if(status_[status]->length() > 0)
-//            status_[status]->newest_element().print();
+        //        osi::print_to_screen("status: ---------------------------------\n");
+        //        if(status_[status]->length() > 0)
+        //            status_[status]->newest_element().print();
 
-//        osi::print_to_screen("inputs ======================================\n");
+        //        osi::print_to_screen("inputs ======================================\n");
 
-//        for(size_t i = 0; i < control_names.size(); i++)
-//        {
-//            osi::print_to_screen("%s: ---------------------------------\n",
-//                                 control_names[i].c_str());
-//            if(control_.at(control_names[i])->length() > 0)
-//            {
-//                double control =
-//                        control_.at(control_names[i])->newest_element();
-//                osi::print_to_screen("value %f:\n", control);
-//            }
-//        }
+        //        for(size_t i = 0; i < control_names.size(); i++)
+        //        {
+        //            osi::print_to_screen("%s: ---------------------------------\n",
+        //                                 control_names[i].c_str());
+        //            if(control_.at(control_names[i])->length() > 0)
+        //            {
+        //                double control =
+        //                        control_.at(control_names[i])->newest_element();
+        //                osi::print_to_screen("value %f:\n", control);
+        //            }
+        //        }
 
-//        osi::print_to_screen("command: ---------------------------------\n");
-//        if(command_[command]->length() > 0)
-//            command_[command]->newest_element().print();
+        //        osi::print_to_screen("command: ---------------------------------\n");
+        //        if(command_[command]->length() > 0)
+        //            command_[command]->newest_element().print();
     }
 
     unsigned id_to_index(unsigned motor_id)
