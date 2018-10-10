@@ -18,26 +18,29 @@ class MotorInterface: public DeviceInterface
 {
 public:
     typedef ThreadsafeTimeseries<double> ScalarTimeseries;
+    template<typename Type> using Ptr = std::shared_ptr<Type>;
+
 
     enum MeasurementIndex {current, position, velocity, encoder_index,
                            measurement_count};
 
-    /// outputs ================================================================
-    virtual std::shared_ptr<const ScalarTimeseries>
-    measurement(const int& index = 0) const = 0;
+    /// getters ================================================================
+    // device outputs ----------------------------------------------------------
+    virtual Ptr<const ScalarTimeseries> measurement(
+            const int& index = 0) const = 0;
 
-    /// inputs =================================================================
-    virtual std::shared_ptr<const ScalarTimeseries> current_target() const = 0;
+    // input logs --------------------------------------------------------------
+    virtual Ptr<const ScalarTimeseries> current_target() const = 0;
+    virtual Ptr<const ScalarTimeseries> sent_current_target() const = 0;
 
-    /// log ====================================================================
-    virtual
-    std::shared_ptr<const ScalarTimeseries> sent_current_target() const = 0;
-
-    /// ========================================================================
+    /// setters ================================================================
     virtual void set_current_target(const double& current_target) = 0;
     virtual void set_command(const MotorBoardCommand& command) = 0;
 
+    /// sender =================================================================
     virtual void send_if_input_changed() = 0;
+
+    /// ========================================================================
 
     virtual ~MotorInterface() {}
 };
@@ -45,13 +48,13 @@ public:
 class Motor: public MotorInterface
 {
 protected:
-    std::shared_ptr<MotorBoardInterface> board_;
+    Ptr<MotorBoardInterface> board_;
     bool motor_id_;
 
 public:
-    /// outputs ================================================================
-    virtual std::shared_ptr<const ScalarTimeseries>
-    measurement(const int& index = 0) const
+    /// getters ================================================================
+    // device outputs ----------------------------------------------------------
+    virtual Ptr<const ScalarTimeseries> measurement(const int& index = 0) const
     {
         if(motor_id_ == 0)
         {
@@ -83,8 +86,8 @@ public:
         }
     }
 
-    /// inputs =================================================================
-    virtual std::shared_ptr<const ScalarTimeseries> current_target() const
+    // input logs --------------------------------------------------------------
+    virtual Ptr<const ScalarTimeseries> current_target() const
     {
         if(motor_id_ == 0)
         {
@@ -95,9 +98,7 @@ public:
             return board_->control(MotorBoardInterface::current_target_1);
         }
     }
-
-    /// log ====================================================================
-    virtual std::shared_ptr<const ScalarTimeseries> sent_current_target() const
+    virtual Ptr<const ScalarTimeseries> sent_current_target() const
     {
         if(motor_id_ == 0)
         {
@@ -109,7 +110,7 @@ public:
         }
     }
 
-    /// ========================================================================
+    /// setters ================================================================
     virtual void set_current_target(const double& current_target)
     {
         if(motor_id_ == 0)
@@ -123,24 +124,30 @@ public:
                                 MotorBoardInterface::current_target_1);
         }
     }
-
     virtual void set_command(const MotorBoardCommand& command)
     {
         board_->set_command(command);
     }
 
+    /// sender =================================================================
     virtual void send_if_input_changed()
     {
         board_->send_if_input_changed();
     }
 
+    /// ========================================================================
 
-    Motor(std::shared_ptr<MotorBoardInterface> board, bool motor_id):
+
+    Motor(Ptr<MotorBoardInterface> board, bool motor_id):
         board_(board),
         motor_id_(motor_id) { }
 
     virtual ~Motor() { }
 };
+
+
+
+
 
 /// \todo: the velocity limit should be implemented in a smoother way,
 /// and the parameters should be passed in the constructor
@@ -148,7 +155,7 @@ class SafeMotor: public Motor
 {
 private:
     double max_current_target_;
-    std::shared_ptr<ScalarTimeseries> current_target_;
+    Ptr<ScalarTimeseries> current_target_;
 
 public:
     virtual void set_current_target(const double& current_target)
@@ -169,12 +176,12 @@ public:
         Motor::set_current_target(safe_current_target);
     }
 
-    virtual std::shared_ptr<const ScalarTimeseries> current_target() const
+    virtual Ptr<const ScalarTimeseries> current_target() const
     {
         return current_target_;
     }
 
-    SafeMotor(std::shared_ptr<MotorBoardInterface> board, bool motor_id,
+    SafeMotor(Ptr<MotorBoardInterface> board, bool motor_id,
               const double& max_current_target = 2.0):
         Motor(board, motor_id),
         max_current_target_(max_current_target)
@@ -217,7 +224,7 @@ public:
 //    MotorTemperature temperature_;
 
 //public:
-//    SafeMotor(std::shared_ptr<MotorBoardInterface> board, bool motor_id):
+//    SafeMotor(Ptr<MotorBoardInterface> board, bool motor_id):
 //        Motor(board, motor_id), temperature_(30)
 //    {
 //        osi::start_thread(&SafeMotor::loop, this);
