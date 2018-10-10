@@ -178,6 +178,11 @@ else()
     )
     target_link_libraries(blmc_can_anticogging ${PROJECT_NAME} pthread m)
 
+    add_executable(blmc_bench_locking
+        new_api/benchmark/blmc_lock_benchmark.cpp
+    )
+    target_link_libraries(blmc_bench_locking ${PROJECT_NAME} pthread m)
+
   # Demo executable
 #  add_executable(blmc_can_demo_optoforce_dumper
 #      demo/blmc_can_demo_optoforce_dumper.c
@@ -187,8 +192,3 @@ else()
 #      )
 #  target_link_libraries(blmc_can_demo_optoforce_dumper ${PROJECT_NAME})
 endif()
-
-
-
-
-
