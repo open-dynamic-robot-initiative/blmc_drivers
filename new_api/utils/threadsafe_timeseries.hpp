@@ -209,4 +209,3 @@ size_t ThreadsafeTimeseries<Type>::length() const
     std::unique_lock<osi::Mutex> lock(*mutex_);
     return newest_timeindex_ - oldest_timeindex_ + 1;
 }
-
