@@ -1,5 +1,11 @@
 #include <eigen3/Eigen/Core>
 #include <time.h>
+#include <unistd.h>
+#include <sys/syscall.h>
+#include <sys/types.h>
+#include <sched.h>
+#include <thread>         // std::this_thread::sleep_for
+#include <chrono>         // std::chrono::seconds
 
 #include <devices/analog_sensor.hpp>
 
@@ -31,25 +37,32 @@ static void
 #endif
 thread_body_locking(void* index)
 {
-
-
     struct timespec now;
     struct timespec prev;
     struct timespec elapsed;
 
     double d = 0.;
     long long i = 0;
-    int print_counter = 100000;
+    int print_counter = 1000000;
+
+    cpu_set_t cpuset;
+    CPU_ZERO(&cpuset);
+    CPU_SET(*((int*)(index)) + 1, &cpuset);
+    int rc = pthread_setaffinity_np(pthread_self(), sizeof(cpu_set_t), &cpuset);
+    // if (rc != 0) {
+      // printf("Error calling pthread_setaffinity_np: %d\n", rc);
+    // }
+
+
+    osi::realtime_printf("Hello world from thread id=%d, cpu=%d\n", syscall(SYS_gettid), sched_getcpu());
 
     clock_gettime(CLOCK_REALTIME, &now);
     prev = now;
     while (true) {
-
         series.append(d);
         d = series.newest_element();
         d += 1.;
         i ++;
-
 
         if (i % print_counter == 0)
         {
@@ -58,7 +71,8 @@ thread_body_locking(void* index)
             timespec_sub(&elapsed, &now, &prev);
 
             float elapsed_ms = (float)(elapsed.tv_sec)*1000 + (elapsed.tv_nsec/1e6);
-            osi::realtime_printf("Duration %0.6f ms for %d store and reads from thread %d\n", elapsed_ms, print_counter, *(int*)(index));
+            osi::realtime_printf("Duration %0.6f ms for %d store and reads from thread %d, cpu=%d\n",
+                                elapsed_ms, print_counter, *(int*)(index), sched_getcpu());
 
             prev = now;
         }
@@ -79,7 +93,7 @@ thread_body_math(void* instance_pointer)
   long long i = 0;
   int print_counter = 1;
 
-  Eigen::MatrixXd m = Eigen::MatrixXd::Random(2048, 2048);
+  Eigen::MatrixXd m = Eigen::MatrixXd::Random(1024, 1024);
 
   osi::realtime_printf("Start benchmarking.\n");
 
@@ -106,6 +120,8 @@ thread_body_math(void* instance_pointer)
 
 int main(int argc, char **argv)
 {
+    mlockall(MCL_CURRENT | MCL_FUTURE);
+
     osi::initialize_realtime_printing();
 
     osi::realtime_printf("argc= %d\n", argc);
@@ -115,15 +131,12 @@ int main(int argc, char **argv)
         indices[i] = i;
 
     if (argc == 1) {
-        for(size_t i = 0; i < indices.size(); i++)
-            osi::start_thread(&thread_body_locking, &indices[i]);
-//      osi::start_thread(&thread_body_locking, NULL);
-//      osi::start_thread(&thread_body_locking, NULL);
-//      osi::start_thread(&thread_body_locking, NULL);
+      for (int i = 0; i < 4; i++) {
+        osi::start_thread(&thread_body_locking, &indices[i]);
+      }
     } else if (argc == 2) {
       osi::start_thread(&thread_body_math, NULL);
     }
-
 
     while(true)
     {

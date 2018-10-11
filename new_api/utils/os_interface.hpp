@@ -165,10 +165,6 @@ inline void receive_message_from_can_device(int fd, struct msghdr *msg, int flag
 #define THREAD_FUNCTION_RETURN_TYPE void*
 #endif
 
-
-
-
-
 inline void start_thread(THREAD_FUNCTION_RETURN_TYPE (*function)(void *cookie),
                          void *argument=NULL)
 {
