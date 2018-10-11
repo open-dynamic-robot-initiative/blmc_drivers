@@ -266,14 +266,14 @@ public:
 //            time_logger.end_and_start_interval();
 //            if ((time_logger.count() % 100) == 0)
 //            {
-//                osi::printf("--------------------------\n");
-//                osi::printf("current: %f\n", current);
-//                osi::printf("target current: %f\n", target_current);
-//                osi::printf("velocity: %f\n", velocity);
+//                osi::realtime_printf("--------------------------\n");
+//                osi::realtime_printf("current: %f\n", current);
+//                osi::realtime_printf("target current: %f\n", target_current);
+//                osi::realtime_printf("velocity: %f\n", velocity);
 
 
-//                osi::printf("temperature: %f\n", temperature_.get());
-//                osi::printf("--------------------------\n");
+//                osi::realtime_printf("temperature: %f\n", temperature_.get());
+//                osi::realtime_printf("--------------------------\n");
 
 //            }
 //        }

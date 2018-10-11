@@ -26,7 +26,7 @@ public:
 
     void print() const
     {
-        osi::printf("command id: %d, content: %d\n", id_, content_);
+        osi::realtime_printf("command id: %d, content: %d\n", id_, content_);
     }
 
     enum IDs
@@ -90,12 +90,12 @@ public:
 
     void print() const
     {
-        osi::printf("\tSystem enabled: %d\n", system_enabled);
-        osi::printf("\tMotor 1 enabled: %d\n", motor1_enabled);
-        osi::printf("\tMotor 1 ready: %d\n", motor1_ready);
-        osi::printf("\tMotor 2 enabled: %d\n", motor2_enabled);
-        osi::printf("\tMotor 2 ready: %d\n", motor2_ready);
-        osi::printf("\tError Code: %d\n", error_code);
+        osi::realtime_printf("\tSystem enabled: %d\n", system_enabled);
+        osi::realtime_printf("\tMotor 1 enabled: %d\n", motor1_enabled);
+        osi::realtime_printf("\tMotor 1 ready: %d\n", motor1_ready);
+        osi::realtime_printf("\tMotor 2 enabled: %d\n", motor2_enabled);
+        osi::realtime_printf("\tMotor 2 ready: %d\n", motor2_ready);
+        osi::realtime_printf("\tError Code: %d\n", error_code);
     }
 };
 
@@ -457,7 +457,7 @@ private:
 
             if(received_timeindex != timeindex)
             {
-                osi::printf("did not get the timeindex we expected! "
+                osi::realtime_printf("did not get the timeindex we expected! "
                                      "received_timeindex: %d, "
                                      "desired_timeindex: %d\n",
                                      received_timeindex, timeindex);
@@ -504,7 +504,7 @@ private:
                 }
                 else
                 {
-                    osi::printf("ERROR: Invalid motor number"
+                    osi::realtime_printf("ERROR: Invalid motor number"
                                          "for encoder index: %d\n", motor_index);
                     exit(-1);
                 }
@@ -538,37 +538,37 @@ private:
 
     void print_status()
     {
-        osi::printf("ouptus ======================================\n");
-        osi::printf("measurements: -------------------------------\n");
+        osi::realtime_printf("ouptus ======================================\n");
+        osi::realtime_printf("measurements: -------------------------------\n");
         for(size_t i = 0; i < measurement_.size(); i++)
         {
-            osi::printf("%d: ---------------------------------\n", i);
+            osi::realtime_printf("%d: ---------------------------------\n", i);
             if(measurement_[i]->length() > 0)
             {
                 double measurement = measurement_[i]->newest_element();
-                osi::printf("value %f:\n", measurement);
+                osi::realtime_printf("value %f:\n", measurement);
             }
         }
 
-        //        osi::printf("status: ---------------------------------\n");
+        //        osi::realtime_printf("status: ---------------------------------\n");
         //        if(status_[status]->length() > 0)
         //            status_[status]->newest_element().print();
 
-        //        osi::printf("inputs ======================================\n");
+        //        osi::realtime_printf("inputs ======================================\n");
 
         //        for(size_t i = 0; i < control_names.size(); i++)
         //        {
-        //            osi::printf("%s: ---------------------------------\n",
+        //            osi::realtime_printf("%s: ---------------------------------\n",
         //                                 control_names[i].c_str());
         //            if(control_.at(control_names[i])->length() > 0)
         //            {
         //                double control =
         //                        control_.at(control_names[i])->newest_element();
-        //                osi::printf("value %f:\n", control);
+        //                osi::realtime_printf("value %f:\n", control);
         //            }
         //        }
 
-        //        osi::printf("command: ---------------------------------\n");
+        //        osi::realtime_printf("command: ---------------------------------\n");
         //        if(command_[command]->length() > 0)
         //            command_[command]->newest_element().print();
     }
@@ -580,7 +580,7 @@ private:
         else if(motor_id == BLMC_MTR2)
             return 1;
 
-        osi::printf("unknown motor id: %d", motor_id);
+        osi::realtime_printf("unknown motor id: %d", motor_id);
         exit(-1);
     }
 };

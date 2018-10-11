@@ -3,6 +3,8 @@
 
 #include <devices/analog_sensor.hpp>
 
+#include <utils/timer.hpp>
+
 typedef ThreadsafeTimeseries<double> ScalarTimeseries;
 
 
@@ -27,34 +29,40 @@ static void
 #ifndef __XENO__
 *
 #endif
-thread_body_locking(void* instance_pointer)
+thread_body_locking(void* index)
 {
-  struct timespec now;
-  struct timespec prev;
-  struct timespec elapsed;
 
-  double d = 0.;
-  long long i = 0;
-  int print_counter = 10000000;
 
-  clock_gettime(CLOCK_REALTIME, &now);
+    struct timespec now;
+    struct timespec prev;
+    struct timespec elapsed;
 
-  while (true) {
-    series.append(d);
-    d = series.newest_element();
-    d += 1.;
-    i ++;
+    double d = 0.;
+    long long i = 0;
+    int print_counter = 100000;
 
-    if (i % print_counter == 0) {
-      clock_gettime(CLOCK_REALTIME, &now);
-      timespec_sub(&elapsed, &now, &prev);
+    clock_gettime(CLOCK_REALTIME, &now);
+    prev = now;
+    while (true) {
 
-      float elapsed_ms = (float)(elapsed.tv_sec)*1000 + (elapsed.tv_nsec/1e6);
-      osi::printf("Duration %0.6f ms for %d store and reads\n", elapsed_ms, print_counter);
+        series.append(d);
+        d = series.newest_element();
+        d += 1.;
+        i ++;
 
-      prev = now;
+
+        if (i % print_counter == 0)
+        {
+            //        timer.end_and_start_interval();
+            clock_gettime(CLOCK_REALTIME, &now);
+            timespec_sub(&elapsed, &now, &prev);
+
+            float elapsed_ms = (float)(elapsed.tv_sec)*1000 + (elapsed.tv_nsec/1e6);
+            osi::realtime_printf("Duration %0.6f ms for %d store and reads from thread %d\n", elapsed_ms, print_counter, *(int*)(index));
+
+            prev = now;
+        }
     }
-  }
 }
 
 static void
@@ -73,7 +81,7 @@ thread_body_math(void* instance_pointer)
 
   Eigen::MatrixXd m = Eigen::MatrixXd::Random(2048, 2048);
 
-  osi::printf("Start benchmarking.\n");
+  osi::realtime_printf("Start benchmarking.\n");
 
   clock_gettime(CLOCK_REALTIME, &now);
 
@@ -86,7 +94,7 @@ thread_body_math(void* instance_pointer)
       timespec_sub(&elapsed, &now, &prev);
 
       float elapsed_ms = (float)(elapsed.tv_sec)*1000 + (elapsed.tv_nsec/1e6);
-      osi::printf(
+      osi::realtime_printf(
         "Duration %0.6f ms for %d matrix multiplies. m(42, 42)=%0.3f\n",
         elapsed_ms, print_counter, m(512, 512));
 
@@ -100,13 +108,18 @@ int main(int argc, char **argv)
 {
     osi::initialize_realtime_printing();
 
-    osi::printf("argc= %d\n", argc);
+    osi::realtime_printf("argc= %d\n", argc);
+
+    std::vector<int> indices(4);
+    for(size_t i = 0; i < indices.size(); i++)
+        indices[i] = i;
 
     if (argc == 1) {
-      osi::start_thread(&thread_body_locking, NULL);
-      osi::start_thread(&thread_body_locking, NULL);
-      osi::start_thread(&thread_body_locking, NULL);
-      osi::start_thread(&thread_body_locking, NULL);
+        for(size_t i = 0; i < indices.size(); i++)
+            osi::start_thread(&thread_body_locking, &indices[i]);
+//      osi::start_thread(&thread_body_locking, NULL);
+//      osi::start_thread(&thread_body_locking, NULL);
+//      osi::start_thread(&thread_body_locking, NULL);
     } else if (argc == 2) {
       osi::start_thread(&thread_body_math, NULL);
     }

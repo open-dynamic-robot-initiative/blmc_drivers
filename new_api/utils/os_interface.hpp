@@ -118,7 +118,7 @@ public:
 
 
 template<typename ...Ts>
- inline   void printf(Ts... args)
+ inline   void realtime_printf(Ts... args)
 {
     rt_printf(args...);
 
@@ -132,7 +132,7 @@ inline void send_to_can_device(int fd, const void *buf, size_t len,
 
     if (ret < 0)
     {
-        osi::printf("something went wrong with "
+        osi::realtime_printf("something went wrong with "
                   "sending CAN frame, error code: %d\n", ret);
         exit(-1);
     }
@@ -153,7 +153,7 @@ inline void receive_message_from_can_device(int fd, struct msghdr *msg, int flag
     int ret = rt_dev_recvmsg(fd, msg, flags);
     if (ret < 0)
     {
-        osi::printf("something went wrong with receiving "
+        osi::realtime_printf("something went wrong with receiving "
                   "CAN frame, error code: %d\n", ret);
         exit(-1);
     }
