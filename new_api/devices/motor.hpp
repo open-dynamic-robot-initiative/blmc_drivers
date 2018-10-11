@@ -26,12 +26,12 @@ public:
 
     /// getters ================================================================
     // device outputs ----------------------------------------------------------
-    virtual Ptr<const ScalarTimeseries> measurement(
+    virtual Ptr<const ScalarTimeseries> get_measurement(
             const int& index = 0) const = 0;
 
     // input logs --------------------------------------------------------------
-    virtual Ptr<const ScalarTimeseries> current_target() const = 0;
-    virtual Ptr<const ScalarTimeseries> sent_current_target() const = 0;
+    virtual Ptr<const ScalarTimeseries> get_current_target() const = 0;
+    virtual Ptr<const ScalarTimeseries> get_sent_current_target() const = 0;
 
     /// setters ================================================================
     virtual void set_current_target(const double& current_target) = 0;
@@ -54,20 +54,21 @@ protected:
 public:
     /// getters ================================================================
     // device outputs ----------------------------------------------------------
-    virtual Ptr<const ScalarTimeseries> measurement(const int& index = 0) const
+    virtual Ptr<const ScalarTimeseries> get_measurement(const int& index = 0) const
     {
         if(motor_id_ == 0)
         {
             switch(index)
             {
             case current:
-                return board_->measurement(MotorBoardInterface::current_0);
+                return board_->get_measurement(MotorBoardInterface::current_0);
             case position:
-                return board_->measurement(MotorBoardInterface::position_0);
+                return board_->get_measurement(MotorBoardInterface::position_0);
             case velocity:
-                return board_->measurement(MotorBoardInterface::velocity_0);
+                return board_->get_measurement(MotorBoardInterface::velocity_0);
             case encoder_index:
-                return board_->measurement(MotorBoardInterface::encoder_index_0);
+                return board_->get_measurement(
+                            MotorBoardInterface::encoder_index_0);
             }
         }
         else
@@ -75,38 +76,41 @@ public:
             switch(index)
             {
             case current:
-                return board_->measurement(MotorBoardInterface::current_1);
+                return board_->get_measurement(MotorBoardInterface::current_1);
             case position:
-                return board_->measurement(MotorBoardInterface::position_1);
+                return board_->get_measurement(MotorBoardInterface::position_1);
             case velocity:
-                return board_->measurement(MotorBoardInterface::velocity_1);
+                return board_->get_measurement(MotorBoardInterface::velocity_1);
             case encoder_index:
-                return board_->measurement(MotorBoardInterface::encoder_index_1);
+                return board_->get_measurement(
+                            MotorBoardInterface::encoder_index_1);
             }
         }
     }
 
     // input logs --------------------------------------------------------------
-    virtual Ptr<const ScalarTimeseries> current_target() const
+    virtual Ptr<const ScalarTimeseries> get_current_target() const
     {
         if(motor_id_ == 0)
         {
-            return board_->control(MotorBoardInterface::current_target_0);
+            return board_->get_control(MotorBoardInterface::current_target_0);
         }
         else
         {
-            return board_->control(MotorBoardInterface::current_target_1);
+            return board_->get_control(MotorBoardInterface::current_target_1);
         }
     }
-    virtual Ptr<const ScalarTimeseries> sent_current_target() const
+    virtual Ptr<const ScalarTimeseries> get_sent_current_target() const
     {
         if(motor_id_ == 0)
         {
-           return board_->sent_control(MotorBoardInterface::current_target_0);
+           return board_->get_sent_control(
+                       MotorBoardInterface::current_target_0);
         }
         else
         {
-            return board_->sent_control(MotorBoardInterface::current_target_1);
+            return board_->get_sent_control(
+                        MotorBoardInterface::current_target_1);
         }
     }
 
@@ -169,8 +173,8 @@ public:
                                        -max_current_target_);
 
         // limit velocity to avoid breaking the robot --------------------------
-        if(measurement(velocity)->length() > 0 &&
-                std::fabs(measurement(velocity)->newest_element()) > 0.5)
+        if(get_measurement(velocity)->length() > 0 &&
+                std::fabs(get_measurement(velocity)->newest_element()) > 0.5)
             safe_current_target = 0;
 
         Motor::set_current_target(safe_current_target);

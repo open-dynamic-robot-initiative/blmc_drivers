@@ -44,7 +44,7 @@ private:
         while(true)
         {
             double analog_measurement =
-                    analog_sensor_->measurement()->newest_element();
+                    analog_sensor_->get_measurement()->newest_element();
             double current_target = 2 * (analog_measurement - 0.5);
 
             finger_->set_current_target(current_target,

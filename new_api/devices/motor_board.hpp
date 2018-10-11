@@ -125,14 +125,16 @@ public:
 
     /// getters ================================================================
     // device outputs ----------------------------------------------------------
-    virtual Ptr<const ScalarTimeseries> measurement(const int& index) const = 0;
-    virtual Ptr<const StatusTimeseries> status() const = 0;
+    virtual Ptr<const ScalarTimeseries> get_measurement(
+            const int& index) const = 0;
+    virtual Ptr<const StatusTimeseries> get_status() const = 0;
 
     // input logs --------------------------------------------------------------
-    virtual Ptr<const ScalarTimeseries> control(const int& index) const = 0;
-    virtual Ptr<const CommandTimeseries> command() const = 0;
-    virtual Ptr<const ScalarTimeseries> sent_control(const int& index) const = 0;
-    virtual Ptr<const CommandTimeseries> sent_command() const = 0;
+    virtual Ptr<const ScalarTimeseries> get_control(const int& index) const = 0;
+    virtual Ptr<const CommandTimeseries> get_command() const = 0;
+    virtual Ptr<const ScalarTimeseries> get_sent_control(
+            const int& index) const = 0;
+    virtual Ptr<const CommandTimeseries> get_sent_command() const = 0;
 
     /// setters ================================================================
     virtual void set_control(const double& control, const int& index) = 0;
@@ -156,31 +158,31 @@ class CanBusMotorBoard: public  MotorBoardInterface
 public:
     /// getters ================================================================
     // device outputs ----------------------------------------------------------
-    virtual Ptr<const ScalarTimeseries> measurement(const int& index) const
+    virtual Ptr<const ScalarTimeseries> get_measurement(const int& index) const
     {
         return measurement_[index];
     }
-    virtual Ptr<const StatusTimeseries> status() const
+    virtual Ptr<const StatusTimeseries> get_status() const
     {
         return status_;
     }
 
     // input logs --------------------------------------------------------------
-    virtual Ptr<const ScalarTimeseries> control(const int& index) const
+    virtual Ptr<const ScalarTimeseries> get_control(const int& index) const
     {
         return control_[index];
     }
-    virtual Ptr<const CommandTimeseries> command() const
+    virtual Ptr<const CommandTimeseries> get_command() const
     {
         return command_;
     }
-    virtual Ptr<const ScalarTimeseries> sent_control(
+    virtual Ptr<const ScalarTimeseries> get_sent_control(
             const int& index) const
     {
         return control_[index];
     }
 
-    virtual Ptr<const CommandTimeseries> sent_command() const
+    virtual Ptr<const CommandTimeseries> get_sent_command() const
     {
         return sent_command_;
     }
@@ -442,12 +444,12 @@ private:
     {
         enable();
 
-        long int timeindex = can_bus_->output_frame()->newest_timeindex();
+        long int timeindex = can_bus_->get_output_frame()->newest_timeindex();
         while(true)
         {
             CanBusFrame can_frame;
             Index received_timeindex = timeindex;
-            can_frame = (*can_bus_->output_frame())[received_timeindex];
+            can_frame = (*can_bus_->get_output_frame())[received_timeindex];
 
             if(received_timeindex != timeindex)
             {

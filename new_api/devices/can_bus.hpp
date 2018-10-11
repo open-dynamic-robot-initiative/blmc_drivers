@@ -37,11 +37,12 @@ public:
 
     /// getters ================================================================
     // device outputs ----------------------------------------------------------
-    virtual std::shared_ptr<const CanframeTimeseries> output_frame() const = 0;
+    virtual std::shared_ptr<const CanframeTimeseries>
+    get_output_frame() const = 0;
 
     // input logs --------------------------------------------------------------
-    virtual std::shared_ptr<const CanframeTimeseries> input_frame() = 0;
-    virtual std::shared_ptr<const CanframeTimeseries> sent_input_frame() = 0;
+    virtual std::shared_ptr<const CanframeTimeseries> get_input_frame() = 0;
+    virtual std::shared_ptr<const CanframeTimeseries> get_sent_input_frame() = 0;
 
     /// setters ================================================================
     virtual void set_input_frame(const CanBusFrame& input_frame) = 0;
@@ -59,16 +60,16 @@ class CanBus: public CanBusInterface
 public:
     /// getters ================================================================
     // device outputs ----------------------------------------------------------
-    std::shared_ptr<const CanframeTimeseries> output_frame() const
+    std::shared_ptr<const CanframeTimeseries> get_output_frame() const
     {
         return output_;
     }
     // input logs --------------------------------------------------------------
-    virtual std::shared_ptr<const CanframeTimeseries>  input_frame()
+    virtual std::shared_ptr<const CanframeTimeseries>  get_input_frame()
     {
         return input_;
     }
-    virtual std::shared_ptr<const CanframeTimeseries> sent_input_frame()
+    virtual std::shared_ptr<const CanframeTimeseries> get_sent_input_frame()
     {
         return sent_input_;
     }

@@ -16,7 +16,7 @@ class AnalogSensorInterface: public DeviceInterface
 public:
     typedef ThreadsafeTimeseries<double> ScalarTimeseries;
 
-    virtual std::shared_ptr<const ScalarTimeseries> measurement() const = 0;
+    virtual std::shared_ptr<const ScalarTimeseries> get_measurement() const = 0;
 
     virtual ~AnalogSensorInterface() {}
 };
@@ -32,15 +32,15 @@ public:
         sensor_id_(sensor_id)
     { }
 
-    virtual std::shared_ptr<const ScalarTimeseries> measurement() const
+    virtual std::shared_ptr<const ScalarTimeseries> get_measurement() const
     {
         if(sensor_id_ == 0)
         {
-            return board_->measurement(MotorBoardInterface::analog_0);
+            return board_->get_measurement(MotorBoardInterface::analog_0);
         }
         else
         {
-            return board_->measurement(MotorBoardInterface::analog_1);
+            return board_->get_measurement(MotorBoardInterface::analog_1);
         }
     }
 

@@ -25,15 +25,15 @@ public:
 
     /// getters ================================================================
     // device outputs ----------------------------------------------------------
-    virtual Ptr<const ScalarTimeseries>
-    motor_measurement(const int& motor_index,
-                      const int& measurement_index) const = 0;
+    virtual Ptr<const ScalarTimeseries> get_motor_measurement(
+            const int& motor_index,
+            const int& measurement_index) const = 0;
 
     // input logs --------------------------------------------------------------
-    virtual Ptr<const ScalarTimeseries>
-    current_target(const int& motor_index) const = 0;
-    virtual Ptr<const ScalarTimeseries>
-    sent_current_target(const int& motor_index) const = 0;
+    virtual Ptr<const ScalarTimeseries> get_current_target(
+            const int& motor_index) const = 0;
+    virtual Ptr<const ScalarTimeseries> get_sent_current_target(
+            const int& motor_index) const = 0;
 
     /// setters ================================================================
     virtual void set_current_target(const double& current_target,
@@ -67,23 +67,23 @@ public:
 
     /// getters ================================================================
     // device outputs ----------------------------------------------------------
-    virtual Ptr<const ScalarTimeseries>
-    motor_measurement(const int& motor_index,
-                      const int& measurement_index) const
+    virtual Ptr<const ScalarTimeseries> get_motor_measurement(
+            const int& motor_index,
+            const int& measurement_index) const
     {
-        return motors_[motor_index]->measurement(measurement_index);
+        return motors_[motor_index]->get_measurement(measurement_index);
     }
 
     // input logs --------------------------------------------------------------
-    virtual Ptr<const ScalarTimeseries>
-    current_target(const int& motor_index) const
+    virtual Ptr<const ScalarTimeseries> get_current_target(
+            const int& motor_index) const
     {
-        return motors_[motor_index]->current_target();
+        return motors_[motor_index]->get_current_target();
     }
-    virtual Ptr<const ScalarTimeseries>
-    sent_current_target(const int& motor_index) const
+    virtual Ptr<const ScalarTimeseries> get_sent_current_target(
+            const int& motor_index) const
     {
-        return motors_[motor_index]->sent_current_target();
+        return motors_[motor_index]->get_sent_current_target();
     }
 
     /// setters ================================================================
