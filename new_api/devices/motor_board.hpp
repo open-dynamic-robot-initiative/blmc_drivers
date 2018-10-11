@@ -431,11 +431,7 @@ private:
         can_bus_->send_if_input_changed();
     }
 
-    static void
-#ifndef __XENO__
-    *
-#endif
-    loop(void* instance_pointer)
+    static THREAD_FUNCTION_RETURN_TYPE loop(void* instance_pointer)
     {
         ((CanBusMotorBoard*)(instance_pointer))->loop();
     }

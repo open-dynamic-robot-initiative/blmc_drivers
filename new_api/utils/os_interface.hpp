@@ -159,11 +159,21 @@ inline void receive_message_from_can_device(int fd, struct msghdr *msg, int flag
     }
 
 }
+#ifdef __XENO__
+#define THREAD_FUNCTION_RETURN_TYPE void
+#else
+#define THREAD_FUNCTION_RETURN_TYPE void*
+#endif
 
+
+
+
+
+inline void start_thread(THREAD_FUNCTION_RETURN_TYPE (*function)(void *cookie),
+                         void *argument=NULL)
+{
 #ifdef __XENO__
 
-inline RT_TASK start_thread(void (*function)(void *cookie), void *argument=NULL)
-{
     // TODO: not sure if this is the right place for this
     mlockall(MCL_CURRENT | MCL_FUTURE);
     //        signal(SIGTERM, cleanup_and_exit);
@@ -181,13 +191,7 @@ inline RT_TASK start_thread(void (*function)(void *cookie), void *argument=NULL)
     }
     rt_task_start(&rt_task, function, argument);
 
-    return rt_task;
-}
-
 #else
-
-inline void start_thread(void * (*function)(void *cookie), void *argument=NULL)
-{
     struct sched_param param;
     pthread_attr_t attr;
     pthread_t thread;
@@ -229,8 +233,9 @@ inline void start_thread(void * (*function)(void *cookie), void *argument=NULL)
                 "required realtime permissions.\n");
         }
     }
-}
 #endif
+}
+
 
 inline void initialize_realtime_printing()
 {

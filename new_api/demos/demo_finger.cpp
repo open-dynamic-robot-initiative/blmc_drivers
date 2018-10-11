@@ -22,11 +22,7 @@ private:
      * @brief this function is just a wrapper around the actual loop function,
      * such that it can be spawned as a posix thread.
      */
-    static void
-#ifndef __XENO__
-    *
-#endif
-    loop(void* instance_pointer)
+    static THREAD_FUNCTION_RETURN_TYPE loop(void* instance_pointer)
     {
         ((Controller*)(instance_pointer))->loop();
     }

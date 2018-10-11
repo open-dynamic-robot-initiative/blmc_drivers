@@ -124,11 +124,7 @@ private:
     std::shared_ptr<ThreadsafeTimeseries<CanBusFrame>> output_;
 
     // methods -----------------------------------------------------------------
-    static void
-#ifndef __XENO__
-    *
-#endif
-    loop(void* instance_pointer)
+    static THREAD_FUNCTION_RETURN_TYPE loop(void* instance_pointer)
     {
         ((CanBus*)(instance_pointer))->loop();
     }
