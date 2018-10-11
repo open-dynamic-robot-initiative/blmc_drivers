@@ -26,7 +26,7 @@ public:
 
     void print() const
     {
-        osi::print_to_screen("command id: %d, content: %d\n", id_, content_);
+        osi::printf("command id: %d, content: %d\n", id_, content_);
     }
 
     enum IDs
@@ -90,12 +90,12 @@ public:
 
     void print() const
     {
-        osi::print_to_screen("\tSystem enabled: %d\n", system_enabled);
-        osi::print_to_screen("\tMotor 1 enabled: %d\n", motor1_enabled);
-        osi::print_to_screen("\tMotor 1 ready: %d\n", motor1_ready);
-        osi::print_to_screen("\tMotor 2 enabled: %d\n", motor2_enabled);
-        osi::print_to_screen("\tMotor 2 ready: %d\n", motor2_ready);
-        osi::print_to_screen("\tError Code: %d\n", error_code);
+        osi::printf("\tSystem enabled: %d\n", system_enabled);
+        osi::printf("\tMotor 1 enabled: %d\n", motor1_enabled);
+        osi::printf("\tMotor 1 ready: %d\n", motor1_ready);
+        osi::printf("\tMotor 2 enabled: %d\n", motor2_enabled);
+        osi::printf("\tMotor 2 ready: %d\n", motor2_ready);
+        osi::printf("\tError Code: %d\n", error_code);
     }
 };
 
@@ -453,7 +453,7 @@ private:
 
             if(received_timeindex != timeindex)
             {
-                osi::print_to_screen("did not get the timeindex we expected! "
+                osi::printf("did not get the timeindex we expected! "
                                      "received_timeindex: %d, "
                                      "desired_timeindex: %d\n",
                                      received_timeindex, timeindex);
@@ -500,7 +500,7 @@ private:
                 }
                 else
                 {
-                    osi::print_to_screen("ERROR: Invalid motor number"
+                    osi::printf("ERROR: Invalid motor number"
                                          "for encoder index: %d\n", motor_index);
                     exit(-1);
                 }
@@ -534,37 +534,37 @@ private:
 
     void print_status()
     {
-        osi::print_to_screen("ouptus ======================================\n");
-        osi::print_to_screen("measurements: -------------------------------\n");
+        osi::printf("ouptus ======================================\n");
+        osi::printf("measurements: -------------------------------\n");
         for(size_t i = 0; i < measurement_.size(); i++)
         {
-            osi::print_to_screen("%d: ---------------------------------\n", i);
+            osi::printf("%d: ---------------------------------\n", i);
             if(measurement_[i]->length() > 0)
             {
                 double measurement = measurement_[i]->newest_element();
-                osi::print_to_screen("value %f:\n", measurement);
+                osi::printf("value %f:\n", measurement);
             }
         }
 
-        //        osi::print_to_screen("status: ---------------------------------\n");
+        //        osi::printf("status: ---------------------------------\n");
         //        if(status_[status]->length() > 0)
         //            status_[status]->newest_element().print();
 
-        //        osi::print_to_screen("inputs ======================================\n");
+        //        osi::printf("inputs ======================================\n");
 
         //        for(size_t i = 0; i < control_names.size(); i++)
         //        {
-        //            osi::print_to_screen("%s: ---------------------------------\n",
+        //            osi::printf("%s: ---------------------------------\n",
         //                                 control_names[i].c_str());
         //            if(control_.at(control_names[i])->length() > 0)
         //            {
         //                double control =
         //                        control_.at(control_names[i])->newest_element();
-        //                osi::print_to_screen("value %f:\n", control);
+        //                osi::printf("value %f:\n", control);
         //            }
         //        }
 
-        //        osi::print_to_screen("command: ---------------------------------\n");
+        //        osi::printf("command: ---------------------------------\n");
         //        if(command_[command]->length() > 0)
         //            command_[command]->newest_element().print();
     }
@@ -576,7 +576,7 @@ private:
         else if(motor_id == BLMC_MTR2)
             return 1;
 
-        osi::print_to_screen("unknown motor id: %d", motor_id);
+        osi::printf("unknown motor id: %d", motor_id);
         exit(-1);
     }
 };

@@ -56,7 +56,7 @@ private:
             time_logger.end_and_start_interval();
             if ((time_logger.count() % 1000) == 0)
             {
-                osi::print_to_screen("sending current: %f\n", current_target);
+                osi::printf("sending current: %f\n", current_target);
             }
         }
     }

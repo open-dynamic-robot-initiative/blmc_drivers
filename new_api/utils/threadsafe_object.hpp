@@ -69,10 +69,10 @@ public:
     {
         if(names.size() != size())
         {
-            osi::print_to_screen("you passed a list of names of wrong size."
+            osi::printf("you passed a list of names of wrong size."
                                  "expected size: %d, actual size: %d\n",
                                  size(), names.size());
-            osi::print_to_screen("name: %s\n", names[0].c_str());
+            osi::printf("name: %s\n", names[0].c_str());
             exit(-1);
         }
 
@@ -151,9 +151,9 @@ public:
         // check that we did not miss data -------------------------------------
         if(initial_modification_count + 1 != (*modification_counts_)[index])
         {
-            osi::print_to_screen("size: %d, \n other info: %s \n",
+            osi::printf("size: %d, \n other info: %s \n",
                       SIZE, __PRETTY_FUNCTION__ );
-            osi::print_to_screen("something went wrong, we missed a message.\n");
+            osi::printf("something went wrong, we missed a message.\n");
             exit(-1);
         }
     }
@@ -179,10 +179,10 @@ public:
         // make sure we did not miss any data ----------------------------------
         if(initial_modification_count + 1 != *total_modification_count_)
         {
-            osi::print_to_screen("size: %d, \n other info: %s \n",
+            osi::printf("size: %d, \n other info: %s \n",
                       SIZE, __PRETTY_FUNCTION__ );
 
-            osi::print_to_screen("something went wrong, we missed a message.\n");
+            osi::printf("something went wrong, we missed a message.\n");
             exit(-1);
         }
 
@@ -194,7 +194,7 @@ public:
             {
                 if(modified_index != -1)
                 {
-                    osi::print_to_screen("something in the threadsafe object "
+                    osi::printf("something in the threadsafe object "
                               "went horribly wrong\n");
                     exit(-1);
                 }
@@ -203,7 +203,7 @@ public:
             }
             else if(initial_modification_counts[i] !=(*modification_counts_)[i])
             {
-                osi::print_to_screen("something in the threadsafe object "
+                osi::printf("something in the threadsafe object "
                           "went horribly wrong\n");
                 exit(-1);
             }
@@ -295,9 +295,9 @@ public:
         // check that we did not miss data -------------------------------------
         if(initial_modification_count + 1 != (*modification_counts_)[index])
         {
-            osi::print_to_screen("size: %d, \n other info: %s \n",
+            osi::printf("size: %d, \n other info: %s \n",
                       SIZE, __PRETTY_FUNCTION__ );
-            osi::print_to_screen("something went wrong, we missed a message.\n");
+            osi::printf("something went wrong, we missed a message.\n");
             exit(-1);
         }
     }
@@ -324,10 +324,10 @@ public:
         // make sure we did not miss any data ----------------------------------
         if(initial_modification_count + 1 != *total_modification_count_)
         {
-            osi::print_to_screen("size: %d, \n other info: %s \n",
+            osi::printf("size: %d, \n other info: %s \n",
                       SIZE, __PRETTY_FUNCTION__ );
 
-            osi::print_to_screen("something went wrong, we missed a message.\n");
+            osi::printf("something went wrong, we missed a message.\n");
             exit(-1);
         }
 
@@ -339,7 +339,7 @@ public:
             {
                 if(modified_index != -1)
                 {
-                    osi::print_to_screen("something in the threadsafe object "
+                    osi::printf("something in the threadsafe object "
                               "went horribly wrong\n");
                     exit(-1);
                 }
@@ -348,7 +348,7 @@ public:
             }
             else if(initial_modification_counts[i] !=(*modification_counts_)[i])
             {
-                osi::print_to_screen("something in the threadsafe object "
+                osi::printf("something in the threadsafe object "
                           "went horribly wrong\n");
                 exit(-1);
             }

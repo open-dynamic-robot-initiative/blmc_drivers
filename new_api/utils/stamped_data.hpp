@@ -60,7 +60,7 @@ public:
 
     void print_header() const
     {
-        osi::print_to_screen("id: %d, time_stamp: %f\n", id_, time_stamp_);
+        osi::printf("id: %d, time_stamp: %f\n", id_, time_stamp_);
     }
 
     /// private data ===========================================================

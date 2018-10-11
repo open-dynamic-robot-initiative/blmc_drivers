@@ -110,11 +110,11 @@ public:
 
     void print_status() const
     {
-        osi::print_to_screen("%s --------------------------------\n", name_.c_str());
-        osi::print_to_screen("count: %d\n min_interval: "
+        osi::printf("%s --------------------------------\n", name_.c_str());
+        osi::printf("count: %d\n min_interval: "
                         "%f\n max_interval: %f\n avg_interval: %f\n",
                   count_, min_interval(), max_interval(), avg_interval());
-        osi::print_to_screen("--------------------------------------------\n");
+        osi::printf("--------------------------------------------\n");
     }
 
     static double current_time_ms()

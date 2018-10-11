@@ -50,7 +50,7 @@ thread_body_locking(void* instance_pointer)
       timespec_sub(&elapsed, &now, &prev);
 
       float elapsed_ms = (float)(elapsed.tv_sec)*1000 + (elapsed.tv_nsec/1e6);
-      osi::print_to_screen("Duration %0.6f ms for %d store and reads\n", elapsed_ms, print_counter);
+      osi::printf("Duration %0.6f ms for %d store and reads\n", elapsed_ms, print_counter);
 
       prev = now;
     }
@@ -73,7 +73,7 @@ thread_body_math(void* instance_pointer)
 
   Eigen::MatrixXd m = Eigen::MatrixXd::Random(2048, 2048);
 
-  osi::print_to_screen("Start benchmarking.\n");
+  osi::printf("Start benchmarking.\n");
 
   clock_gettime(CLOCK_REALTIME, &now);
 
@@ -86,7 +86,7 @@ thread_body_math(void* instance_pointer)
       timespec_sub(&elapsed, &now, &prev);
 
       float elapsed_ms = (float)(elapsed.tv_sec)*1000 + (elapsed.tv_nsec/1e6);
-      osi::print_to_screen(
+      osi::printf(
         "Duration %0.6f ms for %d matrix multiplies. m(42, 42)=%0.3f\n",
         elapsed_ms, print_counter, m(512, 512));
 
@@ -100,7 +100,7 @@ int main(int argc, char **argv)
 {
     osi::initialize_realtime_printing();
 
-    osi::print_to_screen("argc= %d\n", argc);
+    osi::printf("argc= %d\n", argc);
 
     if (argc == 1) {
       osi::start_thread(&thread_body_locking, NULL);
