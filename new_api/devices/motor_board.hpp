@@ -290,15 +290,22 @@ public:
 
 
 
-    CanBusMotorBoard(std::shared_ptr<CanBusInterface> can_bus):
+    CanBusMotorBoard(std::shared_ptr<CanBusInterface> can_bus,
+                     const size_t& history_length = 1000):
         can_bus_(can_bus)
     {
-        measurement_  = create_vector_of_pointers<ScalarTimeseries>(measurement_count, 1000);
-        status_       = std::make_shared<StatusTimeseries>(1000);
-        control_      = create_vector_of_pointers<ScalarTimeseries>(control_count, 1000);
-        command_      = std::make_shared<CommandTimeseries>(1000);
-        sent_control_ = create_vector_of_pointers<ScalarTimeseries>(control_count, 1000);
-        sent_command_ = std::make_shared<CommandTimeseries>(1000);
+        measurement_  = create_vector_of_pointers<ScalarTimeseries>(
+                    measurement_count,
+                    history_length);
+        status_       = std::make_shared<StatusTimeseries>(history_length);
+        control_      = create_vector_of_pointers<ScalarTimeseries>(
+                    control_count,
+                    history_length);
+        command_      = std::make_shared<CommandTimeseries>(history_length);
+        sent_control_ = create_vector_of_pointers<ScalarTimeseries>(
+                    control_count,
+                    history_length);
+        sent_command_ = std::make_shared<CommandTimeseries>(history_length);
 
         // initialize outputs --------------------------------------------------
         for(size_t i = 0; i < control_.size(); i++)
@@ -313,8 +320,9 @@ public:
 
     ~CanBusMotorBoard()
     {
-        append_and_send_command(MotorBoardCommand(MotorBoardCommand::IDs::ENABLE_SYS,
-                                                  MotorBoardCommand::Contents::DISABLE));
+        append_and_send_command(
+                    MotorBoardCommand(MotorBoardCommand::IDs::ENABLE_SYS,
+                                      MotorBoardCommand::Contents::DISABLE));
     }
 
     /// private methods ========================================================

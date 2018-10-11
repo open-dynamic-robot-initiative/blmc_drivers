@@ -186,11 +186,12 @@ public:
     }
 
     SafeMotor(Ptr<MotorBoardInterface> board, bool motor_id,
-              const double& max_current_target = 2.0):
+              const double& max_current_target = 2.0,
+              const size_t& history_length = 1000):
         Motor(board, motor_id),
         max_current_target_(max_current_target)
     {
-        current_target_ = std::make_shared<ScalarTimeseries>(1000);
+        current_target_ = std::make_shared<ScalarTimeseries>(history_length);
     }
 };
 

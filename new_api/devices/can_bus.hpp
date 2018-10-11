@@ -97,11 +97,12 @@ public:
     /// ========================================================================
 
 
-    CanBus(std::string can_interface_name)
+    CanBus(const std::string& can_interface_name,
+           const size_t& history_length = 1000)
     {
-        input_ = std::make_shared<ThreadsafeTimeseries<CanBusFrame>>(1000);
-        sent_input_ = std::make_shared<ThreadsafeTimeseries<CanBusFrame>>(1000);
-        output_ = std::make_shared<ThreadsafeTimeseries<CanBusFrame>>(1000);
+        input_ = std::make_shared<CanframeTimeseries>(history_length);
+        sent_input_ = std::make_shared<CanframeTimeseries>(history_length);
+        output_ = std::make_shared<CanframeTimeseries>(history_length);
 
         can_connection_.set(setup_can(can_interface_name, 0));
 
