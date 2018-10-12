@@ -27,6 +27,9 @@
 #include <linux/can.h>
 #include <linux/can/raw.h>
 
+#include <limits.h>
+
+
 // Define typedefs to make code compatible with Xenoami code.
 typedef struct can_frame can_frame_t;
 typedef canid_t can_id_t;

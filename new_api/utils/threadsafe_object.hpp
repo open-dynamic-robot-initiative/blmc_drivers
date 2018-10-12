@@ -4,6 +4,7 @@
 #include <tuple>
 #include <memory>
 #include <map>
+#include <vector>
 
 #include <utils/timer.hpp>
 #include <utils/os_interface.hpp>

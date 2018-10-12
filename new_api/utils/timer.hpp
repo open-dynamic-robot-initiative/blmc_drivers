@@ -2,7 +2,8 @@
 
 
 #include <limits>
-#include <eigen3/Eigen/Core>
+#include <array>
+#include <cmath>
 
 #include <utils/os_interface.hpp>
 
@@ -16,7 +17,7 @@ private:
     double max_interval_;
     double total_interval_;
 
-    Eigen::Matrix<double, LENGTH, 1> intervals_;
+    std::array<double, LENGTH> intervals_;
 
     long unsigned count_;
     long unsigned print_period_;
@@ -31,7 +32,11 @@ public:
         min_interval_ = std::numeric_limits<double>::max();
         max_interval_ = std::numeric_limits<double>::min();
         total_interval_;
-        intervals_.setZero();
+
+        for(size_t i = 0; i < intervals_.size(); i++)
+        {
+            intervals_[i] = 0;
+        }
 
         count_ = 0;
         print_period_ = print_period;
