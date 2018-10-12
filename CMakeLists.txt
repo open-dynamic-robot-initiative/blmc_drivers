@@ -183,6 +183,25 @@ else()
     )
     target_link_libraries(blmc_bench_locking ${PROJECT_NAME} pthread m)
 
+    add_executable(blmc_bench_locking2
+        new_api/benchmark/blmc_lock_benchmark2.cpp
+    )
+    target_link_libraries(blmc_bench_locking2 ${PROJECT_NAME} pthread m)
+
+
+    # unit tests ###############################################################
+    catkin_add_gtest(threadsafe_object_test
+      tests/main.cpp
+      tests/threadsafe_object_test.cpp
+    )
+    target_link_libraries(threadsafe_object_test ${PROJECT_NAME})
+
+    catkin_add_gtest(threadsafe_timeseries_test
+      tests/main.cpp
+      tests/threadsafe_timeseries_test.cpp
+    )
+    target_link_libraries(threadsafe_timeseries_test ${PROJECT_NAME})
+
   # Demo executable
 #  add_executable(blmc_can_demo_optoforce_dumper
 #      demo/blmc_can_demo_optoforce_dumper.c
