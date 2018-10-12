@@ -47,7 +47,7 @@ static THREAD_FUNCTION_RETURN_TYPE thread_body_locking(void* index)
 
             timer.end_and_start_interval();
 
-                        osi::sleep_ms(0.000000001);
+//            osi::sleep_ms(0.000000001);
             {
                 std::unique_lock<osi::Mutex> lock(*mutex);
             }
