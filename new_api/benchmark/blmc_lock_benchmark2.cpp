@@ -19,7 +19,7 @@ std::shared_ptr<osi::Mutex> mutex;
 
 static THREAD_FUNCTION_RETURN_TYPE thread_body_locking(void* index)
 {
-    int print_counter = 1000000;
+    int print_counter = 10000000;
 
     //    cpu_set_t cpuset;
     //    CPU_ZERO(&cpuset);
@@ -47,19 +47,9 @@ static THREAD_FUNCTION_RETURN_TYPE thread_body_locking(void* index)
 
             timer.end_and_start_interval();
 
-            //            osi::sleep_ms(0.000000001);
-
-            // write -----------------------------------------------------------
+                        osi::sleep_ms(0.000000001);
             {
                 std::unique_lock<osi::Mutex> lock(*mutex);
-                protected_value = element;
-            }
-
-
-            // read ------------------------------------------------------------
-            {
-                std::unique_lock<osi::Mutex> lock(*mutex);
-                element = protected_value;
             }
 
             element += 1.;
