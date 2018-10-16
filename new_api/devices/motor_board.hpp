@@ -396,7 +396,7 @@ private:
         data[7] =  q_current2 & 0xFF;
 
         CanBusFrame can_frame;
-        can_frame.id = BLMC_CAN_ID_IqRef;
+        can_frame.id = CanframeIDs::IqRef;
         for(size_t i = 0; i < 7; i++)
         {
             can_frame.data[i] = data[i];
@@ -573,14 +573,4 @@ private:
         //            command_[command]->newest_element().print();
     }
 
-    unsigned id_to_index(unsigned motor_id)
-    {
-        if(motor_id == BLMC_MTR1)
-            return 0;
-        else if(motor_id == BLMC_MTR2)
-            return 1;
-
-        osi::realtime_printf("unknown motor id: %d", motor_id);
-        exit(-1);
-    }
 };

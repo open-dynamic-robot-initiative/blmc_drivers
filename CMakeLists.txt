@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 2.8)
-project(blmc_can)
+project(blmc_drivers)
 
 find_package(catkin REQUIRED)
 find_package(Xenomai QUIET)
@@ -7,7 +7,6 @@ find_package(Eigen3 REQUIRED)
 
 # support for c++ 11 -----------------------------------
 SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=gnu++11")
-# SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++0x")
 
 # for convenience for qtcreator, does nothing ----------
 FILE(GLOB_RECURSE LibFiles *.h *.hpp)
@@ -17,7 +16,6 @@ add_custom_target(headers SOURCES ${LibFiles})
 execute_process(COMMAND uname -v OUTPUT_VARIABLE uname_OUTPUT)
 
 
-# Do nothing if Xenomai and RT_PREEMPT is not found
 if(Xenomai_FOUND)
     add_definitions(${Xenomai_DEFINITIONS})
 
@@ -111,103 +109,45 @@ else()
         LIBRARIES ${PROJECT_NAME}
     )
 
-
-    # The CAN API library
-    add_library(${PROJECT_NAME}
-        src/can.c
-        src/blmc_can.c
-        src/optoforce_can.c
-    )
-
-    # Demo executable
-    add_executable(blmc_can_demo
-        demo/blmc_can_demo.c
-        src/can.c
-        src/blmc_can.c
-        src/optoforce_can.c
-    )
-    target_link_libraries(blmc_can_demo ${PROJECT_NAME} pthread)
-
-    add_executable(blmc_can_latency_demo
-        demo/blmc_can_latency_demo.c
-        src/can.c
-        src/blmc_can.c
-        src/optoforce_can.c
-    )
-    target_link_libraries(blmc_can_latency_demo ${PROJECT_NAME} pthread)
-
-
-    add_executable(blmc_can_sine_demo
-        demo/blmc_can_sine_demo.c
-        src/can.c
-        src/blmc_can.c
-        src/optoforce_can.c
-    )
-    target_link_libraries(blmc_can_sine_demo ${PROJECT_NAME} pthread m)
-
-    add_executable(demo_finger
-        new_api/demos/demo_finger.cpp
-        src/can.c
-        src/blmc_can.c
-        src/optoforce_can.c
-        )
-    target_link_libraries(demo_finger ${PROJECT_NAME} pthread)
+#    add_executable(demo_finger
+#        new_api/demos/demo_finger.cpp
+#        )
+#    target_link_libraries(demo_finger ${PROJECT_NAME} pthread)
 
     add_executable(demo_3_motors
         new_api/demos/demo_3_motors.cpp
-        src/can.c
-        src/blmc_can.c
-        src/optoforce_can.c
         )
-    target_link_libraries(demo_3_motors ${PROJECT_NAME} pthread)
+    target_link_libraries(demo_3_motors pthread)
 
 
-    add_executable(demo_single_motor
-        new_api/demos/demo_single_motor.cpp
-        src/can.c
-        src/blmc_can.c
-        src/optoforce_can.c
-        )
-    target_link_libraries(demo_single_motor ${PROJECT_NAME} pthread)
-
-    add_executable(blmc_can_anticogging
-        demo/blmc_can_anticogging.cpp
-        src/can.c
-        src/blmc_can.c
-        src/optoforce_can.c
-    )
-    target_link_libraries(blmc_can_anticogging ${PROJECT_NAME} pthread m)
-
-    add_executable(blmc_bench_locking
-        new_api/benchmark/blmc_lock_benchmark.cpp
-    )
-    target_link_libraries(blmc_bench_locking ${PROJECT_NAME} pthread m)
-
-    add_executable(blmc_bench_locking2
-        new_api/benchmark/blmc_lock_benchmark2.cpp
-    )
-    target_link_libraries(blmc_bench_locking2 ${PROJECT_NAME} pthread m)
+#    add_executable(demo_single_motor
+#        new_api/demos/demo_single_motor.cpp
+#        )
+#    target_link_libraries(demo_single_motor ${PROJECT_NAME} pthread)
 
 
-    # unit tests ###############################################################
-    catkin_add_gtest(threadsafe_object_test
-      tests/main.cpp
-      tests/threadsafe_object_test.cpp
-    )
-    target_link_libraries(threadsafe_object_test ${PROJECT_NAME})
+#    add_executable(blmc_bench_locking
+#        new_api/benchmark/blmc_lock_benchmark.cpp
+#    )
+#    target_link_libraries(blmc_bench_locking ${PROJECT_NAME} pthread m)
 
-    catkin_add_gtest(threadsafe_timeseries_test
-      tests/main.cpp
-      tests/threadsafe_timeseries_test.cpp
-    )
-    target_link_libraries(threadsafe_timeseries_test ${PROJECT_NAME})
+#    add_executable(blmc_bench_locking2
+#        new_api/benchmark/blmc_lock_benchmark2.cpp
+#    )
+#    target_link_libraries(blmc_bench_locking2 ${PROJECT_NAME} pthread m)
 
-  # Demo executable
-#  add_executable(blmc_can_demo_optoforce_dumper
-#      demo/blmc_can_demo_optoforce_dumper.c
-#      src/can.c
-#      src/blmc_can.c
-#      src/optoforce_can.c
-#      )
-#  target_link_libraries(blmc_can_demo_optoforce_dumper ${PROJECT_NAME})
+
+#    # unit tests ###############################################################
+#    catkin_add_gtest(threadsafe_object_test
+#      tests/main.cpp
+#      tests/threadsafe_object_test.cpp
+#    )
+#    target_link_libraries(threadsafe_object_test ${PROJECT_NAME})
+
+#    catkin_add_gtest(threadsafe_timeseries_test
+#      tests/main.cpp
+#      tests/threadsafe_timeseries_test.cpp
+#    )
+#    target_link_libraries(threadsafe_timeseries_test ${PROJECT_NAME})
+
 endif()
