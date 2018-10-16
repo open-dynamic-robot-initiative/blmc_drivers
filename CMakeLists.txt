@@ -109,45 +109,28 @@ else()
         LIBRARIES ${PROJECT_NAME}
     )
 
-#    add_executable(demo_finger
-#        new_api/demos/demo_finger.cpp
-#        )
-#    target_link_libraries(demo_finger ${PROJECT_NAME} pthread)
-
     add_executable(demo_3_motors
-        new_api/demos/demo_3_motors.cpp
+        demos/demo_3_motors.cpp
         )
     target_link_libraries(demo_3_motors pthread)
 
-
-#    add_executable(demo_single_motor
-#        new_api/demos/demo_single_motor.cpp
-#        )
-#    target_link_libraries(demo_single_motor ${PROJECT_NAME} pthread)
-
-
-#    add_executable(blmc_bench_locking
-#        new_api/benchmark/blmc_lock_benchmark.cpp
-#    )
-#    target_link_libraries(blmc_bench_locking ${PROJECT_NAME} pthread m)
-
-#    add_executable(blmc_bench_locking2
-#        new_api/benchmark/blmc_lock_benchmark2.cpp
-#    )
-#    target_link_libraries(blmc_bench_locking2 ${PROJECT_NAME} pthread m)
+    add_executable(demo_single_motor
+        demos/demo_single_motor.cpp
+        )
+    target_link_libraries(demo_single_motor pthread)
 
 
-#    # unit tests ###############################################################
-#    catkin_add_gtest(threadsafe_object_test
-#      tests/main.cpp
-#      tests/threadsafe_object_test.cpp
-#    )
-#    target_link_libraries(threadsafe_object_test ${PROJECT_NAME})
+    # unit tests ###############################################################
+    catkin_add_gtest(threadsafe_object_test
+      tests/main.cpp
+      tests/threadsafe_object_test.cpp
+    )
+    target_link_libraries(threadsafe_object_test)
 
-#    catkin_add_gtest(threadsafe_timeseries_test
-#      tests/main.cpp
-#      tests/threadsafe_timeseries_test.cpp
-#    )
-#    target_link_libraries(threadsafe_timeseries_test ${PROJECT_NAME})
+    catkin_add_gtest(threadsafe_timeseries_test
+      tests/main.cpp
+      tests/threadsafe_timeseries_test.cpp
+    )
+    target_link_libraries(threadsafe_timeseries_test)
 
 endif()

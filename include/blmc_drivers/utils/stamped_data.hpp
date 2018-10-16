@@ -1,6 +1,6 @@
 #pragma once
 
-#include <utils/os_interface.hpp>
+#include <blmc_drivers/utils/os_interface.hpp>
 
 template<typename DataType> class StampedData
 {

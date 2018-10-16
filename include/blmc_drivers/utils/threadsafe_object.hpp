@@ -6,8 +6,8 @@
 #include <map>
 #include <vector>
 
-#include <utils/timer.hpp>
-#include <utils/os_interface.hpp>
+#include <blmc_drivers/utils/timer.hpp>
+#include <blmc_drivers/utils/os_interface.hpp>
 
 template<typename Type> class ThreadsafeHistoryInterface
 {

@@ -3,14 +3,14 @@
 #include <memory>
 #include <string>
 
-#include <utils/timer.hpp>
-#include <utils/threadsafe_object.hpp>
-#include <utils/threadsafe_timeseries.hpp>
+#include <blmc_drivers/utils/timer.hpp>
+#include <blmc_drivers/utils/threadsafe_object.hpp>
+#include <blmc_drivers/utils/threadsafe_timeseries.hpp>
 
-#include <utils/os_interface.hpp>
-#include <devices/can_bus.hpp>
+#include <blmc_drivers/utils/os_interface.hpp>
+#include <blmc_drivers/devices/can_bus.hpp>
 
-#include <devices/device_interface.hpp>
+#include <blmc_drivers/devices/device_interface.hpp>
 
 
 

@@ -5,7 +5,7 @@
 #include <array>
 #include <cmath>
 
-#include <utils/os_interface.hpp>
+#include <blmc_drivers/utils/os_interface.hpp>
 
 
 

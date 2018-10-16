@@ -1,5 +1,5 @@
-#include <devices/motor.hpp>
-#include <devices/analog_sensor.hpp>
+#include <blmc_drivers/devices/motor.hpp>
+#include <blmc_drivers/devices/analog_sensor.hpp>
 
 class Controller
 {

@@ -3,8 +3,8 @@
 #include <memory>
 #include <vector>
 
-#include <utils/os_interface.hpp>
-#include <utils/timer.hpp>
+#include <blmc_drivers/utils/os_interface.hpp>
+#include <blmc_drivers/utils/timer.hpp>
 
 
 
