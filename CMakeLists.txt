@@ -60,20 +60,20 @@ if(Xenomai_FOUND)
 
     # demos ####################################################################
     # new api ------------------------------------------------------------------
-    add_executable(demo_finger
+    add_executable(blmc_demo_finger
         new_api/demos/demo_finger.cpp
         )
-    target_link_libraries(demo_finger ${PROJECT_NAME})
+    target_link_libraries(blmc_demo_finger ${PROJECT_NAME})
 
-    add_executable(demo_3_motors
+    add_executable(blmc_demo_3_motors
         new_api/demos/demo_3_motors.cpp
         )
-    target_link_libraries(demo_3_motors ${PROJECT_NAME})
+    target_link_libraries(blmc_demo_3_motors ${PROJECT_NAME})
 
-    add_executable(demo_single_motor
+    add_executable(blmc_demo_single_motor
         new_api/demos/demo_single_motor.cpp
         )
-    target_link_libraries(demo_single_motor ${PROJECT_NAME})
+    target_link_libraries(blmc_demo_single_motor ${PROJECT_NAME})
 
     # old api ------------------------------------------------------------------
     add_executable(blmc_can_demo
@@ -88,11 +88,6 @@ if(Xenomai_FOUND)
         src/optoforce_can.c
         )
     target_link_libraries(blmc_can_demo_optoforce_dumper ${PROJECT_NAME})
-
-
-
-
-
 
 # elseif(${uname_OUTPUT} MATCHES "PREEMPT")
 else()
@@ -109,15 +104,15 @@ else()
         LIBRARIES ${PROJECT_NAME}
     )
 
-    add_executable(demo_3_motors
+    add_executable(blmc_demo_3_motors
         demos/demo_3_motors.cpp
         )
-    target_link_libraries(demo_3_motors pthread)
+    target_link_libraries(blmc_demo_3_motors pthread)
 
-    add_executable(demo_single_motor
+    add_executable(blmc_demo_single_motor
         demos/demo_single_motor.cpp
         )
-    target_link_libraries(demo_single_motor pthread)
+    target_link_libraries(blmc_demo_single_motor pthread)
 
 
     # unit tests ###############################################################
