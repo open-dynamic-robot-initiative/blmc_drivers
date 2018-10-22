@@ -26,7 +26,7 @@ public:
 
     void print() const
     {
-        osi::realtime_printf("command id: %d, content: %d\n", id_, content_);
+        rt_printf("command id: %d, content: %d\n", id_, content_);
     }
 
     enum IDs
@@ -90,12 +90,12 @@ public:
 
     void print() const
     {
-        osi::realtime_printf("\tSystem enabled: %d\n", system_enabled);
-        osi::realtime_printf("\tMotor 1 enabled: %d\n", motor1_enabled);
-        osi::realtime_printf("\tMotor 1 ready: %d\n", motor1_ready);
-        osi::realtime_printf("\tMotor 2 enabled: %d\n", motor2_enabled);
-        osi::realtime_printf("\tMotor 2 ready: %d\n", motor2_ready);
-        osi::realtime_printf("\tError Code: %d\n", error_code);
+        rt_printf("\tSystem enabled: %d\n", system_enabled);
+        rt_printf("\tMotor 1 enabled: %d\n", motor1_enabled);
+        rt_printf("\tMotor 1 ready: %d\n", motor1_ready);
+        rt_printf("\tMotor 2 enabled: %d\n", motor2_enabled);
+        rt_printf("\tMotor 2 ready: %d\n", motor2_ready);
+        rt_printf("\tError Code: %d\n", error_code);
     }
 };
 
@@ -457,10 +457,10 @@ private:
 
             if(received_timeindex != timeindex)
             {
-                osi::realtime_printf("did not get the timeindex we expected! "
+                rt_printf("did not get the timeindex we expected! "
                                      "received_timeindex: %d, "
                                      "desired_timeindex: %d\n",
-                                     received_timeindex, timeindex);
+                                     int(received_timeindex), int(timeindex));
                 exit(-1);
             }
 
@@ -504,7 +504,7 @@ private:
                 }
                 else
                 {
-                    osi::realtime_printf("ERROR: Invalid motor number"
+                    rt_printf("ERROR: Invalid motor number"
                                          "for encoder index: %d\n", motor_index);
                     exit(-1);
                 }
@@ -538,37 +538,37 @@ private:
 
     void print_status()
     {
-        osi::realtime_printf("ouptus ======================================\n");
-        osi::realtime_printf("measurements: -------------------------------\n");
+        rt_printf("ouptus ======================================\n");
+        rt_printf("measurements: -------------------------------\n");
         for(size_t i = 0; i < measurement_.size(); i++)
         {
-            osi::realtime_printf("%d: ---------------------------------\n", i);
+            rt_printf("%d: ---------------------------------\n", int(i));
             if(measurement_[i]->length() > 0)
             {
                 double measurement = measurement_[i]->newest_element();
-                osi::realtime_printf("value %f:\n", measurement);
+                rt_printf("value %f:\n", measurement);
             }
         }
 
-        //        osi::realtime_printf("status: ---------------------------------\n");
+        //        rt_printf("status: ---------------------------------\n");
         //        if(status_[status]->length() > 0)
         //            status_[status]->newest_element().print();
 
-        //        osi::realtime_printf("inputs ======================================\n");
+        //        rt_printf("inputs ======================================\n");
 
         //        for(size_t i = 0; i < control_names.size(); i++)
         //        {
-        //            osi::realtime_printf("%s: ---------------------------------\n",
+        //            rt_printf("%s: ---------------------------------\n",
         //                                 control_names[i].c_str());
         //            if(control_.at(control_names[i])->length() > 0)
         //            {
         //                double control =
         //                        control_.at(control_names[i])->newest_element();
-        //                osi::realtime_printf("value %f:\n", control);
+        //                rt_printf("value %f:\n", control);
         //            }
         //        }
 
-        //        osi::realtime_printf("command: ---------------------------------\n");
+        //        rt_printf("command: ---------------------------------\n");
         //        if(command_[command]->length() > 0)
         //            command_[command]->newest_element().print();
     }

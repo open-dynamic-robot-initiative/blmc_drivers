@@ -264,14 +264,14 @@ public:
 //            time_logger.end_and_start_interval();
 //            if ((time_logger.count() % 100) == 0)
 //            {
-//                osi::realtime_printf("--------------------------\n");
-//                osi::realtime_printf("current: %f\n", current);
-//                osi::realtime_printf("target current: %f\n", target_current);
-//                osi::realtime_printf("velocity: %f\n", velocity);
+//                rt_printf("--------------------------\n");
+//                rt_printf("current: %f\n", current);
+//                rt_printf("target current: %f\n", target_current);
+//                rt_printf("velocity: %f\n", velocity);
 
 
-//                osi::realtime_printf("temperature: %f\n", temperature_.get());
-//                osi::realtime_printf("--------------------------\n");
+//                rt_printf("temperature: %f\n", temperature_.get());
+//                rt_printf("--------------------------\n");
 
 //            }
 //        }

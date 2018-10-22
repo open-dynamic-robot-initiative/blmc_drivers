@@ -52,7 +52,7 @@ private:
             time_logger.end_and_start_interval();
             if ((time_logger.count() % 1000) == 0)
             {
-                osi::realtime_printf("sending current: %f\n", current_target);
+                rt_printf("sending current: %f\n", current_target);
             }
         }
     }
@@ -81,17 +81,25 @@ int main(int argc, char **argv)
     auto motor_2 = std::make_shared<SafeMotor>(board1, 1);
     auto motor_3 = std::make_shared<SafeMotor>(board2, 0);
 
+    rt_printf("motors are set up \n");
+
     auto analog_sensor_1 = std::make_shared<AnalogSensor>(board1, 0);
     auto analog_sensor_2 = std::make_shared<AnalogSensor>(board1, 1);
     auto analog_sensor_3 = std::make_shared<AnalogSensor>(board2, 0);
+
+    rt_printf("sensors are set up \n");
 
     Controller controller1(motor_1, analog_sensor_1);
     Controller controller2(motor_2, analog_sensor_2);
     Controller controller3(motor_3, analog_sensor_3);
 
+    rt_printf("controllers are set up \n");
+
     controller1.start_loop();
     controller2.start_loop();
     controller3.start_loop();
+
+    rt_printf("loops have started \n");
 
     while(true)
     {

@@ -220,7 +220,7 @@ private:
         ret = rt_dev_socket(PF_CAN, SOCK_RAW, CAN_RAW);
         if (ret < 0) {
             rt_fprintf(stderr, "rt_dev_socket: %s\n", strerror(-ret));
-            osi::realtime_printf("Couldn't setup CAN connection. Exit.");
+            rt_printf("Couldn't setup CAN connection. Exit.");
             exit(-1);
         }
         socket_number = ret;
@@ -232,7 +232,7 @@ private:
             rt_fprintf(stderr, "rt_dev_ioctl GET_IFINDEX: %s\n",
                        strerror(-ret));
             osi::close_can_device(socket_number);
-            osi::realtime_printf("Couldn't setup CAN connection. Exit.");
+            rt_printf("Couldn't setup CAN connection. Exit.");
             exit(-1);
         }
 
@@ -244,7 +244,7 @@ private:
             {
                 rt_fprintf(stderr, "rt_dev_setsockopt: %s\n", strerror(-ret));
                 osi::close_can_device(socket_number);
-                osi::realtime_printf("Couldn't setup CAN connection. Exit.");
+                rt_printf("Couldn't setup CAN connection. Exit.");
                 exit(-1);
             }
         }
@@ -258,7 +258,7 @@ private:
         {
             rt_fprintf(stderr, "rt_dev_bind: %s\n", strerror(-ret));
             osi::close_can_device(socket_number);
-            osi::realtime_printf("Couldn't setup CAN connection. Exit.");
+            rt_printf("Couldn't setup CAN connection. Exit.");
             exit(-1);
         }
 
@@ -270,7 +270,7 @@ private:
             rt_fprintf(stderr, "rt_dev_ioctl TAKE_TIMESTAMP: %s\n",
                        strerror(-ret));
             osi::close_can_device(socket);
-            osi::realtime_printf("Couldn't setup CAN connection. Exit.");
+            rt_printf("Couldn't setup CAN connection. Exit.");
             exit(-1);
         }
 #elif defined __RT_PREEMPT__
