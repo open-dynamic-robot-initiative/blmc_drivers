@@ -101,7 +101,6 @@ else()
 
     catkin_package(
         INCLUDE_DIRS ./include
-        LIBRARIES ${PROJECT_NAME}
     )
 
     add_executable(blmc_demo_3_motors
