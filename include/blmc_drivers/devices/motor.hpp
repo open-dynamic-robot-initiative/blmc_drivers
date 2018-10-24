@@ -11,6 +11,8 @@
 #include <blmc_drivers/devices/device_interface.hpp>
 
 
+namespace blmc_drivers
+{
 
 class MotorInterface: public DeviceInterface
 {
@@ -192,6 +194,8 @@ public:
         current_target_ = std::make_shared<ScalarTimeseries>(history_length);
     }
 };
+
+}
 
 //class MotorTemperature
 //{

@@ -21,7 +21,13 @@
  * the next element or step through them one by one such that none of them is
  * missed)
  */
+
+namespace blmc_drivers
+{
+
 class DeviceInterface
 {
 
 };
+
+}

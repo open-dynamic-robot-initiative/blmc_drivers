@@ -114,11 +114,6 @@ else()
         )
     target_link_libraries(demo_3_motors pthread)
 
-    add_executable(demo_single_motor
-        demos/demo_single_motor.cpp
-        )
-    target_link_libraries(demo_single_motor pthread)
-
 
     # unit tests ###############################################################
     catkin_add_gtest(threadsafe_object_test

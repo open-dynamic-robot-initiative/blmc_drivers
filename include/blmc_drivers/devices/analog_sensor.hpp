@@ -9,6 +9,10 @@
 #include <blmc_drivers/devices/device_interface.hpp>
 #include <blmc_drivers/devices/motor_board.hpp>
 
+
+namespace blmc_drivers
+{
+
 class AnalogSensorInterface: public DeviceInterface
 {
 public:
@@ -43,3 +47,5 @@ public:
     }
 
 };
+
+}

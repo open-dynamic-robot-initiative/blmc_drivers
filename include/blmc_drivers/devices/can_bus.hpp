@@ -11,7 +11,8 @@
 #include <blmc_drivers/devices/device_interface.hpp>
 
 
-
+namespace blmc_drivers
+{
 
 class CanBusFrame
 {
@@ -289,3 +290,6 @@ private:
         return can_connection;
     }
 };
+
+}
+
