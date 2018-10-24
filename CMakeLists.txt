@@ -100,8 +100,6 @@ else()
 
     include_directories(
         ./include
-        ./new_api
-
      )
 
     catkin_package(
