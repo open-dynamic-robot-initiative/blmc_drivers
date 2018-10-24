@@ -528,12 +528,12 @@ private:
             }
             }
 
-            static int count = 0;
-            if(count % 4000 == 0)
-            {
-                print_status();
-            }
-            count++;
+            // static int count = 0;
+            // if(count % 4000 == 0)
+            // {
+            //     print_status();
+            // }
+            // count++;
         }
     }
 
