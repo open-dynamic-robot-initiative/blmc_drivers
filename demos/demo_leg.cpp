@@ -2,6 +2,7 @@
 #include <blmc_drivers/devices/analog_sensor.hpp>
 #include <blmc_drivers/utils/timer.hpp>
 #include <blmc_drivers/devices/leg.hpp>
+#include <math.h>
 
 class Controller
 {
@@ -102,9 +103,39 @@ private:
         {
             double analog_measurement =
                     analog_sensor_->get_measurement()->newest_element();
-            double current_target = (analog_measurement - 0.5);
+            double position_target = (analog_measurement - 0.5);
 
-            leg_->set_current_target(current_target, blmc_drivers::Leg::knee);
+            double position_hip = leg_->get_motor_measurement(blmc_drivers::Leg::hip,
+                                                         blmc_drivers::Leg::position)->newest_element();
+            double velocity_hip = leg_->get_motor_measurement(blmc_drivers::Leg::hip,
+                                                         blmc_drivers::Leg::velocity)->newest_element();
+
+            double position_knee = leg_->get_motor_measurement(blmc_drivers::Leg::knee,
+                                                         blmc_drivers::Leg::position)->newest_element();
+            double velocity_knee = leg_->get_motor_measurement(blmc_drivers::Leg::knee,
+                                                         blmc_drivers::Leg::velocity)->newest_element();
+
+            double kp = 5;
+            double kd = 1;
+            double current_target_knee = kp*(position_target - position_knee) -
+                                         kd*(velocity_knee);
+            double current_target_hip = kp*(position_target - position_hip) -
+                                         kd*(velocity_hip);
+
+            if(current_target_knee > 1.0) {
+                current_target_knee = 1.0;
+            } else if (current_target_knee < -1.0) {
+                current_target_knee = -1.0;
+            }
+
+            if(current_target_hip > 1.0) {
+                current_target_hip = 1.0;
+            } else if (current_target_hip < -1.0) {
+                current_target_hip = -1.0;
+            }
+
+            leg_->set_current_target(current_target_knee, blmc_drivers::Leg::knee);
+            leg_->set_current_target(current_target_hip, blmc_drivers::Leg::hip);
             leg_->send_if_input_changed();
 
             // print -----------------------------------------------------------
@@ -112,7 +143,7 @@ private:
             time_logger.end_and_start_interval();
             if ((time_logger.count() % 1000) == 0)
             {
-                rt_printf("sending current: %f\n", current_target);
+                rt_printf("sending current: %f\n", current_target_knee);
                 // time_logger.print_status();
             }
         }
