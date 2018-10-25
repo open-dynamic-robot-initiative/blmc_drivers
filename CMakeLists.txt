@@ -106,6 +106,12 @@ else()
         )
     target_link_libraries(blmc_demo_3_motors pthread)
 
+    #####
+    add_executable(blmc_demo_single_board
+        demos/demo_single_board.cpp
+        )
+    target_link_libraries(blmc_demo_single_board pthread)
+
 
     # unit tests ###############################################################
     catkin_add_gtest(threadsafe_object_test
