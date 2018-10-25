@@ -159,7 +159,9 @@ int main(int argc, char **argv)
 
     // create bus and boards -------------------------------------------------
 
-    auto can_bus = std::make_shared<blmc_drivers::CanBus>("can1");
+    auto can_bus = std::make_shared<blmc_drivers::CanBus>("can4");
+    auto can_bus2 = std::make_shared<blmc_drivers::CanBus>("can5");
+
 
     auto board = std::make_shared<blmc_drivers::CanBusMotorBoard>(can_bus);
     // create motors and sensors ---------------------------------------------
@@ -167,6 +169,17 @@ int main(int argc, char **argv)
     auto motor_knee = std::make_shared<blmc_drivers::Motor>(board,1); 
 
     auto leg = std::make_shared<blmc_drivers::Leg>(motor_hip, motor_knee);
+
+
+
+
+
+    auto board2 = std::make_shared<blmc_drivers::CanBusMotorBoard>(can_bus2);
+    // create motors and sensors ---------------------------------------------
+    auto motor_hip2 = std::make_shared<blmc_drivers::Motor>(board2,0);
+    auto motor_knee2 = std::make_shared<blmc_drivers::Motor>(board2,1); 
+
+    auto leg2 = std::make_shared<blmc_drivers::Leg>(motor_hip2, motor_knee2);
 
     rt_printf("leg is set up \n");
 
@@ -180,10 +193,12 @@ int main(int argc, char **argv)
     // Controller controller2(motor_2, analog_sensor_3);
 
     LegController leg_controller(leg, analog_sensor);
+    LegController leg_controller2(leg2, analog_sensor);
     // Controller controller3(motor_3, analog_sensor_3);
     rt_printf("controllers are set up \n");
 
     leg_controller.start_loop();
+    leg_controller2.start_loop();
     // controller3.start_loop();
 
     rt_printf("loops have started \n");
