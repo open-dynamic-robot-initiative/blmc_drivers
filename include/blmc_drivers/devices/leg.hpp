@@ -4,16 +4,15 @@
 #include <string>
 #include <map>
 
+#include <blmc_drivers/utils/threadsafe_timeseries.hpp>
 
-#include <utils/threadsafe_object.hpp>
-#include <utils/threadsafe_timeseries.hpp>
+#include <blmc_drivers/devices/motor.hpp>
+#include <blmc_drivers/devices/device_interface.hpp>
 
-#include <devices/motor.hpp>
-#include <devices/device_interface.hpp>
+namespace blmc_drivers
+{
 
-
-
-class FingerInterface: public DeviceInterface
+class LegInterface: public DeviceInterface
 {
 public:
     typedef ThreadsafeTimeseries<double> ScalarTimeseries;
@@ -21,19 +20,19 @@ public:
 
     enum MotorMeasurementIndexing {current, position, velocity, encoder_index,
                                    motor_measurement_count};
-    enum MotorIndexing {interior, center, tip, motor_count};
+    enum MotorIndexing {hip, knee, motor_count};
 
     /// getters ================================================================
     // device outputs ----------------------------------------------------------
     virtual Ptr<const ScalarTimeseries>
-    motor_measurement(const int& motor_index,
+    get_motor_measurement(const int& motor_index,
                       const int& measurement_index) const = 0;
 
     // input logs --------------------------------------------------------------
     virtual Ptr<const ScalarTimeseries>
-    current_target(const int& motor_index) const = 0;
+    get_current_target(const int& motor_index) const = 0;
     virtual Ptr<const ScalarTimeseries>
-    sent_current_target(const int& motor_index) const = 0;
+    get_sent_current_target(const int& motor_index) const = 0;
 
     /// setters ================================================================
     virtual void set_current_target(const double& current_target,
@@ -44,46 +43,45 @@ public:
 
     /// ========================================================================
 
-    virtual ~FingerInterface() {}
+    virtual ~LegInterface() {}
 };
 
 
-class Finger: public FingerInterface
+class Leg: public LegInterface
 {
 private:
-    std::array<std::shared_ptr<MotorInterface>, 3> motors_;
+    std::array<std::shared_ptr<MotorInterface>, 2> motors_;
 
 public:
-    Finger(std::shared_ptr<MotorInterface> interior_motor,
-           std::shared_ptr<MotorInterface> center_motor,
-           std::shared_ptr<MotorInterface> tip_motor)
+    Leg(std::shared_ptr<MotorInterface> hip_motor,
+           std::shared_ptr<MotorInterface> knee_motor)
+   
     {
-        motors_[interior] = interior_motor;
-        motors_[center] = center_motor;
-        motors_[tip] = tip_motor;
+        motors_[hip] = hip_motor;
+        motors_[knee] = knee_motor;
     }
 
-    virtual ~Finger() {}
+    virtual ~Leg() {}
 
     /// getters ================================================================
     // device outputs ----------------------------------------------------------
     virtual Ptr<const ScalarTimeseries>
-    motor_measurement(const int& motor_index,
+    get_motor_measurement(const int& motor_index,
                       const int& measurement_index) const
     {
-        return motors_[motor_index]->measurement(measurement_index);
+        return motors_[motor_index]->get_measurement(measurement_index);
     }
 
     // input logs --------------------------------------------------------------
     virtual Ptr<const ScalarTimeseries>
-    current_target(const int& motor_index) const
+    get_current_target(const int& motor_index) const
     {
-        return motors_[motor_index]->current_target();
+        return motors_[motor_index]->get_current_target();
     }
     virtual Ptr<const ScalarTimeseries>
-    sent_current_target(const int& motor_index) const
+    get_sent_current_target(const int& motor_index) const
     {
-        return motors_[motor_index]->sent_current_target();
+        return motors_[motor_index]->get_sent_current_target();
     }
 
     /// setters ================================================================
@@ -103,3 +101,4 @@ public:
     /// ========================================================================
 };
 
+}

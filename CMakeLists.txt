@@ -112,6 +112,11 @@ else()
         )
     target_link_libraries(blmc_demo_single_board pthread)
 
+    #####
+    add_executable(demo_leg
+        demos/demo_leg.cpp
+        )
+    target_link_libraries(demo_leg pthread)
 
     # unit tests ###############################################################
     catkin_add_gtest(threadsafe_object_test
