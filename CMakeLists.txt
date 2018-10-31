@@ -101,22 +101,28 @@ else()
         INCLUDE_DIRS ./include
     )
 
-    add_executable(blmc_demo_3_motors
+    add_executable(demo_blmc_3_motors
         demos/demo_3_motors.cpp
         )
-    target_link_libraries(blmc_demo_3_motors pthread)
+    target_link_libraries(demo_blmc_3_motors pthread)
 
     #####
-    add_executable(blmc_demo_single_board
+    add_executable(demo_blmc_single_board
         demos/demo_single_board.cpp
         )
-    target_link_libraries(blmc_demo_single_board pthread)
+    target_link_libraries(demo_blmc_single_board pthread)
 
     #####
-    add_executable(demo_leg
+    add_executable(demo_blmc_leg
         demos/demo_leg.cpp
         )
-    target_link_libraries(demo_leg pthread)
+    target_link_libraries(demo_blmc_leg pthread)
+
+    #####
+    add_executable(demo_blmc_8_motors
+        demos/demo_8_motors.cpp
+        )
+    target_link_libraries(demo_blmc_8_motors pthread)
 
     # unit tests ###############################################################
     catkin_add_gtest(threadsafe_object_test

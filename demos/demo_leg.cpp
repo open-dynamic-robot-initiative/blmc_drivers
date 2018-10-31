@@ -159,48 +159,30 @@ int main(int argc, char **argv)
 
     // create bus and boards -------------------------------------------------
 
-    auto can_bus = std::make_shared<blmc_drivers::CanBus>("can4");
-    auto can_bus2 = std::make_shared<blmc_drivers::CanBus>("can5");
+    // this is the id of the cans bus (plug behind the computer). see https://atlas.is.localnet/confluence/pages/viewpage.action?pageId=44958260
+    // use netstat -i repeatedly to see wich can bus value is changing. (Later labels behind the computer identify it).
+    auto can_bus = std::make_shared<blmc_drivers::CanBus>("can3");
 
-
+    // the board is used to communicate with the can bus, it takes one upon creation
     auto board = std::make_shared<blmc_drivers::CanBusMotorBoard>(can_bus);
+    
     // create motors and sensors ---------------------------------------------
-    auto motor_hip = std::make_shared<blmc_drivers::Motor>(board,0);
-    auto motor_knee = std::make_shared<blmc_drivers::Motor>(board,1); 
+    auto motor_hip = std::make_shared<blmc_drivers::Motor>(board, 0);
+    auto motor_knee = std::make_shared<blmc_drivers::Motor>(board, 1); 
 
     auto leg = std::make_shared<blmc_drivers::Leg>(motor_hip, motor_knee);
-
-
-
-
-
-    auto board2 = std::make_shared<blmc_drivers::CanBusMotorBoard>(can_bus2);
-    // create motors and sensors ---------------------------------------------
-    auto motor_hip2 = std::make_shared<blmc_drivers::Motor>(board2,0);
-    auto motor_knee2 = std::make_shared<blmc_drivers::Motor>(board2,1); 
-
-    auto leg2 = std::make_shared<blmc_drivers::Leg>(motor_hip2, motor_knee2);
-
     rt_printf("leg is set up \n");
 
-    // auto analog_sensor_1 = std::make_shared<blmc_drivers::AnalogSensor>(board1, 0);
-    // auto analog_sensor_2 = std::make_shared<blmc_drivers::AnalogSensor>(board1, 1);
+    // on the board there is an analog input (slider) at slot 0 (of the analog input)
     auto analog_sensor = std::make_shared<blmc_drivers::AnalogSensor>(board, 0);
-
+    // on the board there is an analog input (slider) at slot 0 (of the analog input)
+    //auto analog_sensor = std::make_shared<blmc_drivers::AnalogSensor>(board, 1);
     rt_printf("sensors are set up \n");
 
-    // Controller controller1(motor_1, analog_sensor_3);
-    // Controller controller2(motor_2, analog_sensor_3);
-
     LegController leg_controller(leg, analog_sensor);
-    LegController leg_controller2(leg2, analog_sensor);
-    // Controller controller3(motor_3, analog_sensor_3);
     rt_printf("controllers are set up \n");
 
     leg_controller.start_loop();
-    leg_controller2.start_loop();
-    // controller3.start_loop();
-
     rt_printf("loops have started \n");
 
     while(true)
