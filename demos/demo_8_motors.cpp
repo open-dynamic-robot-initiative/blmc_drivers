@@ -54,7 +54,7 @@ private:
     while(true)
     {
       for(std::vector<PairMotorSlider>::iterator pair_it = motor_slider_pairs_.begin() ;
-          pair_it != motor_slider_pairs_.begin() ; ++pair_it)
+          pair_it != motor_slider_pairs_.end() ; ++pair_it)
       {
         SafeMotor_ptr motor = pair_it->first;
         Slider_ptr slider = pair_it->second;
@@ -130,29 +130,29 @@ int main(int argc, char **argv)
         std::make_shared<blmc_drivers::SafeMotor>   (board0, 1, max_current),
         std::make_shared<blmc_drivers::AnalogSensor>(board0, 1)));
 
-//  // two individual motors with a wheel on top
-//  motor_slider_list.push_back(PairMotorSlider(
-//        std::make_shared<blmc_drivers::SafeMotor>   (board1, 0, max_current),
-//        std::make_shared<blmc_drivers::AnalogSensor>(board1, 0)));
-//  motor_slider_list.push_back(PairMotorSlider(
-//        std::make_shared<blmc_drivers::SafeMotor>   (board1, 1, max_current),
-//        std::make_shared<blmc_drivers::AnalogSensor>(board1, 1)));
+  // two individual motors with a wheel on top
+  motor_slider_list.push_back(PairMotorSlider(
+        std::make_shared<blmc_drivers::SafeMotor>   (board1, 0, max_current),
+        std::make_shared<blmc_drivers::AnalogSensor>(board1, 0)));
+  motor_slider_list.push_back(PairMotorSlider(
+        std::make_shared<blmc_drivers::SafeMotor>   (board1, 1, max_current),
+        std::make_shared<blmc_drivers::AnalogSensor>(board1, 1)));
 
-//  // the leg style mounting
-//  motor_slider_list.push_back(PairMotorSlider(
-//        std::make_shared<blmc_drivers::SafeMotor>   (board2, 0, max_current),
-//        std::make_shared<blmc_drivers::AnalogSensor>(board2, 0)));
-//  motor_slider_list.push_back(PairMotorSlider(
-//        std::make_shared<blmc_drivers::SafeMotor>   (board2, 1, max_current),
-//        std::make_shared<blmc_drivers::AnalogSensor>(board2, 1)));
+  // the leg style mounting
+  motor_slider_list.push_back(PairMotorSlider(
+        std::make_shared<blmc_drivers::SafeMotor>   (board2, 0, max_current),
+        std::make_shared<blmc_drivers::AnalogSensor>(board2, 0)));
+  motor_slider_list.push_back(PairMotorSlider(
+        std::make_shared<blmc_drivers::SafeMotor>   (board2, 1, max_current),
+        std::make_shared<blmc_drivers::AnalogSensor>(board2, 1)));
 
-//  // the hopper style mounting
-//  motor_slider_list.push_back(PairMotorSlider(
-//        std::make_shared<blmc_drivers::SafeMotor>   (board3, 0, max_current),
-//        std::make_shared<blmc_drivers::AnalogSensor>(board3, 0)));
-//  motor_slider_list.push_back(PairMotorSlider(
-//        std::make_shared<blmc_drivers::SafeMotor>   (board3, 1, max_current),
-//        std::make_shared<blmc_drivers::AnalogSensor>(board3, 1)));
+  // the hopper style mounting
+  motor_slider_list.push_back(PairMotorSlider(
+        std::make_shared<blmc_drivers::SafeMotor>   (board3, 0, max_current),
+        std::make_shared<blmc_drivers::AnalogSensor>(board3, 0)));
+  motor_slider_list.push_back(PairMotorSlider(
+        std::make_shared<blmc_drivers::SafeMotor>   (board3, 1, max_current),
+        std::make_shared<blmc_drivers::AnalogSensor>(board3, 1)));
 
   rt_printf("motors and sliders are set up \n");
 
