@@ -136,7 +136,7 @@ inline void send_to_can_device(int fd, const void *buf, size_t len,
     if (ret < 0)
     {
         rt_printf("something went wrong with "
-                  "sending CAN frame, error code: %d\n", ret);
+                  "sending CAN frame, error code: %d, errno=%d\n", ret, errno);
         exit(-1);
     }
 }
@@ -157,7 +157,7 @@ inline void receive_message_from_can_device(int fd, struct msghdr *msg, int flag
     if (ret < 0)
     {
         rt_printf("something went wrong with receiving "
-                  "CAN frame, error code: %d\n", ret);
+                  "CAN frame, error code: %d, errno=%d\n", ret, errno);
         exit(-1);
     }
 
