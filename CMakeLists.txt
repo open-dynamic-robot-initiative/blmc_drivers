@@ -138,3 +138,7 @@ else()
     target_link_libraries(threadsafe_timeseries_test)
 
 endif()
+
+catkin_install_python(PROGRAMS
+  scripts/initialize_can_bus.sh
+  DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
