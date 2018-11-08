@@ -172,10 +172,10 @@ public:
         safe_current_target = std::max(safe_current_target,
                                        -max_current_target_);
 
-        // limit velocity to avoid breaking the robot --------------------------
-        if(get_measurement(velocity)->length() > 0 &&
-                std::fabs(get_measurement(velocity)->newest_element()) > 0.5)
-            safe_current_target = 0;
+//        // limit velocity to avoid breaking the robot --------------------------
+//        if(get_measurement(velocity)->length() > 0 &&
+//                std::fabs(get_measurement(velocity)->newest_element()) > 0.5)
+//            safe_current_target = 0;
 
         Motor::set_current_target(safe_current_target);
     }
