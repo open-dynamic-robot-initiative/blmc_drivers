@@ -125,17 +125,17 @@ else()
     target_link_libraries(demo_blmc_8_motors pthread)
 
     # unit tests ###############################################################
-    catkin_add_gtest(threadsafe_object_test
+    catkin_add_gtest(test_threadsafe_object
       tests/main.cpp
       tests/threadsafe_object_test.cpp
     )
-    target_link_libraries(threadsafe_object_test)
+    target_link_libraries(test_threadsafe_object)
 
-    catkin_add_gtest(threadsafe_timeseries_test
+    catkin_add_gtest(test_threadsafe_timeseries
       tests/main.cpp
       tests/threadsafe_timeseries_test.cpp
     )
-    target_link_libraries(threadsafe_timeseries_test)
+    target_link_libraries(test_threadsafe_timeseries)
 
 endif()
 

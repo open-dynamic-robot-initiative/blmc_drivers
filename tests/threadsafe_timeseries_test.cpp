@@ -2,8 +2,9 @@
 #include <eigen3/Eigen/Core>
 #include <gtest/gtest.h>
 
-#include <utils/threadsafe_timeseries.hpp>
-#include <utils/timer.hpp>
+#include <blmc_drivers/utils/os_interface.hpp>
+#include <blmc_drivers/utils/threadsafe_timeseries.hpp>
+#include <blmc_drivers/utils/timer.hpp>
 
 
 typedef Eigen::Matrix<double, 20, 20> Type;
@@ -69,7 +70,7 @@ TEST(threadsafe_timeseries, full_history)
     }
 
     mlockall(MCL_CURRENT | MCL_FUTURE);
-    rt_print_auto_init(1);
+    osi::initialize_realtime_printing();
 
     std::vector<size_t> output_indices(n_outputs);
     for(size_t i = 0; i < n_outputs; i++)
@@ -128,7 +129,7 @@ TEST(threadsafe_timeseries, partial_history)
     }
 
     mlockall(MCL_CURRENT | MCL_FUTURE);
-    rt_print_auto_init(1);
+    osi::initialize_realtime_printing();
 
     std::vector<size_t> output_indices(n_outputs);
     for(size_t i = 0; i < n_outputs; i++)

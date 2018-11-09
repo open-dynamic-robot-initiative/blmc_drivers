@@ -249,7 +249,7 @@ inline void sleep_ms(const double& sleep_time_ms)
 #ifdef __XENO__
     rt_task_sleep(int(sleep_time_ms * 1000000.));
 #else
-    usleep(sleep_time_ms * 1000.);
+    usleep(sleep_time_ms * 1000.); // nano_sleep
 #endif
 }
 
