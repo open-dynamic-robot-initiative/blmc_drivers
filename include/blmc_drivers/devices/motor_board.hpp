@@ -7,6 +7,8 @@
 #include <blmc_drivers/utils/threadsafe_object.hpp>
 #include <blmc_drivers/utils/threadsafe_timeseries.hpp>
 
+#include <real_time_tools/realtime_thread_creation.hpp>
+
 #include <blmc_drivers/utils/os_interface.hpp>
 #include <blmc_drivers/devices/can_bus.hpp>
 
@@ -274,6 +276,9 @@ private:
     Vector<Ptr<ScalarTimeseries>> sent_control_;
     Ptr<CommandTimeseries> sent_command_;
 
+    /// loop management ========================================================
+    bool is_loop_active_;
+    real_time_tools::RealTimeThread rt_thread_;
 
     /// constructor ============================================================
 public:
@@ -313,7 +318,10 @@ public:
         for(size_t i = 0; i < control_.size(); i++)
             control_[i]->append(0);
 
-        osi::start_thread(&CanBusMotorBoard::loop, this);
+
+        is_loop_active_ = true;
+        real_time_tools::create_realtime_thread(
+              rt_thread_, &CanBusMotorBoard::loop, this);
     }
 
 
@@ -322,6 +330,8 @@ public:
 
     ~CanBusMotorBoard()
     {
+        is_loop_active_ = false;
+        real_time_tools::join_thread(rt_thread_);
         append_and_send_command(
                     MotorBoardCommand(MotorBoardCommand::IDs::ENABLE_SYS,
                                       MotorBoardCommand::Contents::DISABLE));
@@ -451,7 +461,7 @@ private:
         enable();
 
         long int timeindex = can_bus_->get_output_frame()->newest_timeindex();
-        while(true)
+        while(is_loop_active_)
         {
             CanBusFrame can_frame;
             Index received_timeindex = timeindex;

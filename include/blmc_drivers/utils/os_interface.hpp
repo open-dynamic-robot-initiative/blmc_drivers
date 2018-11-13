@@ -235,7 +235,6 @@ inline void start_thread(THREAD_FUNCTION_RETURN_TYPE (*function)(void *cookie),
 #endif
 }
 
-
 inline void initialize_realtime_printing()
 {
 #ifdef __XENO__

@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 2.8)
 project(blmc_drivers)
 
-find_package(catkin REQUIRED)
+find_package(catkin REQUIRED COMPONENTS real_time_tools)
 find_package(Xenomai QUIET)
 find_package(Eigen3 REQUIRED)
 
@@ -15,6 +15,9 @@ add_custom_target(headers SOURCES ${LibFiles})
 # Use the `uname` command to determine if running on a RT_PREEMPTED system.
 execute_process(COMMAND uname -v OUTPUT_VARIABLE uname_OUTPUT)
 
+# This macro sets the C++ preprocessor flags "XENOMAI", "RT_PREEMPT", or
+# "NON_REAL_TIME" according to the current operating system.
+define_os()
 
 if(Xenomai_FOUND)
     add_definitions(${Xenomai_DEFINITIONS})
@@ -95,6 +98,7 @@ else()
 
     include_directories(
         ./include
+        ${catkin_INCLUDE_DIRS}
      )
 
     catkin_package(
@@ -104,38 +108,38 @@ else()
     add_executable(demo_blmc_3_motors
         demos/demo_3_motors.cpp
         )
-    target_link_libraries(demo_blmc_3_motors pthread)
+    target_link_libraries(demo_blmc_3_motors pthread ${catkin_LIBRARIES})
 
     #####
     add_executable(demo_blmc_single_board
         demos/demo_single_board.cpp
         )
-    target_link_libraries(demo_blmc_single_board pthread)
+    target_link_libraries(demo_blmc_single_board pthread ${catkin_LIBRARIES})
 
     #####
     add_executable(demo_blmc_leg
         demos/demo_leg.cpp
         )
-    target_link_libraries(demo_blmc_leg pthread)
+    target_link_libraries(demo_blmc_leg pthread ${catkin_LIBRARIES})
 
     #####
     add_executable(demo_blmc_8_motors
         demos/demo_8_motors.cpp
         )
-    target_link_libraries(demo_blmc_8_motors pthread)
+    target_link_libraries(demo_blmc_8_motors pthread ${catkin_LIBRARIES})
 
     # unit tests ###############################################################
     catkin_add_gtest(test_threadsafe_object
       tests/main.cpp
       tests/threadsafe_object_test.cpp
     )
-    target_link_libraries(test_threadsafe_object)
+    target_link_libraries(test_threadsafe_object ${catkin_LIBRARIES})
 
     catkin_add_gtest(test_threadsafe_timeseries
       tests/main.cpp
       tests/threadsafe_timeseries_test.cpp
     )
-    target_link_libraries(test_threadsafe_timeseries)
+    target_link_libraries(test_threadsafe_timeseries ${catkin_LIBRARIES})
 
 endif()
 

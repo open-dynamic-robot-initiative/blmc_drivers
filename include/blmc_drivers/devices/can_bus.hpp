@@ -7,6 +7,8 @@
 #include <blmc_drivers/utils/threadsafe_object.hpp>
 #include <blmc_drivers/utils/threadsafe_timeseries.hpp>
 
+#include <real_time_tools/realtime_thread_creation.hpp>
+
 #include <blmc_drivers/utils/os_interface.hpp>
 #include <blmc_drivers/devices/device_interface.hpp>
 
@@ -105,11 +107,15 @@ public:
 
         can_connection_.set(setup_can(can_interface_name, 0));
 
-        osi::start_thread(&CanBus::loop, this);
+        is_loop_active_ = true;
+        real_time_tools::create_realtime_thread(
+              rt_thread_, &CanBus::loop, this);
     }
 
     virtual ~CanBus()
     {
+        is_loop_active_ = false;
+        real_time_tools::join_thread(rt_thread_);
         osi::close_can_device(can_connection_.get().socket);
     }
 
@@ -123,6 +129,10 @@ private:
 
     std::shared_ptr<ThreadsafeTimeseries<CanBusFrame>> output_;
 
+    bool is_loop_active_;
+    real_time_tools::RealTimeThread rt_thread_;
+
+
     // methods -----------------------------------------------------------------
     static THREAD_FUNCTION_RETURN_TYPE loop(void* instance_pointer)
     {
@@ -133,7 +143,7 @@ private:
     {
         Timer<100> loop_time_logger("can bus loop");
 
-        while (true)
+        while (is_loop_active_)
         {
             output_->append(receive_frame());
             loop_time_logger.end_and_start_interval();
