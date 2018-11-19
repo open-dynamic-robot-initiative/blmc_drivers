@@ -128,6 +128,12 @@ else()
         )
     target_link_libraries(demo_blmc_8_motors pthread ${catkin_LIBRARIES})
 
+    #####
+    add_executable(demo_blmc_2_motors
+        demos/demo_2_motors.cpp
+        )
+    target_link_libraries(demo_blmc_2_motors pthread ${catkin_LIBRARIES})
+
     # unit tests ###############################################################
     catkin_add_gtest(test_threadsafe_object
       tests/main.cpp
