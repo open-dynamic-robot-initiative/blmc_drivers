@@ -193,6 +193,11 @@ public:
     {
         current_target_ = std::make_shared<ScalarTimeseries>(history_length);
     }
+
+    void set_max_current(double max_current_target)
+    {
+      max_current_target_ = max_current_target;
+    }
 };
 
 }
