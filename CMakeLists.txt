@@ -98,7 +98,7 @@ else()
      )
 
     catkin_package(
-        INCLUDE_DIRS ./include
+        INCLUDE_DIRS include
     )
 
     add_executable(demo_blmc_3_motors
