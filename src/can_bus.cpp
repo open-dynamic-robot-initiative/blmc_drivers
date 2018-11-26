@@ -2,7 +2,7 @@
  * @file can_bus.cpp
  * @author Manuel Wuthrich (manuel.wuthrich@gmail.com)
  * @author Maximilien Naveau (maximilien.naveau@gmail.com)
- * @brief 
+ * @brief This file defines classes that allow communication with a Can network.
  * @version 0.1
  * @date 2018-11-23
  * 
@@ -194,7 +194,7 @@ CanBusConnection CanBus::setup_can(std::string name, uint32_t err_mask)
         rt_printf("Couldn't setup CAN connection. Exit.");
         exit(-1);
     }
-#elif defined __RT_PREEMPT__
+#elif defined RT_PREEMPT
     // TODO: Need to support timestamps.
 #endif
 

@@ -2,7 +2,7 @@
  * @file analog_sensor.hpp
  * @author Manuel Wuthrich (manuel.wuthrich@gmail.com)
  * @author Maximilien Naveau (maximilien.naveau@gmail.com)
- * @brief 
+ * @brief This file declares a class to get access to analogue sensors.
  * @version 0.1
  * @date 2018-11-23
  * 

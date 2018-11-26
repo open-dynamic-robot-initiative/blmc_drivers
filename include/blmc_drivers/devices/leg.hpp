@@ -1,3 +1,22 @@
+/**
+ * @file leg.hpp
+ * @author Manuel Wuthrich (manuel.wuthrich@gmail.com)
+ * @author Maximilien Naveau (maximilien.naveau@gmail.com)
+ * @brief This file declares and define a wrapper around the blmc_drivers
+ * conventionnal classes.
+ * It implements a simple leg class that concatenate 2 motors, one for teh hip
+ * and one for the knee.
+ * 
+ * Warning: The class implemented here are extremely simple.
+ * So there do **NOT** exists a leg.cpp file.
+ * 
+ * @version 0.1
+ * @date 2018-11-26
+ * 
+ * @copyright Copyright (c) 2018
+ * 
+ */
+
 #pragma once
 
 #include <memory>
@@ -12,62 +31,147 @@
 namespace blmc_drivers
 {
 
+/**
+ * @brief This class defines an interface to control a leg.
+ * This legg is composed of 2 motor, one for the hip and one for the knee.
+ */
 class LegInterface: public DeviceInterface
 {
 public:
+    /**
+     * @brief ScalarTimeseries is a simple shortcut for more intelligible code.
+     */
     typedef ThreadsafeTimeseries<double> ScalarTimeseries;
+    
+    /**
+     * @brief This is a shortcut for creating shared pointer in a simpler
+     * writting expression.
+     * 
+     * @tparam Type is the template paramer of the shared pointer.
+     */
     template<typename Type> using Ptr = std::shared_ptr<Type>;
 
+    /**
+     * @brief MotorMeasurementIndexing this enum allow to access the different
+     * kind of sensor measurements in an understandable way in the code.
+     */
     enum MotorMeasurementIndexing {current, position, velocity, encoder_index,
                                    motor_measurement_count};
+
+    /**
+     * @brief This enum list the motors in the leg
+     */
     enum MotorIndexing {hip, knee, motor_count};
 
-    /// getters ================================================================
-    // device outputs ----------------------------------------------------------
+    /**
+     * @brief Destroy the LegInterface object
+     */
+    virtual ~LegInterface() {}
+
+    /**
+     * Getters
+     */
+
+    /**
+     * @brief Get the device output
+     * 
+     * @param[in] motor_index designate the motor from which we want the data
+     * from.
+     * @param[in] measurement_index is teh kind of data we are looking for.
+     * @return Ptr<const ScalarTimeseries>  is the list of the lasts time 
+     * stamped acquiered.
+     */
     virtual Ptr<const ScalarTimeseries>
     get_motor_measurement(const int& motor_index,
-                      const int& measurement_index) const = 0;
+                          const int& measurement_index) const = 0;
 
-    // input logs --------------------------------------------------------------
+    
+    /**
+     * @brief Get the actual target current
+     * 
+     * @param[in] motor_index designate the motor from which we want the data
+     * from.
+     * @return Ptr<const ScalarTimeseries> is the list of the lasts time 
+     * stamped acquiered.
+     */
     virtual Ptr<const ScalarTimeseries>
     get_current_target(const int& motor_index) const = 0;
+
+    /**
+     * @brief Get the last sent target current.
+     * 
+     * @param[in] motor_index designate the motor from which we want the data
+     * from.
+     * @return Ptr<const ScalarTimeseries> is the list of the lasts time 
+     * stamped acquiered.
+     */
     virtual Ptr<const ScalarTimeseries>
     get_sent_current_target(const int& motor_index) const = 0;
 
-    /// setters ================================================================
+    /**
+     * Setters
+     */
+
+    /**
+     * @brief Set the current target saves internally the desired current. This
+     * data is not send to the motor yet. Please call send_if_input_changed in
+     * order to actually send the data to the card.
+     * 
+     * @param current_target is the current to achieve on the motor card.
+     * @param motor_index is the motor to control.
+     */
     virtual void set_current_target(const double& current_target,
                                     const int& motor_index) = 0;
 
-    /// sender =================================================================
+    /**
+     * Sender
+     */
+
+    /**
+     * @brief Actually send the target current to the motor cards.
+     */
     virtual void send_if_input_changed() = 0;
-
-    /// ========================================================================
-
-    virtual ~LegInterface() {}
 };
 
-
+/**
+ * @brief The leg class is the implementation of the LegInterface. This is
+ * the decalartion and the definition of the class as it is very simple.
+ */
 class Leg: public LegInterface
 {
-private:
-    std::array<std::shared_ptr<MotorInterface>, 2> motors_;
-
 public:
+    /**
+     * @brief Construct a new Leg object
+     * 
+     * @param hip_motor is the pointer to the hip motor
+     * @param knee_motor is the pointer to the knee motor
+     */
     Leg(std::shared_ptr<MotorInterface> hip_motor,
-           std::shared_ptr<MotorInterface> knee_motor)
-   
+        std::shared_ptr<MotorInterface> knee_motor)
     {
-        motors_[hip] = hip_motor;
-        motors_[knee] = knee_motor;
+      motors_[hip] = hip_motor;
+      motors_[knee] = knee_motor;
     }
 
+    /**
+     * @brief Destroy the Leg object
+     */
     virtual ~Leg() {}
 
-    /// getters ================================================================
-    // device outputs ----------------------------------------------------------
+    /**
+     * Getters
+     */
+
+    /**
+     * @brief Get the motor measurements.
+     * 
+     * @param motor_index 
+     * @param measurement_index 
+     * @return Ptr<const ScalarTimeseries> 
+     */
     virtual Ptr<const ScalarTimeseries>
     get_motor_measurement(const int& motor_index,
-                      const int& measurement_index) const
+                          const int& measurement_index) const
     {
         return motors_[motor_index]->get_measurement(measurement_index);
     }
@@ -99,6 +203,13 @@ public:
     }
 
     /// ========================================================================
+    private:
+    /**
+     * @brief This list contains pointers to two motors. This motors are 
+     * respectively the hip and the knee of the leg.
+     */
+    std::array<std::shared_ptr<MotorInterface>, 2> motors_;
+
 };
 
 }

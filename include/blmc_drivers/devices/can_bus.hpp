@@ -2,7 +2,8 @@
  * @file can_bus.hpp
  * @author Manuel Wuthrich (manuel.wuthrich@gmail.com)
  * @author Maximilien Naveau (maximilien.naveau@gmail.com)
- * @brief 
+ * @brief This file declares classes that allow communication with a Can
+ * network.
  * @version 0.1
  * @date 2018-11-23
  * 
@@ -44,9 +45,7 @@ public:
      */
     uint8_t dlc;
     /**
-     * @brief id is the can id.
-     * TODO: Manuel check (My guess is that is correspond to the can bus
-     * identification number).
+     * @brief id is the id number return by the CAN bus. Not currently used.
      */
     can_id_t id;
 };
