@@ -11,9 +11,12 @@
   <author email="fwidmaier@tue.mpg.de">Felix Widmaier</author>
   <author email="manuel.wuthrich@gmail.com">Manuel Wuthrich</author>
 
-
   <buildtool_depend>catkin</buildtool_depend>
   <build_depend>xenomai_ros</build_depend>
+
+  <!-- This tools provides real time thread objects in an encapsulated way -->
+  <build_depend> real_time_tools </build_depend>
+  <run_depend>   real_time_tools </run_depend>
 
   <export>
   </export>
