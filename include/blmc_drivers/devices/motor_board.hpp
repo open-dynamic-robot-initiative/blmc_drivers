@@ -593,8 +593,8 @@ private:
     std::shared_ptr<CanBusInterface> can_bus_;
 
     /**
-     * @brief 
-     * 
+     * @brief These are the frame IDs that define the kind of data we acquiere
+     * from the CAN bus
      */
     enum CanframeIDs
     {
@@ -608,20 +608,63 @@ private:
         ENC_INDEX = 0x60
     };
 
-    /// outputs ================================================================
+    /**
+     * Outputs
+     */
+
+    /**
+     * @brief measurement_ contains all the measurements acquiered from the CAN
+     * board.
+     */
     Vector<Ptr<ScalarTimeseries>> measurement_;
+
+    /**
+     * @brief This is the status history of the CAN board.
+     */
     Ptr<StatusTimeseries> status_;
 
-    /// inputs =================================================================
+    /**
+     * Inputs
+     */
+
+    /**
+     * @brief This is the buffer of the controls to be sent to card.
+     */
     Vector<Ptr<ScalarTimeseries>> control_;
+
+    /**
+     * @brief This is the buffer of the commands to be sent to the card. 
+     */
     Ptr<CommandTimeseries> command_;
 
-    /// log ====================================================================
+    /**
+     * Log
+     */
+
+    /**
+     * @brief This is the history of the already sent controls.
+     */
     Vector<Ptr<ScalarTimeseries>> sent_control_;
+
+    /**
+     * @brief This is the history of the already sent commands.
+     */
     Ptr<CommandTimeseries> sent_command_;
 
-    /// loop management ========================================================
+    /**
+     * Loop management
+     */
+
+    /**
+     * @brief This boolean makes sure that the loop is stopped upon destruction
+     * of this object.
+     */
     bool is_loop_active_;
+
+    /**
+     * @brief This is the thread object that allow to spwan a real-time thread
+     * or not dependening on the current OS.
+     */
     real_time_tools::RealTimeThread rt_thread_;
 
 };
