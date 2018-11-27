@@ -1,3 +1,15 @@
+/**
+ * @file stamped_data.hpp
+ * @author Manuel Wuthrich (manuel.wuthrich@gmail.com)
+ * @author Maximilien Naveau (maximilien.naveau@gmail.com)
+ * @brief 
+ * @version 0.1
+ * @date 2018-11-27
+ * 
+ * @copyright Copyright (c) 2018
+ * 
+ */
+
 #pragma once
 
 #include <blmc_drivers/utils/os_interface.hpp>

@@ -14,3 +14,4 @@ EXCLUDE_PATTERNS       = */deprecated/*
 RECURSIVE              = YES
 GENERATE_LATEX         = NO
 GENERATE_TAGFILE       = @PROJECT_NAME@.tag
+IMAGE_PATH             = @PROJECT_SOURCE_DIR@/doc/images

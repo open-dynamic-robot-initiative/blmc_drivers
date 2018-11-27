@@ -1,5 +1,22 @@
+/**
+ * @file device_interface.hpp
+ * @author Manuel Wuthrich (manuel.wuthrich@gmail.com)
+ * @author Maximilien Naveau (maximilien.naveau@gmail.com)
+ * @brief 
+ * @version 0.1
+ * @date 2018-11-27
+ * 
+ * @copyright Copyright (c) 2018
+ * 
+ */
+
 #pragma once
 
+/**
+ * @brief This namespace is the standard namespace of the package.
+ */
+namespace blmc_drivers
+{
 
 /**
  * @brief this class exists purely for logical reasons, it does not in
@@ -21,10 +38,6 @@
  * the next element or step through them one by one such that none of them is
  * missed)
  */
-
-namespace blmc_drivers
-{
-
 class DeviceInterface
 {
 
