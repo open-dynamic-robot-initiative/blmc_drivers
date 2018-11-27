@@ -9,6 +9,7 @@ class Controller
 private:
     std::shared_ptr<blmc_drivers::Motor> motor_;
     std::shared_ptr<blmc_drivers::AnalogSensor> analog_sensor_;
+    real_time_tools::RealTimeThread rt_thread_;
 
 public:
     Controller(std::shared_ptr<blmc_drivers::Motor> motor,
@@ -17,10 +18,10 @@ public:
 
     void start_loop()
     {
-        osi::start_thread(&Controller::loop, this);
+        real_time_tools::create_realtime_thread(
+          rt_thread_, &Controller::loop, this);
     }
 
-private:
     /**
      * @brief this function is just a wrapper around the actual loop function,
      * such that it can be spawned as a posix thread.
@@ -30,7 +31,8 @@ private:
         ((Controller*)(instance_pointer))->loop();
     }
 
-
+private:
+    
     /**
      * @brief this is a simple control loop which runs at a kilohertz.
      *
@@ -67,6 +69,7 @@ class LegController
 private:
     std::shared_ptr<blmc_drivers::Leg> leg_;
     std::shared_ptr<blmc_drivers::AnalogSensor> analog_sensor_;
+    real_time_tools::RealTimeThread rt_thread_;
 
 public:
     LegController(std::shared_ptr<blmc_drivers::Leg> leg,
@@ -75,10 +78,10 @@ public:
 
     void start_loop()
     {
-        osi::start_thread(&LegController::loop, this);
+        real_time_tools::create_realtime_thread(
+          rt_thread_, &Controller::loop, this);
     }
 
-private:
     /**
      * @brief this function is just a wrapper around the actual loop function,
      * such that it can be spawned as a posix thread.
@@ -88,6 +91,7 @@ private:
         ((LegController*)(instance_pointer))->loop();
     }
 
+private:
 
     /**
      * @brief this is a simple control loop which runs at a kilohertz.

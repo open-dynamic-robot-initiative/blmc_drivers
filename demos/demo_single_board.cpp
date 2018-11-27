@@ -7,6 +7,7 @@ class Controller
 private:
     std::shared_ptr<blmc_drivers::Motor> motor_;
     std::shared_ptr<blmc_drivers::AnalogSensor> analog_sensor_;
+    real_time_tools::RealTimeThread rt_thread_;
 
 public:
     Controller(std::shared_ptr<blmc_drivers::Motor> motor,
@@ -15,7 +16,8 @@ public:
 
     void start_loop()
     {
-        osi::start_thread(&Controller::loop, this);
+        real_time_tools::create_realtime_thread(
+          rt_thread_, &Controller::loop, this);
     }
 
 private:

@@ -14,11 +14,13 @@ public:
 
   void start_loop()
   {
-    osi::start_thread(&Controller::loop, this);
+    real_time_tools::create_realtime_thread(
+          rt_thread_, &Controller::loop, this);
   }
 
 private:
   std::vector<PairMotorSlider> motor_slider_pairs_;
+  real_time_tools::RealTimeThread rt_thread_;
 
 private:
   /**

@@ -54,7 +54,7 @@ public:
 };
 
 /**
- * @brief The AnalogSensorclass is the implementation of the above interface.
+ * @brief AnalogSensor class is the implementation of the above interface.
  */
 class AnalogSensor: public AnalogSensorInterface
 {

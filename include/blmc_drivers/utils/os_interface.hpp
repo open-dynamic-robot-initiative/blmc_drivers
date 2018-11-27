@@ -1,18 +1,35 @@
+/**
+ * @file os_interface.hpp
+ * @author Manuel Wuthrich (manuel.wuthrich@gmail.com)
+ * @author Maximilien Naveau (maximilien.naveau@gmail.com)
+ * @brief 
+ * @version 0.1
+ * @date 2018-11-27
+ * 
+ * @copyright Copyright (c) 2018
+ * 
+ */
+
 #pragma once
 
 
-
+/**
+ * xeno specific include
+ */
 #ifdef __XENO__
 
 #include <native/task.h>
 #include <native/timer.h>
 #include <native/mutex.h>
 #include <native/cond.h>
-
 #include <rtdk.h>
 #include <rtdm/rtcan.h>
 
+/**
+ * Ubuntu posix rt_prempt based include
+ */
 #else
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -29,16 +46,13 @@
 
 #include <limits.h>
 
-
-// Define typedefs to make code compatible with Xenoami code.
+// Define typedefs to make code compatible with Xenomai code.
 typedef struct can_frame can_frame_t;
 typedef canid_t can_id_t;
 typedef uint64_t 	nanosecs_abs_t;
 
 #define rt_fprintf fprintf
 #define rt_printf printf
-
-
 
 #define rt_dev_socket socket
 #define rt_dev_ioctl ioctl
@@ -47,6 +61,10 @@ typedef uint64_t 	nanosecs_abs_t;
 #define rt_dev_bind bind
 #define rt_dev_recvmsg recvmsg
 #define rt_dev_sendto sendto
+
+/**
+ * Common include
+ */
 #endif
 
 #include <mutex>
@@ -54,31 +72,53 @@ typedef uint64_t 	nanosecs_abs_t;
 
 #include <sys/mman.h>
 
-
+/**
+ * @brief osi stands for Operating System Interface.
+ * \todo This workspace should be replaced eventually by the real_time_tools
+ * package.
+ */
 namespace osi
 {
 
-
-
 #ifdef __XENO__
+
+/**
+ * Namespace to wrap the xenomai specific implementation xenomai
+ */ 
 namespace xenomai
 {
+/**
+ * @brief The mutex class is a specific implementation of the mutex class
+ * for xenomai
+ */
 class mutex
 {
 public:
+    /**
+     * @brief Create a xenomai mutex object.
+     */
     RT_MUTEX rt_mutex_;
 
+    /**
+     * @brief Construct a new mutex object
+     */
     mutex()
     {
         rt_mutex_create(&rt_mutex_, NULL);
     }
 
+    /**
+     * @brief lock the mutex.
+     */
     void lock()
     {
         rt_mutex_acquire(&rt_mutex_, TM_INFINITE);
 
     }
 
+    /**
+     * @brief Unlock the mutex.
+     */
     void unlock()
     {
         rt_mutex_release(&rt_mutex_);
@@ -86,46 +126,70 @@ public:
 
 };
 
+/**
+ * @brief Implementation of a condition variable specific to xenomai
+ */
 class condition_variable
 {
 public:
+    /**
+     * @brief Create the xenomai condition variable object
+     */
     RT_COND rt_condition_variable_;
 
-
+    /**
+     * @brief Construct a new condition_variable object
+     */
     condition_variable()
     {
         rt_cond_create(&rt_condition_variable_, NULL);
     }
 
+    /**
+     * @brief Put the condition variable to wait mode.
+     * 
+     * @param lock is the mutex to be used for locking the scope.
+     */
     void wait(std::unique_lock<mutex>& lock )
     {
         rt_cond_wait(&rt_condition_variable_,
                      &lock.mutex()->rt_mutex_, TM_INFINITE);
     }
 
+    /**
+     * @brief Notify all condition variable owning the same mutex.
+     */
     void notify_all()
     {
         rt_cond_broadcast(&rt_condition_variable_);
     }
 };
 }
-
-
+    /**
+     * @brief Wrapper around the xenomai specific Mutex implementation.
+     */
     typedef xenomai::mutex Mutex;
+
+    /**
+     * @brief Wrapper around the xenomai specific ConditionVariable
+     * implementation
+     */
     typedef xenomai::condition_variable ConditionVariable;
+
+
 #else
+    /**
+     * @brief Wrapper around the posix specific Mutex implementation.
+     */
     typedef std::mutex Mutex;
+
+    /**
+     * @brief Wrapper around the posix specific ConditionVariable
+     * implementation
+     */
     typedef std::condition_variable ConditionVariable;
 #endif
 
-
-
-//template<typename ...Ts>
-// inline   void realtime_printf(Ts... args)
-//{
-//    rt_printf(args...);
-
-//}
 
 inline void send_to_can_device(int fd, const void *buf, size_t len,
                        int flags, const struct sockaddr *to,
@@ -167,73 +231,6 @@ inline void receive_message_from_can_device(int fd, struct msghdr *msg, int flag
 #else
 #define THREAD_FUNCTION_RETURN_TYPE void*
 #endif
-
-inline void start_thread(THREAD_FUNCTION_RETURN_TYPE (*function)(void *cookie),
-                         void *argument=NULL)
-{
-#ifdef __XENO__
-
-    // TODO: not sure if this is the right place for this
-    mlockall(MCL_CURRENT | MCL_FUTURE);
-    //        signal(SIGTERM, cleanup_and_exit);
-    //        signal(SIGINT, cleanup_and_exit);
-    //        signal(SIGDEBUG, action_upon_switch);
-    rt_print_auto_init(1);
-
-    RT_TASK rt_task;
-    int priority = 10;
-
-    int return_task_create = rt_task_create(&rt_task, NULL, 0, priority,  T_JOINABLE | T_FPU);
-    if (return_task_create) {
-        rt_fprintf(stderr, "controller: %s\n", strerror(-return_task_create));
-        exit(-1);
-    }
-    rt_task_start(&rt_task, function, argument);
-
-#else
-    struct sched_param param;
-    pthread_attr_t attr;
-    pthread_t thread;
-    int ret;
-
-    ret = pthread_attr_init(&attr);
-    if (ret) {
-        printf("init pthread attributes failed\n");
-    }
-
-    /* Set a specific stack size  */
-    ret = pthread_attr_setstacksize(&attr, PTHREAD_STACK_MIN);
-    if (ret) {
-        printf("pthread setstacksize failed\n");
-    }
-
-    /* Set scheduler policy and priority of pthread */
-    ret = pthread_attr_setschedpolicy(&attr, SCHED_FIFO);
-    if (ret) {
-        printf("pthread setschedpolicy failed\n");
-    }
-    param.sched_priority = 80;
-    ret = pthread_attr_setschedparam(&attr, &param);
-    if (ret) {
-        printf("pthread setschedparam failed\n");
-    }
-    /* Use scheduling parameters of attr */
-    ret = pthread_attr_setinheritsched(&attr, PTHREAD_EXPLICIT_SCHED);
-    if (ret) {
-        printf("pthread setinheritsched failed\n");
-    }
-
-    /* Create a pthread with specified attributes */
-    ret = pthread_create(&thread, &attr, function, argument);
-    if (ret) {
-        printf("create pthread failed. Ret=%d\n", ret);
-        if (ret == 1) {
-            printf("NOTE: This program must be executed as root to get the "
-                "required realtime permissions.\n");
-        }
-    }
-#endif
-}
 
 inline void initialize_realtime_printing()
 {

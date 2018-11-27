@@ -70,6 +70,7 @@ set(blmc_drivers_src
   src/analog_sensors.cpp
   src/can_bus.cpp
   src/motor_board.cpp
+  src/motor.cpp
 )
 # if xenomai is found we need to add the definition of the
 # realtime specific functions
@@ -169,7 +170,7 @@ catkin_install_python(PROGRAMS
 ##########################
 # building documentation #
 ##########################
-set(BUILD_DOCUMENTATION_${PROJECT_NAME} OFF CACHE BOOL
+set(BUILD_DOCUMENTATION OFF CACHE BOOL
   "Set to ON if you want to build the documentation")
 if(BUILD_DOCUMENTATION)
 message(STATUS "building doxygen documentation for ${PROJECT_NAME}")

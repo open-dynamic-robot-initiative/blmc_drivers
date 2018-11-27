@@ -1,3 +1,15 @@
+/**
+ * @file motor.hpp
+ * @author Manuel Wuthrich (manuel.wuthrich@gmail.com)
+ * @author Maximilien Naveau (maximilien.naveau@gmail.com)
+ * @brief 
+ * @version 0.1
+ * @date 2018-11-27
+ * 
+ * @copyright Copyright (c) 2018
+ * 
+ */
+
 #pragma once
 
 #include <memory>
@@ -10,51 +22,139 @@
 #include <blmc_drivers/devices/motor_board.hpp>
 #include <blmc_drivers/devices/device_interface.hpp>
 
-
 namespace blmc_drivers
 {
 
+/**
+ * @brief This class declares an interface to the motor. It allows the user to
+ * access the sensors data as well as sending controls. The only control
+ * supported for now is the current.
+ */
 class MotorInterface: public DeviceInterface
 {
 public:
+
+    /**
+     * @brief This is a useful alias.
+     */
     typedef ThreadsafeTimeseries<double> ScalarTimeseries;
+    /**
+     * @brief This a useful alias for the shared Pointer creation.
+     * 
+     * @tparam Type is the Class to crate the pointer from.
+     */
     template<typename Type> using Ptr = std::shared_ptr<Type>;
 
-
+    /**
+     * @brief Here is a list of the different measurement available on the 
+     * blmc card.
+     */
     enum MeasurementIndex {current, position, velocity, encoder_index,
                            measurement_count};
 
-    /// getters ================================================================
-    // device outputs ----------------------------------------------------------
+    /**
+     * @brief Destroy the MotorInterface object
+     */
+    virtual ~MotorInterface() {}
+
+    /**
+     * @brief Actually send the commands and controls.
+     */
+    virtual void send_if_input_changed() = 0;
+
+    /**
+     * Getters
+     */
+
+    /**
+     * @brief Get the measurements.
+     * 
+     * @param index 
+     * @return Ptr<const ScalarTimeseries> the pointer to the desired 
+     * measurement history.
+     */
     virtual Ptr<const ScalarTimeseries> get_measurement(
             const int& index = 0) const = 0;
 
-    // input logs --------------------------------------------------------------
+    /**
+     * @brief Get the current target object
+     * 
+     * @return Ptr<const ScalarTimeseries> the list of the current values to
+     * be sent.
+     */
     virtual Ptr<const ScalarTimeseries> get_current_target() const = 0;
+
+    /**
+     * @brief Get the history of the sent current targets.
+     * 
+     * @return Ptr<const ScalarTimeseries> 
+     */
     virtual Ptr<const ScalarTimeseries> get_sent_current_target() const = 0;
 
-    /// setters ================================================================
+    /**
+     * Setters
+     */
+
+    /**
+     * @brief Set the current target. This function saves the data internally.
+     * Please call send_if_input_changed() to actually send the data.
+     * 
+     * @param current_target 
+     */
     virtual void set_current_target(const double& current_target) = 0;
+
+    /**
+     * @brief Set the command. Save internally a command to be apply by the
+     * motor board. This function save the command internally. Please call
+     * send_if_input_changed() to actually send the data.
+     * 
+     * @param command 
+     */
     virtual void set_command(const MotorBoardCommand& command) = 0;
-
-    /// sender =================================================================
-    virtual void send_if_input_changed() = 0;
-
-    /// ========================================================================
-
-    virtual ~MotorInterface() {}
 };
 
+/**
+ * @brief This class implements the MotorInterface.
+ */
 class Motor: public MotorInterface
 {
-protected:
-    Ptr<MotorBoardInterface> board_;
-    bool motor_id_;
-
 public:
-    /// getters ================================================================
-    // device outputs ----------------------------------------------------------
-    virtual Ptr<const ScalarTimeseries> get_measurement(const int& index = 0) const
+    /**
+     * @brief Construct a new Motor object
+     * 
+     * @param board is the MotorBoard to be used.
+     * @param motor_id is the id of the motor on the on-board card
+     */
+    Motor(Ptr<MotorBoardInterface> board, bool motor_id);
+
+    /**
+     * @brief Destroy the Motor object
+     * 
+     */
+    virtual ~Motor() { }
+
+    /**
+     * @brief Actually send the command and controls via the network,
+     * See MotorInterface for more information.
+     */
+    virtual void send_if_input_changed()
+    {
+        board_->send_if_input_changed();
+    }
+    
+    /**
+     * Getters
+     */
+
+    /**
+     * @brief Get the measurements
+     * 
+     * @param index is the kind of measurement we are instersted in.
+     * see MotorInterface::MeasurementIndex.
+     * @return Ptr<const ScalarTimeseries> The history of the measurement
+     */
+    virtual Ptr<const ScalarTimeseries> get_measurement(const int& index = 0)
+    const
     {
         if(motor_id_ == 0)
         {
@@ -88,7 +188,12 @@ public:
         }
     }
 
-    // input logs --------------------------------------------------------------
+    /**
+     * @brief Get the current target to be sent.
+     * 
+     * @return Ptr<const ScalarTimeseries> the list of current values to be
+     * sent.
+     */
     virtual Ptr<const ScalarTimeseries> get_current_target() const
     {
         if(motor_id_ == 0)
@@ -100,12 +205,18 @@ public:
             return board_->get_control(MotorBoardInterface::current_target_1);
         }
     }
+
+    /**
+     * @brief Get the already sent current target values.
+     * 
+     * @return Ptr<const ScalarTimeseries> 
+     */
     virtual Ptr<const ScalarTimeseries> get_sent_current_target() const
     {
         if(motor_id_ == 0)
         {
-           return board_->get_sent_control(
-                       MotorBoardInterface::current_target_0);
+            return board_->get_sent_control(
+                        MotorBoardInterface::current_target_0);
         }
         else
         {
@@ -114,175 +225,109 @@ public:
         }
     }
 
-    /// setters ================================================================
-    virtual void set_current_target(const double& current_target)
-    {
-        if(motor_id_ == 0)
-        {
-            board_->set_control(current_target,
-                                MotorBoardInterface::current_target_0);
-        }
-        else
-        {
-            board_->set_control(current_target,
-                                MotorBoardInterface::current_target_1);
-        }
-    }
+    /**
+     * Setters
+     */
+
+    /**
+     * @brief Set the current (Amper) target. See MotorInterface for more
+     * information.
+     * 
+     * @param current_target in Amper
+     */
+    virtual void set_current_target(const double& current_target);
+
+    /**
+     * @brief Set the command. See MotorInterface for more information.
+     * 
+     * @param command 
+     */
     virtual void set_command(const MotorBoardCommand& command)
     {
         board_->set_command(command);
     }
 
-    /// sender =================================================================
-    virtual void send_if_input_changed()
-    {
-        board_->send_if_input_changed();
-    }
+protected:
+    /**
+     * @brief The MotorBoard to be used for the communication.
+     */
+    Ptr<MotorBoardInterface> board_;
 
-    /// ========================================================================
-
-
-    Motor(Ptr<MotorBoardInterface> board, bool motor_id):
-        board_(board),
-        motor_id_(motor_id) { }
-
-    virtual ~Motor() { }
+    /**
+     * @brief The id of the motor on the MotorBoard.
+     */
+    bool motor_id_;
 };
 
-
-
-
-
-/// \todo: the velocity limit should be implemented in a smoother way,
-/// and the parameters should be passed in the constructor
+/**
+ * @brief This class is a safe implementation of the Motor class.
+ * It contains utilities to bound the control input.
+ * It could also contains some velocity limits at the motor level and why not
+ * some temperature management.
+ * 
+ * \todo the velocity limit should be implemented in a smoother way,
+ * and the parameters should be passed in the constructor.
+ */
 class SafeMotor: public Motor
 {
-private:
-    double max_current_target_;
-    Ptr<ScalarTimeseries> current_target_;
-
 public:
-    virtual void set_current_target(const double& current_target)
-    {
-        current_target_->append(current_target);
+    /**
+     * @brief Construct a new SafeMotor object
+     * 
+     * @param board 
+     * @param motor_id 
+     * @param max_current_target 
+     * @param history_length 
+     */
+    SafeMotor(Ptr<MotorBoardInterface> board, bool motor_id,
+              const double& max_current_target = 2.0,
+              const size_t& history_length = 1000);
 
-        // limit current to avoid overheating ----------------------------------
-        double safe_current_target = std::min(current_target,
-                                              max_current_target_);
-        safe_current_target = std::max(safe_current_target,
-                                       -max_current_target_);
+    /**
+     * Getters
+     */
 
-//        // limit velocity to avoid breaking the robot --------------------------
-//        if(get_measurement(velocity)->length() > 0 &&
-//                std::fabs(get_measurement(velocity)->newest_element()) > 0.5)
-//            safe_current_target = 0;
-
-        Motor::set_current_target(safe_current_target);
-    }
-
-    virtual Ptr<const ScalarTimeseries> current_target() const
+    /**
+     * @brief Get the _current_target object
+     * 
+     * @return Ptr<const ScalarTimeseries> 
+     */
+    virtual Ptr<const ScalarTimeseries> get_current_target() const
     {
         return current_target_;
     }
 
-    SafeMotor(Ptr<MotorBoardInterface> board, bool motor_id,
-              const double& max_current_target = 2.0,
-              const size_t& history_length = 1000):
-        Motor(board, motor_id),
-        max_current_target_(max_current_target)
-    {
-        current_target_ = std::make_shared<ScalarTimeseries>(history_length);
-    }
+    /**
+     * Setters
+     */
 
+    /**
+     * @brief Set the current target (Amper)
+     * 
+     * @param current_target 
+     */
+    virtual void set_current_target(const double& current_target);
+    
+    /**
+     * @brief Set the max_current_target_ object
+     * 
+     * @param max_current_target 
+     */
     void set_max_current(double max_current_target)
     {
       max_current_target_ = max_current_target;
     }
+
+private:
+    /**
+     * @brief max_current_target_ is the limit of the current.
+     */
+    double max_current_target_;
+
+    /**
+     * @brief History of the target current sent.
+     */
+    Ptr<ScalarTimeseries> current_target_;
 };
 
-}
-
-//class MotorTemperature
-//{
-//public:
-//    MotorTemperature(double room_temperature):
-//        room_temperature_(room_temperature),
-//        temperature_(room_temperature)
-//    {
-//    }
-
-//    void update(double current, double delta_time)
-//    {
-//        temperature_ =
-//                room_temperature_ +
-//                exp(-0.003 * delta_time) * (temperature_ - room_temperature_) +
-//                0.03 * delta_time * pow(current, 2);
-//    }
-
-//    double get()
-//    {
-//        return temperature_;
-//    }
-
-//private:
-//    double room_temperature_;
-//    double temperature_;
-//};
-
-
-
-//class SafeMotor: public Motor
-//{
-//    MotorTemperature temperature_;
-
-//public:
-//    SafeMotor(Ptr<MotorBoardInterface> board, bool motor_id):
-//        Motor(board, motor_id), temperature_(30)
-//    {
-//        osi::start_thread(&SafeMotor::loop, this);
-//    }
-
-//private:
-//    static void
-//#ifndef __XENO__
-//    *
-//#endif
-//    loop(void* instance_pointer)
-//    {
-//        ((SafeMotor*)(instance_pointer))->loop();
-//    }
-
-//    void loop()
-//    {
-//        Timer<10> time_logger("current_targetler");
-//        while(true)
-//        {
-//            Timer<>::sleep_ms(1);
-//            if(measurement("current")->length() == 0)
-//                continue;
-
-//            double current = measurement("current")->newest_element();
-//            double target_current = current_target()->newest_element();
-//            double velocity = measurement("velocity")->newest_element();
-
-
-
-//            temperature_.update(current, 0.001);
-
-//            // print -----------------------------------------------------------
-//            time_logger.end_and_start_interval();
-//            if ((time_logger.count() % 100) == 0)
-//            {
-//                rt_printf("--------------------------\n");
-//                rt_printf("current: %f\n", current);
-//                rt_printf("target current: %f\n", target_current);
-//                rt_printf("velocity: %f\n", velocity);
-
-
-//                rt_printf("temperature: %f\n", temperature_.get());
-//                rt_printf("--------------------------\n");
-
-//            }
-//        }
-//    }
-//};
+} // namespace blmc_drivers
