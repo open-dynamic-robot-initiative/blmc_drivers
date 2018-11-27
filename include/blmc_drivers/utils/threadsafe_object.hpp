@@ -1,3 +1,15 @@
+/**
+ * @file threadsafe_object.hpp
+ * @author Manuel Wuthrich (manuel.wuthrich@gmail.com)
+ * @author Maximilien Naveau (maximilien.naveau@gmail.com)
+ * @brief 
+ * @version 0.1
+ * @date 2018-11-27
+ * 
+ * @copyright Copyright (c) 2018
+ * 
+ */
+
 #pragma once
 
 #include <array>
@@ -9,25 +21,58 @@
 #include <blmc_drivers/utils/timer.hpp>
 #include <blmc_drivers/utils/os_interface.hpp>
 
+/**
+ * @brief This is a template abstract interface class that define a data history.
+ * This re-writting of the vector style class is thread safe. So it allows the
+ * user to use the object without having to deal with mutexes nor condition
+ * variables. This class is not used so far.
+ * 
+ * @tparam Type is the type of the data to store.
+ */
 template<typename Type> class ThreadsafeHistoryInterface
 {
-    // return the element after the one with the given id. if there is no
-    // newer element, then wait until one arrives.
+    /**
+     * @brief Get the element after the one with the given id. if there is no
+     * newer element, then wait until one arrives.
+     * 
+     * @param id is the index of the element in the buffer.
+     * @return Type the next element.
+     */
     virtual Type get_next(size_t id) const
     {
         return get(get_next_id(id));
     }
     virtual size_t get_next_id(size_t id) const = 0;
 
-    // wait if empty
+    /**
+     * @brief Get the newest value, this function waits if it is empty.
+     * 
+     * @return Type the newest element.
+     */
     virtual Type get_newest() const
     {
         return get(get_newest_id());
     }
+
+    /**
+     * @brief get_newest_id
+     * 
+     * @return size_t 
+     */
     virtual size_t get_newest_id() const = 0;
 
+    /**
+     * @brief Get the value whith a specific id.
+     * 
+     * @param id 
+     * @return Type 
+     */
     virtual Type get(size_t id) const = 0;
 
+    /**
+     * @brief I guess this is to add a value but with no argument?
+     * \todo Manuel, could you delete this class or provide an implementation?
+     */
     virtual void add() = 0;
 };
 
@@ -65,9 +110,9 @@ public:
         *total_modification_count_ = 0;
     }
 
-    SingletypeThreadsafeObject(const std::vector<std::string>& names):
-        SingletypeThreadsafeObject()
+    SingletypeThreadsafeObject(const std::vector<std::string>& names)
     {
+        SingletypeThreadsafeObject();
         if(names.size() != size())
         {
             rt_printf("you passed a list of names of wrong size."

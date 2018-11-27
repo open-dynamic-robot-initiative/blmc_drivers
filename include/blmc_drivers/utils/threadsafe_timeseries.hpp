@@ -1,3 +1,15 @@
+/**
+ * @file threadsafe_timeseries.hpp
+ * @author Manuel Wuthrich (manuel.wuthrich@gmail.com)
+ * @author Maximilien Naveau (maximilien.naveau@gmail.com)
+ * @brief 
+ * @version 0.1
+ * @date 2018-11-27
+ * 
+ * @copyright Copyright (c) 2018
+ * 
+ */
+
 #pragma once
 
 #include <memory>
@@ -6,10 +18,9 @@
 #include <blmc_drivers/utils/os_interface.hpp>
 #include <blmc_drivers/utils/timer.hpp>
 
-
-
-/*! \brief implements a timeseries  \f$ X_{{oldest}:{newest}} \f$ which can safely
- * be accessed from multiple threads.
+/**
+ * \brief implements a timeseries  \f$ X_{{oldest}:{newest}} \f$ which can
+ * safely be accessed from multiple threads.
  *
  * this object has the following properties:
  * - an oldest timeindex \f$ oldest\f$,
@@ -21,21 +32,16 @@
 template<typename Type=int> class ThreadsafeTimeseries
 {
 public:
+    /**
+     * @brief Alias for the index type.
+     */
     typedef long int Index;
+
+    /**
+     * @brief alias for the Timestamp.
+     */
     typedef long double Timestamp;
 
-private:
-    std::shared_ptr<std::vector<Type>> history_elements_;
-    std::shared_ptr<std::vector<Timestamp>> history_timestamps_;
-
-    Index oldest_timeindex_;
-    Index newest_timeindex_;
-    Index tagged_timeindex_;
-
-    mutable std::shared_ptr<osi::ConditionVariable> condition_;
-    mutable std::shared_ptr<osi::Mutex> mutex_;
-
-public:
     /*! \brief initializes to an empty timeseries with the given
      * \f$ maxlength \f$. when the first element will be inserted, it will
      * have index start_timeindex.
@@ -90,122 +96,31 @@ public:
      * to \f$ X_{2:11} \f$.
      */
     virtual void append(const Type& element);
+
+private:
+    /*! @brief History of the values. */
+    std::shared_ptr<std::vector<Type> > history_elements_;
+    /*! @brief History of the headers. */
+    std::shared_ptr<std::vector<Timestamp> > history_timestamps_;
+
+    /*! @brief Oldest time index. */
+    Index oldest_timeindex_;
+    /*! @brief Newest time index. */
+    Index newest_timeindex_;
+    /*! @brief Tagged time index. */
+    Index tagged_timeindex_;
+
+    /** 
+     * @brief A condition variable that protect the data during copy and
+     * reading.
+     */
+    mutable std::shared_ptr<osi::ConditionVariable> condition_;
+    /** 
+     * @brief A mutex variable that protect the data during copy and
+     * reading.
+     */
+    mutable std::shared_ptr<osi::Mutex> mutex_;
+
 };
 
-
-
-
-template<typename Type> ThreadsafeTimeseries<Type>::
-ThreadsafeTimeseries(size_t max_length, Index start_timeindex)
-{
-    oldest_timeindex_ = start_timeindex;
-    newest_timeindex_ = oldest_timeindex_ - 1;
-
-    tagged_timeindex_ = newest_timeindex_;
-
-    history_elements_ = std::make_shared<std::vector<Type>>(max_length);
-    history_timestamps_ = std::make_shared<std::vector<Timestamp>>(max_length);
-
-    condition_ = std::make_shared<osi::ConditionVariable>();
-    mutex_ = std::make_shared<osi::Mutex>();
-}
-
-template<typename Type>
-void ThreadsafeTimeseries<Type>::tag(const Index& timeindex)
-{
-    std::unique_lock<osi::Mutex> lock(*mutex_);
-    tagged_timeindex_ = timeindex;
-}
-
-template<typename Type>
-bool ThreadsafeTimeseries<Type>::has_changed_since_tag() const
-{
-    std::unique_lock<osi::Mutex> lock(*mutex_);
-    return tagged_timeindex_ != newest_timeindex_;
-}
-
-template<typename Type> typename ThreadsafeTimeseries<Type>::Index
-ThreadsafeTimeseries<Type>::newest_timeindex() const
-{
-    std::unique_lock<osi::Mutex> lock(*mutex_);
-    while(newest_timeindex_ < oldest_timeindex_)
-    {
-        condition_->wait(lock);
-    }
-
-    return newest_timeindex_;
-}
-
-template<typename Type> Type
-ThreadsafeTimeseries<Type>::newest_element() const
-{
-    Index timeindex = newest_timeindex();
-    return (*this)[timeindex];
-}
-
-template<typename Type> Type
-ThreadsafeTimeseries<Type>::operator[](Index& timeindex) const
-{
-    std::unique_lock<osi::Mutex> lock(*mutex_);
-
-    while(newest_timeindex_ < timeindex ||
-          newest_timeindex_ < oldest_timeindex_)
-    {
-        condition_->wait(lock);
-    }
-
-    if(timeindex < oldest_timeindex_)
-    {
-        timeindex = oldest_timeindex_;
-    }
-    Type element
-            = (*history_elements_)[timeindex % history_elements_->size()];
-
-    return element;
-}
-
-template<typename Type> typename ThreadsafeTimeseries<Type>::Timestamp
-ThreadsafeTimeseries<Type>::timestamp_ms(Index& timeindex) const
-{
-    std::unique_lock<osi::Mutex> lock(*mutex_);
-
-    while(newest_timeindex_ < timeindex ||
-          newest_timeindex_ < oldest_timeindex_)
-    {
-        condition_->wait(lock);
-    }
-
-    if(timeindex < oldest_timeindex_)
-    {
-        timeindex = oldest_timeindex_;
-    }
-    Timestamp timestamp
-            = (*history_timestamps_)[timeindex % history_timestamps_->size()];
-
-    return timestamp;
-}
-
-template<typename Type>
-void ThreadsafeTimeseries<Type>::append(const Type& element)
-{
-    {
-        std::unique_lock<osi::Mutex> lock(*mutex_);
-        newest_timeindex_++;
-        if(newest_timeindex_ - oldest_timeindex_ + 1
-                > history_elements_->size())
-        {
-            oldest_timeindex_++;
-        }
-        Index history_index = newest_timeindex_ % history_elements_->size();
-        (*history_elements_)[history_index] = element;
-        (*history_timestamps_)[history_index] = Timer<>::current_time_ms();
-    }
-    condition_->notify_all();
-}
-
-template<typename Type>
-size_t ThreadsafeTimeseries<Type>::length() const
-{
-    std::unique_lock<osi::Mutex> lock(*mutex_);
-    return newest_timeindex_ - oldest_timeindex_ + 1;
-}
+#include "blmc_drivers/utils/threadsafe_timeseries.hxx"
