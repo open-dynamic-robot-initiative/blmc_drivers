@@ -1,112 +1,101 @@
-#include <blmc_drivers/devices/motor.hpp>
-#include <blmc_drivers/devices/analog_sensor.hpp>
+/**
+ * @file demo_3_motors.cpp
+ * @author Maximilien Naveau (maximilien.naveau@gmail.com)
+ * @brief 
+ * @version 0.1
+ * @date 2018-11-29
+ * 
+ * @copyright Copyright (c) 2018
+ * 
+ */
 
-class Controller
-{
-private:
-    std::shared_ptr<blmc_drivers::Motor> motor_;
-    std::shared_ptr<blmc_drivers::AnalogSensor> analog_sensor_;
-    real_time_tools::RealTimeThread rt_thread_;
+#include <atomic>
+#include <signal.h>
 
-public:
-    Controller(std::shared_ptr<blmc_drivers::Motor> motor,
-               std::shared_ptr<blmc_drivers::AnalogSensor> analog_sensor):
-        motor_(motor), analog_sensor_(analog_sensor) { }
+#include <pd_control.hpp>
 
-    void start_loop()
-    {
-        real_time_tools::create_realtime_thread(
-          rt_thread_, &Controller::loop, this);
-    }
+/**
+ * @brief This boolean is here to kill cleanly the application upon ctrl+c
+ */
+std::atomic_bool StopDemos (false);
 
-private:
-    /**
-     * @brief this function is just a wrapper around the actual loop function,
-     * such that it can be spawned as a posix thread.
-     */
-    static THREAD_FUNCTION_RETURN_TYPE loop(void* instance_pointer)
-    {
-        ((Controller*)(instance_pointer))->loop();
-    }
+/**
+ * @brief This function is the callback upon a ctrl+c call from the terminal.
+ * 
+ * @param s 
+ */
+void my_handler(int s){
+  StopDemos = true;
+}
 
-
-    /**
-     * @brief this is a simple control loop which runs at a kilohertz.
-     *
-     * it reads the measurement from the analog sensor, in this case the
-     * slider. then it scales it and sends it as the current target to
-     * the motor.
-     */
-    void loop()
-    {
-        Timer<10> time_logger("controller");
-        while(true)
-        {
-            double analog_measurement =
-                    analog_sensor_->get_measurement()->newest_element();
-            double current_target = 4 * (analog_measurement - 0.5);
-
-            motor_->set_current_target(current_target);
-            motor_->send_if_input_changed();
-
-            // print -----------------------------------------------------------
-            Timer<>::sleep_ms(1);
-            time_logger.end_and_start_interval();
-            if ((time_logger.count() % 1000) == 0)
-            {
-                rt_printf("sending current: %f\n", current_target);
-            }
-        }
-    }
-};
-
-
-
-
+/**
+ * @brief This is the main demo program.
+ * 
+ * @param argc 
+ * @param argv 
+ * @return int 
+ */
 int main(int argc, char **argv)
-{  
-    osi::initialize_realtime_printing();
+{   
+    // make sure we catch the ctrl+c signal to kill the application properly.
+    struct sigaction sigIntHandler;
+    sigIntHandler.sa_handler = my_handler;
+    sigemptyset(&sigIntHandler.sa_mask);
+    sigIntHandler.sa_flags = 0;
+    sigaction(SIGINT, &sigIntHandler, NULL);
+    StopDemos = false;
 
-    // create bus and boards -------------------------------------------------
-#ifdef __XENO__
-    auto can_bus1 = std::make_shared<blmc_drivers::CanBus>("rtcan0");
-    auto can_bus2 = std::make_shared<blmc_drivers::CanBus>("rtcan1");
-#else
+    // First of all one need to initialize the communication with the can bus.
     auto can_bus1 = std::make_shared<blmc_drivers::CanBus>("can0");
     auto can_bus2 = std::make_shared<blmc_drivers::CanBus>("can1");
-#endif
+
+    // Then we create a motor board object that will use the can bus in order
+    // communicate between this application and the actual motor board.
+    // Important: the blmc motors are alinged during this stage.
     auto board1 = std::make_shared<blmc_drivers::CanBusMotorBoard>(can_bus1);
     auto board2 = std::make_shared<blmc_drivers::CanBusMotorBoard>(can_bus2);
 
-    // create motors and sensors ---------------------------------------------
+    // create the motors object that have an index that define the port on which
+    // they are plugged on the motor board. This object takes also a MotorBoard
+    // object to be able to get the sensors and send the control consistantly.
+    // These safe motors have the ability to bound the current that is given
+    // as input.
     auto motor_1 = std::make_shared<blmc_drivers::SafeMotor>(board1, 0);
     auto motor_2 = std::make_shared<blmc_drivers::SafeMotor>(board1, 1);
     auto motor_3 = std::make_shared<blmc_drivers::SafeMotor>(board2, 0);
 
     rt_printf("motors are set up \n");
 
-    auto analog_sensor_1 = std::make_shared<blmc_drivers::AnalogSensor>(board1, 0);
-    auto analog_sensor_2 = std::make_shared<blmc_drivers::AnalogSensor>(board1, 1);
-    auto analog_sensor_3 = std::make_shared<blmc_drivers::AnalogSensor>(board2, 0);
+    // create 2 analogue sensors onject which happen to be slider here, i.e.
+    // 2 linear potentiometers.
+    auto slider_1 = std::make_shared<blmc_drivers::AnalogSensor>(board1, 0);
+    auto slider_2 = std::make_shared<blmc_drivers::AnalogSensor>(board1, 1);
+    auto slider_3 = std::make_shared<blmc_drivers::AnalogSensor>(board2, 0);
 
     rt_printf("sensors are set up \n");
 
-    Controller controller1(motor_1, analog_sensor_1);
-    Controller controller2(motor_2, analog_sensor_2);
-    Controller controller3(motor_3, analog_sensor_3);
+    // construct the pairs of motors and sliders
+    std::vector<blmc_drivers::PairMotorSlider> motor_and_sliders;
+    motor_and_sliders.push_back(
+      blmc_drivers::PairMotorSlider(motor_1, slider_1));
+    motor_and_sliders.push_back(
+      blmc_drivers::PairMotorSlider(motor_2, slider_2));
+    motor_and_sliders.push_back(
+      blmc_drivers::PairMotorSlider(motor_3, slider_3));
+
+    // construct a simple PD controller.
+    blmc_drivers::PDController controller(motor_and_sliders); 
 
     rt_printf("controllers are set up \n");
 
-    controller1.start_loop();
-    controller2.start_loop();
-    controller3.start_loop();
+    controller.start_loop();
 
     rt_printf("loops have started \n");
 
-    while(true)
+    // Wait until the application is killed.
+    while(!StopDemos)
     {
-        Timer<>::sleep_ms(10);
+        real_time_tools::Timer::sleep_sec(0.01);
     }
-
     return 0;
 }

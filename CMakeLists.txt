@@ -142,8 +142,11 @@ target_link_libraries(test_threadsafe_timeseries
 # manage the demos #
 ####################
 
+include_directories(${PROJECT_SOURCE_DIR}/demos)
+
 macro(add_demo demo_name)
   add_executable(${demo_name}
+    demos/pd_control.cpp
     demos/${demo_name}.cpp
   )
   target_link_libraries(${demo_name}
