@@ -190,7 +190,7 @@ public:
      * @brief Set one element at a designated index.
      * Warning the index is resolved at compile time.
      * This is used for backward comaptibility.
-     * (Manuel Which bakward?).
+     * \todo "This is used for backward comaptibility.", Manuel Which bakward?
      * 
      * @tparam INDEX=0 
      * @param datum 

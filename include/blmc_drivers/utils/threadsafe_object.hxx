@@ -66,20 +66,16 @@ SingletypeThreadsafeObject::Type SingletypeThreadsafeObject::get(
     return get(name_to_index_.at(name));
 }
 
-/// for backwards compatibility ============================================
-template<int INDEX=0> void 
-SingletypeThreadsafeObject::set(SingletypeThreadsafeObject::Type datum)
-{
-    set(datum, INDEX);
-}
-
 template<int INDEX=0> 
 SingletypeThreadsafeObject::Type SingletypeThreadsafeObject::get() const
 {
     return get(INDEX);
 }
 
-void SingletypeThreadsafeObject::set(const SingletypeThreadsafeObject::Type& datum, const size_t& index = 0)
+template<typename Type>
+void SingletypeThreadsafeObject::set(
+  const Type& datum,
+  const size_t& index = 0)
 {
     // we sleep for a nanosecond, in case some thread calls set several
     // times in a row. this way we do hopefully not miss messages
@@ -98,8 +94,16 @@ void SingletypeThreadsafeObject::set(const SingletypeThreadsafeObject::Type& dat
         condition_->notify_all();
     }
 }
+
+/// for backwards compatibility ============================================
+template<typename Type, int INDEX=0> void 
+SingletypeThreadsafeObject::set(Type datum)
+{
+    set(datum, INDEX);
+}
+
 void SingletypeThreadsafeObject::set(
-  const SingletypeThreadsafeObject::Type& datum,
+  const Type& datum,
   const std::string& name)
 {
     set(datum, name_to_index_.at(name));

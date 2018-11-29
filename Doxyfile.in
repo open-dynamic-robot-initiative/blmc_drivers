@@ -8,8 +8,9 @@ EXTRACT_ALL            = NO
 EXTRACT_PRIVATE        = NO
 EXTRACT_STATIC         = YES
 INPUT                  = @PROJECT_SOURCE_DIR@/src \
-                         @PROJECT_SOURCE_DIR@/include
-FILE_PATTERNS          = *.h *.hpp *.hh *.cpp *.c *.cc
+                         @PROJECT_SOURCE_DIR@/include \
+                         @PROJECT_SOURCE_DIR@/doc \
+FILE_PATTERNS          = *.h *.hpp *.hh *.cpp *.c *.cc *.dox
 EXCLUDE_PATTERNS       = */deprecated/*
 RECURSIVE              = YES
 GENERATE_LATEX         = NO
