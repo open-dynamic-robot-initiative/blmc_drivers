@@ -2,7 +2,7 @@
  * @file threadsafe_object.hpp
  * @author Manuel Wuthrich (manuel.wuthrich@gmail.com)
  * @author Maximilien Naveau (maximilien.naveau@gmail.com)
- * @brief 
+ * @brief This file declares templated container for data buffering
  * @version 0.1
  * @date 2018-11-27
  * 
@@ -20,6 +20,8 @@
 
 #include <blmc_drivers/utils/timer.hpp>
 #include <blmc_drivers/utils/os_interface.hpp>
+
+namespace blmc_drivers{
 
 /**
  * @brief This is a template abstract interface class that define a data history.
@@ -76,329 +78,286 @@ template<typename Type> class ThreadsafeHistoryInterface
     virtual void add() = 0;
 };
 
-
-
+/**
+ * @brief The SingletypeThreadsafeObject is a thread safe object 
+ * 
+ * @tparam Type is the data type to store in the buffer.
+ * @tparam SIZE is the size of the buffer. It is better to know it at compile
+ * time to be 100% real time safe.
+ */
 template<typename Type, size_t SIZE> class SingletypeThreadsafeObject
 {
-private:
-    std::shared_ptr<std::array<Type, SIZE> > data_;
-    std::shared_ptr<std::array<size_t, SIZE>> modification_counts_;
-    std::shared_ptr<size_t> total_modification_count_;
-
-    std::map<std::string, size_t> name_to_index_;
-
-    mutable std::shared_ptr<osi::ConditionVariable> condition_;
-    mutable std::shared_ptr<osi::Mutex> condition_mutex_;
-    mutable std::shared_ptr<std::array<osi::Mutex, SIZE>> data_mutexes_;
-
 public:
-    SingletypeThreadsafeObject()
-    {
-        // initialize shared pointers ------------------------------------------
-        data_ = std::make_shared<std::array<Type, SIZE>>();
-        condition_ = std::make_shared<osi::ConditionVariable>();
-        condition_mutex_ = std::make_shared<osi::Mutex>();
-        modification_counts_ = std::make_shared<std::array<size_t, SIZE>>();
-        total_modification_count_ = std::make_shared<size_t>();
-        data_mutexes_ = std::make_shared<std::array<osi::Mutex, SIZE>>();
+    /**
+     * @brief Construct a new SingletypeThreadsafeObject object
+     */
+    SingletypeThreadsafeObject();
 
-        // initialize counts ---------------------------------------------------
-        for(size_t i = 0; i < SIZE; i++)
-        {
-            (*modification_counts_)[i] = 0;
-        }
-        *total_modification_count_ = 0;
-    }
+    /**
+     * @brief Construct a new SingletypeThreadsafeObject object
+     * 
+     * @param names 
+     */
+    SingletypeThreadsafeObject(const std::vector<std::string>& names);
 
-    SingletypeThreadsafeObject(const std::vector<std::string>& names)
-    {
-        SingletypeThreadsafeObject();
-        if(names.size() != size())
-        {
-            rt_printf("you passed a list of names of wrong size."
-                                 "expected size: %d, actual size: %d\n",
-                                 size(), names.size());
-            rt_printf("name: %s\n", names[0].c_str());
-            exit(-1);
-        }
+    /**
+     * @brief Wait until the data at the given index is modified.
+     * 
+     * @param index 
+     */
+    void wait_for_update(const size_t& index) const;
 
-        for(size_t i = 0; i < names.size(); i++)
-        {
-            name_to_index_[names[i]] = i;
-        }
-//        name_to_index_ = name_to_index;
-    }
-
-    size_t size()
-    {
-        return SIZE;
-    }
-
-    Type get(const size_t& index = 0) const
-    {
-        std::unique_lock<osi::Mutex> lock((*data_mutexes_)[index]);
-        return (*data_)[index];
-    }
-    Type get(const std::string& name) const
-    {
-        return get(name_to_index_.at(name));
-    }
-
-    /// for backwards compatibility ============================================
-    template<int INDEX=0> void set(Type datum)
-    {
-        set(datum, INDEX);
-    }
-
-    template<int INDEX=0> Type get() const
-    {
-        return get(INDEX);
-    }
-
-
-    /// ========================================================================
-
-    void set(const Type& datum, const size_t& index = 0)
-    {
-        // we sleep for a nanosecond, in case some thread calls set several
-        // times in a row. this way we do hopefully not miss messages
-        Timer<>::sleep_ms(0.000001);
-        // set datum in our data_ member ---------------------------------------
-        {
-            std::unique_lock<osi::Mutex> lock((*data_mutexes_)[index]);
-            (*data_)[index] = datum;
-        }
-
-        // notify --------------------------------------------------------------
-        {
-            std::unique_lock<osi::Mutex> lock(*condition_mutex_);
-            (*modification_counts_)[index] += 1;
-            *total_modification_count_ += 1;
-            condition_->notify_all();
-        }
-    }
-    void set(const Type& datum, const std::string& name)
-    {
-        set(datum, name_to_index_.at(name));
-    }
-
-    void wait_for_update(const size_t& index) const
-    {
-        std::unique_lock<osi::Mutex> lock(*condition_mutex_);
-
-        // wait until the datum with the right index is modified ---------------
-        size_t initial_modification_count =
-                (*modification_counts_)[index];
-        while(initial_modification_count == (*modification_counts_)[index])
-        {
-            condition_->wait(lock);
-        }
-
-        // check that we did not miss data -------------------------------------
-        if(initial_modification_count + 1 != (*modification_counts_)[index])
-        {
-            rt_printf("size: %d, \n other info: %s \n",
-                      SIZE, __PRETTY_FUNCTION__ );
-            rt_printf("something went wrong, we missed a message.\n");
-            exit(-1);
-        }
-    }
+    /**
+     * @brief Wait until the data at the given name is modified.
+     * 
+     * @param name 
+     */
     void wait_for_update(const std::string& name) const
     {
         wait_for_update(name_to_index_.at(name));
     }
 
-    size_t wait_for_update() const
+    /**
+     * @brief Wait unitl any data has been changed and return its index.
+     * 
+     * @return size_t 
+     */
+    size_t wait_for_update() const;
+
+    /**
+     * Getters
+     */
+
+    /**
+     * @brief get size.
+     * 
+     * @return size_t 
+     */
+    size_t size()
     {
-        std::unique_lock<osi::Mutex> lock(*condition_mutex_);
-
-        // wait until any datum is modified ------------------------------------
-        std::array<size_t, SIZE>
-                initial_modification_counts = *modification_counts_;
-        size_t initial_modification_count = *total_modification_count_;
-
-        while(initial_modification_count == *total_modification_count_)
-        {
-            condition_->wait(lock);
-        }
-
-        // make sure we did not miss any data ----------------------------------
-        if(initial_modification_count + 1 != *total_modification_count_)
-        {
-            rt_printf("size: %d, \n other info: %s \n",
-                      SIZE, __PRETTY_FUNCTION__ );
-
-            rt_printf("something went wrong, we missed a message.\n");
-            exit(-1);
-        }
-
-        // figure out which index was modified and return it -------------------
-        int modified_index = -1;
-        for(size_t i = 0; i < SIZE; i++)
-        {
-            if(initial_modification_counts[i] + 1 == (*modification_counts_)[i])
-            {
-                if(modified_index != -1)
-                {
-                    rt_printf("something in the threadsafe object "
-                              "went horribly wrong\n");
-                    exit(-1);
-                }
-
-                modified_index = i;
-            }
-            else if(initial_modification_counts[i] !=(*modification_counts_)[i])
-            {
-                rt_printf("something in the threadsafe object "
-                          "went horribly wrong\n");
-                exit(-1);
-            }
-        }
-        return modified_index;
+        return SIZE;
     }
+
+    /**
+     * @brief Get the data by its index in the buffer.
+     * 
+     * @param index 
+     * @return Type 
+     */
+    Type get(const size_t& index = 0) const
+    {
+        std::unique_lock<osi::Mutex> lock((*data_mutexes_)[index]);
+        return (*data_)[index];
+    }
+
+    /**
+     * @brief Get the data by its name in the buffer.
+     * 
+     * @param name 
+     * @return Type 
+     */
+    Type get(const std::string& name) const
+    {
+        return get(name_to_index_.at(name));
+    }
+
+    /**
+     * @brief Get the data by its index in the buffer. Index is solved during
+     * compile time
+     * 
+     * @tparam INDEX=0 
+     * @return Type 
+     */
+    template<int INDEX=0> Type get() const
+    {
+        return get(INDEX);
+    }
+
+    /**
+     * Setters.
+     */
+
+    /**
+     * @brief Set one element at a designated index.
+     * 
+     * @param datum 
+     * @param index 
+     */
+    void set(const Type& datum, const size_t& index = 0);
+
+    /**
+     * @brief Set one element at a designated index.
+     * Warning the index is resolved at compile time.
+     * This is used for backward comaptibility.
+     * (Manuel Which bakward?).
+     * 
+     * @tparam INDEX=0 
+     * @param datum 
+     */
+    template<int INDEX=0> void set(Type datum)
+    {
+        set(datum, INDEX);
+    }
+
+    /**
+     * @brief Set one element using at a designated name. Internally this name
+     * is map to an index.
+     * 
+     * @param datum 
+     * @param name 
+     */
+    void set(const Type& datum, const std::string& name)
+    {
+        set(datum, name_to_index_.at(name));
+    }
+
+private:
+    /**
+     * @brief This is the data buffer.
+     */
+    std::shared_ptr<std::array<Type, SIZE> > data_;
+    /**
+     * @brief This is counting the data modification occurences for each
+     * individual buffers.
+     */
+    std::shared_ptr<std::array<size_t, SIZE>> modification_counts_;
+    /**
+     * @brief This is counting the all data modification occurences for all
+     * buffer.
+     * /todo Can't we just some the modification_counts_ array whenever needed?
+     */
+    std::shared_ptr<size_t> total_modification_count_;
+
+    /**
+     * @brief This is the map that allow to deal with data by their names.
+     */
+    std::map<std::string, size_t> name_to_index_;
+
+    /**
+     * @brief This condition variable is used to wait untils any data has been
+     * changed.
+     */
+    mutable std::shared_ptr<osi::ConditionVariable> condition_;
+    /**
+     * @brief This is the mutex of the condition varaible.
+     */
+    mutable std::shared_ptr<osi::Mutex> condition_mutex_;
+    /**
+     * @brief These are the individual mutexes of each data upon setting and
+     * getting.
+     */
+    mutable std::shared_ptr<std::array<osi::Mutex, SIZE>> data_mutexes_;
 };
 
-
-
-
-
+/**
+ * @brief This object can have several types depending on what ones want to
+ * store.
+ * 
+ * @tparam Types 
+ */
 template<typename ...Types> class ThreadsafeObject
 {
 public:
+    /**
+     * @brief Define a specific "Type" which permit a more readable code.
+     * 
+     * @tparam INDEX 
+     */
     template<int INDEX> using Type
     = typename std::tuple_element<INDEX, std::tuple<Types...>>::type;
 
+    /**
+     * @brief Define the size of the different types. 
+     */
     static const std::size_t SIZE = sizeof...(Types);
 
-private:
-    std::shared_ptr<std::tuple<Types ...> > data_;
+    /**
+     * @brief Construct a new ThreadsafeObject object
+     */
+    ThreadsafeObject();
 
-    mutable std::shared_ptr<osi::ConditionVariable> condition_;
-    mutable std::shared_ptr<osi::Mutex> condition_mutex_;
-    std::shared_ptr<std::array<size_t, SIZE>> modification_counts_;
-    std::shared_ptr<size_t> total_modification_count_;
+    /**
+     * @brief Wait until the data with the deignated index is changed.
+     * 
+     * @param index 
+     */
+    void wait_for_update(unsigned index) const;
 
-    std::shared_ptr<std::array<osi::Mutex, SIZE>> data_mutexes_;
-
-public:
-    ThreadsafeObject()
-    {
-        // initialize shared pointers ------------------------------------------
-        data_ = std::make_shared<std::tuple<Types ...> >();
-        condition_ = std::make_shared<osi::ConditionVariable>();
-        condition_mutex_ = std::make_shared<osi::Mutex>();
-        modification_counts_ =
-                std::make_shared<std::array<size_t, SIZE>>();
-        total_modification_count_ = std::make_shared<size_t>();
-        data_mutexes_ = std::make_shared<std::array<osi::Mutex, SIZE>>();
-
-        // initialize counts ---------------------------------------------------
-        for(size_t i = 0; i < SIZE; i++)
-        {
-            (*modification_counts_)[i] = 0;
-        }
-        *total_modification_count_ = 0;
-    }
-
-    template<int INDEX=0> Type<INDEX> get() const
-    {
-        std::unique_lock<osi::Mutex> lock((*data_mutexes_)[INDEX]);
-        return std::get<INDEX>(*data_);
-    }
-
-    template<int INDEX=0> void set(Type<INDEX> datum)
-    {
-        // we sleep for a nanosecond, in case some thread calls set several
-        // times in a row. this way we do hopefully not miss messages
-        Timer<>::sleep_ms(0.000001);
-        // set datum in our data_ member ---------------------------------------
-        {
-            std::unique_lock<osi::Mutex> lock((*data_mutexes_)[INDEX]);
-            std::get<INDEX>(*data_) = datum;
-        }
-
-        // notify --------------------------------------------------------------
-        {
-            std::unique_lock<osi::Mutex> lock(*condition_mutex_);
-            (*modification_counts_)[INDEX] += 1;
-            *total_modification_count_ += 1;
-            condition_->notify_all();
-        }
-    }
-
-    void wait_for_update(unsigned index) const
-    {
-        std::unique_lock<osi::Mutex> lock(*condition_mutex_);
-
-        // wait until the datum with the right index is modified ---------------
-        size_t initial_modification_count =
-                (*modification_counts_)[index];
-        while(initial_modification_count == (*modification_counts_)[index])
-        {
-            condition_->wait(lock);
-        }
-
-        // check that we did not miss data -------------------------------------
-        if(initial_modification_count + 1 != (*modification_counts_)[index])
-        {
-            rt_printf("size: %d, \n other info: %s \n",
-                      SIZE, __PRETTY_FUNCTION__ );
-            rt_printf("something went wrong, we missed a message.\n");
-            exit(-1);
-        }
-    }
-
+    /**
+     * @brief Wait until the data with the designated index is changed.
+     * 
+     * @tparam INDEX=0 
+     */
     template< unsigned INDEX=0> void wait_for_update() const
     {
         wait_for_update(INDEX);
     }
 
-    size_t wait_for_update() const
-    {
-        std::unique_lock<osi::Mutex> lock(*condition_mutex_);
+    /**
+     * @brief Wait until any data has been changed.
+     * 
+     * @return size_t 
+     */
+    size_t wait_for_update() const;
 
-        // wait until any datum is modified ------------------------------------
-        std::array<size_t, SIZE>
-                initial_modification_counts = *modification_counts_;
-        size_t initial_modification_count = *total_modification_count_;
+    /**
+     * Getters
+     */
 
-        while(initial_modification_count == *total_modification_count_)
-        {
-            condition_->wait(lock);
-        }
+    /**
+     * @brief Get the data with the designated index. The index is resolved at
+     * compile time.
+     * 
+     * @tparam INDEX=0 
+     * @return Type<INDEX> 
+     */
+    template<int INDEX=0> Type<INDEX> get() const;
+    
+    /**
+     * Setters
+     */
 
-        // make sure we did not miss any data ----------------------------------
-        if(initial_modification_count + 1 != *total_modification_count_)
-        {
-            rt_printf("size: %d, \n other info: %s \n",
-                      SIZE, __PRETTY_FUNCTION__ );
+    /**
+     * @brief Set the data with the designated index. The index is resolved at
+     * compile time.
+     * 
+     * @tparam INDEX=0 
+     * @param datum 
+     */
+    template<int INDEX=0> void set(Type<INDEX> datum);
 
-            rt_printf("something went wrong, we missed a message.\n");
-            exit(-1);
-        }
-
-        // figure out which index was modified and return it -------------------
-        int modified_index = -1;
-        for(size_t i = 0; i < SIZE; i++)
-        {
-            if(initial_modification_counts[i] + 1 == (*modification_counts_)[i])
-            {
-                if(modified_index != -1)
-                {
-                    rt_printf("something in the threadsafe object "
-                              "went horribly wrong\n");
-                    exit(-1);
-                }
-
-                modified_index = i;
-            }
-            else if(initial_modification_counts[i] !=(*modification_counts_)[i])
-            {
-                rt_printf("something in the threadsafe object "
-                          "went horribly wrong\n");
-                exit(-1);
-            }
-        }
-        return modified_index;
-    }
+private:
+    /**
+     * @brief the actual data buffers.
+     */
+    std::shared_ptr<std::tuple<Types ...> > data_;
+    /**
+     * @brief a condition variable that allow to wait until one data has been
+     * changed in the buffer.
+     */
+    mutable std::shared_ptr<osi::ConditionVariable> condition_;
+    /**
+     * @brief The mutex of the condition variable.
+     */
+    mutable std::shared_ptr<osi::Mutex> condition_mutex_;
+    /**
+     * @brief This is counting the data modification occurences for each
+     * individual buffers.
+     */
+    std::shared_ptr<std::array<size_t, SIZE>> modification_counts_;
+    /**
+     * @brief This is counting the all data modification occurences for all
+     * buffer.
+     * /todo Can't we just some the modification_counts_ array whenever needed?
+     */
+    std::shared_ptr<size_t> total_modification_count_;  
+    /**
+     * @brief These are the individual mutexes of each data upon setting and
+     * getting.
+     */
+    std::shared_ptr<std::array<osi::Mutex, SIZE>> data_mutexes_;
 };
+
+} // namespace blmc_drivers
+
+#include "blmc_drivers/utils/threadsafe_timeseries.hxx"

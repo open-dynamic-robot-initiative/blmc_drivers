@@ -18,6 +18,8 @@
 #include <blmc_drivers/utils/os_interface.hpp>
 #include <blmc_drivers/utils/timer.hpp>
 
+namespace blmc_drivers{
+
 /**
  * \brief implements a timeseries  \f$ X_{{oldest}:{newest}} \f$ which can
  * safely be accessed from multiple threads.
@@ -122,5 +124,7 @@ private:
     mutable std::shared_ptr<osi::Mutex> mutex_;
 
 };
+
+} // namespace blmc_drivers
 
 #include "blmc_drivers/utils/threadsafe_timeseries.hxx"

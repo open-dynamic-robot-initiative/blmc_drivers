@@ -154,39 +154,7 @@ public:
      * @return Ptr<const ScalarTimeseries> The history of the measurement
      */
     virtual Ptr<const ScalarTimeseries> get_measurement(const int& index = 0)
-    const
-    {
-        if(motor_id_ == 0)
-        {
-            switch(index)
-            {
-            case current:
-                return board_->get_measurement(MotorBoardInterface::current_0);
-            case position:
-                return board_->get_measurement(MotorBoardInterface::position_0);
-            case velocity:
-                return board_->get_measurement(MotorBoardInterface::velocity_0);
-            case encoder_index:
-                return board_->get_measurement(
-                            MotorBoardInterface::encoder_index_0);
-            }
-        }
-        else
-        {
-            switch(index)
-            {
-            case current:
-                return board_->get_measurement(MotorBoardInterface::current_1);
-            case position:
-                return board_->get_measurement(MotorBoardInterface::position_1);
-            case velocity:
-                return board_->get_measurement(MotorBoardInterface::velocity_1);
-            case encoder_index:
-                return board_->get_measurement(
-                            MotorBoardInterface::encoder_index_1);
-            }
-        }
-    }
+    const;
 
     /**
      * @brief Get the current target to be sent.
@@ -194,36 +162,14 @@ public:
      * @return Ptr<const ScalarTimeseries> the list of current values to be
      * sent.
      */
-    virtual Ptr<const ScalarTimeseries> get_current_target() const
-    {
-        if(motor_id_ == 0)
-        {
-            return board_->get_control(MotorBoardInterface::current_target_0);
-        }
-        else
-        {
-            return board_->get_control(MotorBoardInterface::current_target_1);
-        }
-    }
+    virtual Ptr<const ScalarTimeseries> get_current_target() const;
 
     /**
      * @brief Get the already sent current target values.
      * 
      * @return Ptr<const ScalarTimeseries> 
      */
-    virtual Ptr<const ScalarTimeseries> get_sent_current_target() const
-    {
-        if(motor_id_ == 0)
-        {
-            return board_->get_sent_control(
-                        MotorBoardInterface::current_target_0);
-        }
-        else
-        {
-            return board_->get_sent_control(
-                        MotorBoardInterface::current_target_1);
-        }
-    }
+    virtual Ptr<const ScalarTimeseries> get_sent_current_target() const;
 
     /**
      * Setters

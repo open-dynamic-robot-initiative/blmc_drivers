@@ -11,8 +11,15 @@
  * 
  */
 
-template<typename Type> ThreadsafeTimeseries<Type>::
-ThreadsafeTimeseries(size_t max_length, Index start_timeindex)
+#pragma once
+
+#include "blmc_drivers/utils/threadsafe_timeseries.hpp"
+
+namespace blmc_drivers{
+
+template<typename Type>
+ThreadsafeTimeseries<Type>::ThreadsafeTimeseries(
+   size_t max_length, Index start_timeindex)
 {
     oldest_timeindex_ = start_timeindex;
     newest_timeindex_ = oldest_timeindex_ - 1;
@@ -125,3 +132,5 @@ size_t ThreadsafeTimeseries<Type>::length() const
     std::unique_lock<osi::Mutex> lock(*mutex_);
     return newest_timeindex_ - oldest_timeindex_ + 1;
 }
+
+} //namespace blmc_drivers
