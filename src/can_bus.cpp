@@ -10,8 +10,9 @@
  * 
  */
 
-#include <blmc_drivers/devices/can_bus.hpp>
+#include <sstream>
 
+#include <blmc_drivers/devices/can_bus.hpp>
 
 namespace blmc_drivers
 {
@@ -22,8 +23,11 @@ CanBus::CanBus(const std::string& can_interface_name,
     input_ = std::make_shared<CanframeTimeseries>(history_length);
     sent_input_ = std::make_shared<CanframeTimeseries>(history_length);
     output_ = std::make_shared<CanframeTimeseries>(history_length);
+    name_ = can_interface_name;
 
     can_connection_.set(setup_can(can_interface_name, 0));
+
+    log_dir_ = real_time_tools::get_log_dir(".blmc_drivers");
 
     is_loop_active_ = true;
     real_time_tools::create_realtime_thread(
@@ -53,13 +57,15 @@ void CanBus::send_if_input_changed()
 
 void CanBus::loop()
 {
-    Timer<100> loop_time_logger("can bus loop");
-
+    real_time_tools::Timer loop_time_logger;
     while (is_loop_active_)
     {
+        loop_time_logger.tic();
         output_->append(receive_frame());
-        loop_time_logger.end_and_start_interval();
+        loop_time_logger.tac();
     }
+    loop_time_logger.dump_measurements(
+      log_dir_ + name_ + "_loop_time.dat");
 }
 
 void CanBus::send_frame(const CanBusFrame& unstamped_can_frame)

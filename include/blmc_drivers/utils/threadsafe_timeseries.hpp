@@ -15,8 +15,10 @@
 #include <memory>
 #include <vector>
 
-#include <blmc_drivers/utils/os_interface.hpp>
-#include <blmc_drivers/utils/timer.hpp>
+#include "real_time_tools/timer.hpp"
+
+#include "blmc_drivers/utils/os_interface.hpp"
+
 
 namespace blmc_drivers{
 

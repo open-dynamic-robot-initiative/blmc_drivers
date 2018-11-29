@@ -121,7 +121,8 @@ void ThreadsafeTimeseries<Type>::append(const Type& element)
         }
         Index history_index = newest_timeindex_ % history_elements_->size();
         (*history_elements_)[history_index] = element;
-        (*history_timestamps_)[history_index] = Timer<>::current_time_ms();
+        (*history_timestamps_)[history_index] = 
+        real_time_tools::Timer::get_current_time_milli_sec();
     }
     condition_->notify_all();
 }

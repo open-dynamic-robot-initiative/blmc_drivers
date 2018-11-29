@@ -16,14 +16,13 @@
 #include <memory>
 #include <string>
 
-#include <blmc_drivers/utils/timer.hpp>
-#include <blmc_drivers/utils/threadsafe_object.hpp>
-#include <blmc_drivers/utils/threadsafe_timeseries.hpp>
+#include "real_time_tools/timer.hpp"
+#include "real_time_tools/realtime_thread_creation.hpp"
 
-#include <real_time_tools/realtime_thread_creation.hpp>
-
-#include <blmc_drivers/utils/os_interface.hpp>
-#include <blmc_drivers/devices/device_interface.hpp>
+#include "blmc_drivers/utils/threadsafe_object.hpp"
+#include "blmc_drivers/utils/threadsafe_timeseries.hpp"
+#include "blmc_drivers/utils/os_interface.hpp"
+#include "blmc_drivers/devices/device_interface.hpp"
 
 
 namespace blmc_drivers
@@ -151,7 +150,6 @@ public:
      * @brief Destroy the CanBus object
      */
     virtual ~CanBus();
-
     
     /**
      * Getters
@@ -257,7 +255,6 @@ private:
      */
     CanBusConnection setup_can(std::string name, uint32_t err_mask);
 
-private:
     /**
      * Attributes
      */
@@ -295,6 +292,16 @@ private:
      * threads.
      */
     real_time_tools::RealTimeThread rt_thread_;
+
+    /**
+     * @brief Log directory.
+     */
+    std::string log_dir_;
+
+    /**
+     * @brief time_log_name is the name of the loggin
+     */
+    std::string name_;
 };
 
 }
