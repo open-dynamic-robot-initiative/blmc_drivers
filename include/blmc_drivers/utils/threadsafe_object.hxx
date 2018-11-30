@@ -10,9 +10,14 @@
  * 
  */
 
+#pragma once
+
+#include "real_time_tools/timer.hpp"
+
 namespace blmc_drivers{
 
-SingletypeThreadsafeObject::SingletypeThreadsafeObject()
+template<typename Type, size_t SIZE>
+SingletypeThreadsafeObject<Type, SIZE>::SingletypeThreadsafeObject()
 {
     // initialize shared pointers ------------------------------------------
     data_ = std::make_shared<std::array<Type, SIZE>>();
@@ -30,7 +35,9 @@ SingletypeThreadsafeObject::SingletypeThreadsafeObject()
     *total_modification_count_ = 0;
 }
 
-SingletypeThreadsafeObject::SingletypeThreadsafeObject(const std::vector<std::string>& names)
+template<typename Type, size_t SIZE>
+SingletypeThreadsafeObject<Type, SIZE>::SingletypeThreadsafeObject(
+  const std::vector<std::string>& names)
 {
     SingletypeThreadsafeObject();
     if(names.size() != size())
@@ -49,37 +56,14 @@ SingletypeThreadsafeObject::SingletypeThreadsafeObject(const std::vector<std::st
 //        name_to_index_ = name_to_index;
 }
 
-SingletypeThreadsafeObject::size_t SingletypeThreadsafeObject::size()
-{
-    return SingletypeThreadsafeObject::SIZE;
-}
-
-SingletypeThreadsafeObject::Type SingletypeThreadsafeObject::get(
-  const size_t& index) const
-{
-    std::unique_lock<osi::Mutex> lock((*data_mutexes_)[index]);
-    return (*data_)[index];
-}
-SingletypeThreadsafeObject::Type SingletypeThreadsafeObject::get(
-  const std::string& name) const
-{
-    return get(name_to_index_.at(name));
-}
-
-template<int INDEX=0> 
-SingletypeThreadsafeObject::Type SingletypeThreadsafeObject::get() const
-{
-    return get(INDEX);
-}
-
-template<typename Type>
-void SingletypeThreadsafeObject::set(
+template<typename Type, size_t SIZE>
+void SingletypeThreadsafeObject<Type, SIZE>::set(
   const Type& datum,
-  const size_t& index = 0)
+  const size_t& index)
 {
     // we sleep for a nanosecond, in case some thread calls set several
     // times in a row. this way we do hopefully not miss messages
-    Timer<>::sleep_ms(0.000001);
+    real_time_tools::Timer::sleep_sec(1e-9);
     // set datum in our data_ member ---------------------------------------
     {
         std::unique_lock<osi::Mutex> lock((*data_mutexes_)[index]);
@@ -95,21 +79,9 @@ void SingletypeThreadsafeObject::set(
     }
 }
 
-/// for backwards compatibility ============================================
-template<typename Type, int INDEX=0> void 
-SingletypeThreadsafeObject::set(Type datum)
-{
-    set(datum, INDEX);
-}
-
-void SingletypeThreadsafeObject::set(
-  const Type& datum,
-  const std::string& name)
-{
-    set(datum, name_to_index_.at(name));
-}
-
-void SingletypeThreadsafeObject::wait_for_update(const size_t& index) const
+template<typename Type, size_t SIZE>
+void SingletypeThreadsafeObject<Type, SIZE>::wait_for_update(
+  const size_t& index) const
 {
     std::unique_lock<osi::Mutex> lock(*condition_mutex_);
 
@@ -131,13 +103,8 @@ void SingletypeThreadsafeObject::wait_for_update(const size_t& index) const
     }
 }
 
-void SingletypeThreadsafeObject::wait_for_update(
-  const std::string& name) const
-{
-    wait_for_update(name_to_index_.at(name));
-}
-
-size_t SingletypeThreadsafeObject::wait_for_update() const
+template<typename Type, size_t SIZE>
+size_t SingletypeThreadsafeObject<Type, SIZE>::wait_for_update() const
 {
     std::unique_lock<osi::Mutex> lock(*condition_mutex_);
 
@@ -188,7 +155,8 @@ size_t SingletypeThreadsafeObject::wait_for_update() const
 
 // ========================================================================== // 
 
-ThreadsafeObject::ThreadsafeObject()
+template<typename ...Types>
+ThreadsafeObject<Types ...>::ThreadsafeObject()
 {
     // initialize shared pointers ------------------------------------------
     data_ = std::make_shared<std::tuple<Types ...> >();
@@ -207,18 +175,21 @@ ThreadsafeObject::ThreadsafeObject()
     *total_modification_count_ = 0;
 }
 
-template<int INDEX=0> ThreadsafeObject::Type<INDEX> 
-ThreadsafeObject::get() const
+template<class ... Types>
+template<int INDEX>
+ThreadsafeObject<Types ...>::Type<INDEX> ThreadsafeObject<Types ...>::get() const
 {
     std::unique_lock<osi::Mutex> lock((*data_mutexes_)[INDEX]);
     return std::get<INDEX>(*data_);
 }
 
-template<int INDEX=0> void ThreadsafeObject::set(Type<INDEX> datum)
+template<class ... Types>
+template<int INDEX> void
+ThreadsafeObject<Types ...>::set(ThreadsafeObject<Types ...>::Type<INDEX> datum)
 {
     // we sleep for a nanosecond, in case some thread calls set several
     // times in a row. this way we do hopefully not miss messages
-    Timer<>::sleep_ms(0.000001);
+    real_time_tools::Timer::sleep_sec(1e-9);
     // set datum in our data_ member ---------------------------------------
     {
         std::unique_lock<osi::Mutex> lock((*data_mutexes_)[INDEX]);
@@ -234,7 +205,8 @@ template<int INDEX=0> void ThreadsafeObject::set(Type<INDEX> datum)
     }
 }
 
-void ThreadsafeObject::wait_for_update(unsigned index) const
+template<class ... Types>
+void ThreadsafeObject<Types ...>::wait_for_update(unsigned index) const
 {
     std::unique_lock<osi::Mutex> lock(*condition_mutex_);
 
@@ -256,12 +228,8 @@ void ThreadsafeObject::wait_for_update(unsigned index) const
     }
 }
 
-template< unsigned INDEX=0> void ThreadsafeObject::wait_for_update() const
-{
-    wait_for_update(INDEX);
-}
-
-size_t ThreadsafeObject::wait_for_update() const
+template<class ... Types>
+size_t ThreadsafeObject<Types ...>::wait_for_update() const
 {
     std::unique_lock<osi::Mutex> lock(*condition_mutex_);
 

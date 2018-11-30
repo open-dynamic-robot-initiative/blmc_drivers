@@ -32,7 +32,8 @@ namespace blmc_drivers{
  * 
  * @tparam Type is the type of the data to store.
  */
-template<typename Type> class ThreadsafeHistoryInterface
+template<typename Type>
+class ThreadsafeHistoryInterface
 {
     /**
      * @brief Get the element after the one with the given id. if there is no
@@ -86,7 +87,8 @@ template<typename Type> class ThreadsafeHistoryInterface
  * @tparam SIZE is the size of the buffer. It is better to know it at compile
  * time to be 100% real time safe.
  */
-template<typename Type, size_t SIZE> class SingletypeThreadsafeObject
+template<typename Type, size_t SIZE>
+class SingletypeThreadsafeObject
 {
 public:
     /**
@@ -256,7 +258,8 @@ private:
  * 
  * @tparam Types 
  */
-template<typename ...Types> class ThreadsafeObject
+template<typename ...Types>
+class ThreadsafeObject
 {
 public:
     /**
@@ -361,4 +364,4 @@ private:
 
 } // namespace blmc_drivers
 
-#include "blmc_drivers/utils/threadsafe_timeseries.hxx"
+#include "blmc_drivers/utils/threadsafe_object.hxx"

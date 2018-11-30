@@ -12,7 +12,7 @@
 #include <atomic>
 #include <signal.h>
 
-#include <pd_control.hpp>
+#include "pd_control.hpp"
 
 /**
  * @brief This boolean is here to kill cleanly the application upon ctrl+c
