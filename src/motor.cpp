@@ -118,12 +118,17 @@ void SafeMotor::set_current_target(const double& current_target)
     safe_current_target = std::max(safe_current_target,
                                     -max_current_target_);
 
+    if(-max_current_target_ <= safe_current_target <= max_current_target_)
+    {
+        Motor::set_current_target(safe_current_target);
+    }
+
+
 //    // limit velocity to avoid breaking the robot --------------------------
 //    if(get_measurement(velocity)->length() > 0 &&
 //            std::fabs(get_measurement(velocity)->newest_element()) > 0.5)
 //        safe_current_target = 0;
 
-    Motor::set_current_target(safe_current_target);
 }
 
 } // namespace blmc_drivers
