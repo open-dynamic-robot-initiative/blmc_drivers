@@ -5,9 +5,9 @@
  * @brief This file defines classes that allow communication with a Can network.
  * @version 0.1
  * @date 2018-11-23
- * 
+ *
  * @copyright Copyright (c) 2018
- * 
+ *
  */
 
 #include <sstream>
@@ -27,11 +27,8 @@ CanBus::CanBus(const std::string& can_interface_name,
 
     can_connection_.set(setup_can(can_interface_name, 0));
 
-    log_dir_ = real_time_tools::get_log_dir(".blmc_drivers");
-
     is_loop_active_ = true;
-    real_time_tools::create_realtime_thread(
-          rt_thread_, &CanBus::loop, this);
+    real_time_tools::create_realtime_thread(rt_thread_, &CanBus::loop, this);
 }
 
 CanBus::~CanBus()
@@ -57,15 +54,10 @@ void CanBus::send_if_input_changed()
 
 void CanBus::loop()
 {
-    real_time_tools::Timer loop_time_logger;
     while (is_loop_active_)
     {
-        loop_time_logger.tic();
         output_->append(receive_frame());
-        loop_time_logger.tac();
     }
-    loop_time_logger.dump_measurements(
-      log_dir_ + name_ + "_loop_time.dat");
 }
 
 void CanBus::send_frame(const CanBusFrame& unstamped_can_frame)
