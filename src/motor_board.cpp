@@ -207,12 +207,12 @@ void CanBusMotorBoard::loop()
             measurement_[current_1]->append(measurement_1);
             break;
         case CanframeIDs::POS:
-            measurement_[position_0]->append(measurement_0);
-            measurement_[position_1]->append(measurement_1);
+            measurement_[position_0]->append(measurement_0 * 2 * M_PI);
+            measurement_[position_1]->append(measurement_1 * 2 * M_PI);
             break;
         case CanframeIDs::SPEED:
-            measurement_[velocity_0]->append(measurement_0);
-            measurement_[velocity_1]->append(measurement_1);
+            measurement_[velocity_0]->append(measurement_0 * 2 * M_PI * (1000./60.));
+            measurement_[velocity_1]->append(measurement_1 * 2 * M_PI * (1000./60.));
             break;
         case CanframeIDs::ADC6:
             measurement_[analog_0]->append(measurement_0);
@@ -225,11 +225,11 @@ void CanBusMotorBoard::loop()
             uint8_t motor_index = can_frame.data[4];
             if(motor_index == 0)
             {
-                measurement_[encoder_index_0]->append(measurement_0);
+                measurement_[encoder_index_0]->append(measurement_0 * 2 * M_PI);
             }
             else if(motor_index == 1)
             {
-                measurement_[encoder_index_1]->append(measurement_0);
+                measurement_[encoder_index_1]->append(measurement_0 * 2 * M_PI);
             }
             else
             {
