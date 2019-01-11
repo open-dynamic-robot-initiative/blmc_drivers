@@ -176,10 +176,10 @@ public:
      */
 
     /**
-     * @brief Set the current (Amper) target. See MotorInterface for more
+     * @brief Set the current (Ampere) target. See MotorInterface for more
      * information.
      * 
-     * @param current_target in Amper
+     * @param current_target in Ampere
      */
     virtual void set_current_target(const double& current_target);
 
@@ -248,7 +248,7 @@ public:
      */
 
     /**
-     * @brief Set the current target (Amper)
+     * @brief Set the current target (Ampere)
      * 
      * @param current_target 
      */
