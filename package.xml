@@ -14,7 +14,11 @@
   <buildtool_depend>catkin</buildtool_depend>
   <build_depend>xenomai_ros</build_depend>
 
-  <!-- This tools provides real time thread objects in an encapsulated way -->
+  <!-- This provide cmake macros to help building the project. -->
+  <build_depend> mpi_cmake_modules </build_depend>
+  <run_depend>   mpi_cmake_modules </run_depend>
+
+  <!-- This tools provides real time thread objects in an encapsulated way. -->
   <build_depend> real_time_tools </build_depend>
   <run_depend>   real_time_tools </run_depend>
 
