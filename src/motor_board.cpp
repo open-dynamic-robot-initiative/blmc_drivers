@@ -207,10 +207,14 @@ void CanBusMotorBoard::loop()
             measurement_[current_1]->append(measurement_1);
             break;
         case CanframeIDs::POS:
+            // Convert the position unit from the blmc card (kilo-rotations)
+            // into rad.
             measurement_[position_0]->append(measurement_0 * 2 * M_PI);
             measurement_[position_1]->append(measurement_1 * 2 * M_PI);
             break;
         case CanframeIDs::SPEED:
+            // Convert the speed unit from the blmc card (kilo-rotations-per-minutes)
+            // into rad/s.
             measurement_[velocity_0]->append(measurement_0 * 2 * M_PI * (1000./60.));
             measurement_[velocity_1]->append(measurement_1 * 2 * M_PI * (1000./60.));
             break;
