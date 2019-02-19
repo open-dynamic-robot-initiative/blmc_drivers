@@ -4,8 +4,11 @@
 
 #include <blmc_drivers/utils/os_interface.hpp>
 #include <blmc_drivers/utils/threadsafe_timeseries.hpp>
-#include <blmc_drivers/utils/timer.hpp>
+#include <real_time_tools/timer.hpp>
+#include "real_time_tools/realtime_thread_creation.hpp"
 
+using namespace blmc_drivers;
+using namespace real_time_tools;
 
 typedef Eigen::Matrix<double, 20, 20> Type;
 
@@ -27,7 +30,9 @@ timeseries_to_output(void* void_ptr)
 {
     size_t output_index = *static_cast<size_t*>(void_ptr);
 
-    Timer<100> logger("timeseries_to_output " + std::to_string(output_index));
+    Timer logger;
+    logger.set_memory_size(100);
+    logger.set_name("timeseries_to_output " + std::to_string(output_index));
 
     for(size_t i = 0; i < length; i++)
     {
@@ -35,10 +40,10 @@ timeseries_to_output(void* void_ptr)
         ThreadsafeTimeseries<Type>::Index timeindex = i;
         element = timeseries[timeindex];
         outputs[output_index][i] = element;
-        logger.end_and_start_interval();
+        logger.tac_tic();
     }
 
-    logger.print_status();
+    logger.print_statistics();
 }
 
 void
@@ -47,15 +52,17 @@ void
 #endif
 input_to_timeseries(void* void_ptr)
 {
-    Timer<100> logger("input_to_timeseries");
+    Timer logger;
+    logger.set_memory_size(100);
+    logger.set_name("input_to_timeseries");
 
     for(size_t i = 0; i < length; i++)
     {
         timeseries.append(inputs[i]);
-        logger.end_and_start_interval();
+        logger.tac_tic();
     }
 
-    logger.print_status();
+    logger.print_statistics();
 }
 
 
@@ -73,14 +80,20 @@ TEST(threadsafe_timeseries, full_history)
     osi::initialize_realtime_printing();
 
     std::vector<size_t> output_indices(n_outputs);
+
+    std::vector<RealTimeThread> threads;
     for(size_t i = 0; i < n_outputs; i++)
     {
         output_indices[i] = i;
-        osi::start_thread(timeseries_to_output, &output_indices[i]);
+        threads.push_back(RealTimeThread());
+        create_realtime_thread(
+          threads.back(), &timeseries_to_output, &output_indices[i]);
     }
     usleep(1000);
 
-    osi::start_thread(input_to_timeseries);
+    threads.push_back(RealTimeThread());
+    create_realtime_thread(
+      threads.back(), &input_to_timeseries);
     usleep(1000000);
 
     // check that the outputs written by the individual threads
@@ -103,17 +116,19 @@ void
 #endif
 input_to_timeseries_slow(void* void_ptr)
 {
-    Timer<100> logger("input_to_timeseries");
+    Timer logger;
+    logger.set_memory_size(100);
+    logger.set_name("input_to_timeseries");
 
     for(size_t i = 0; i < length; i++)
     {
         timeseries.append(inputs[i]);
-        logger.end_and_start_interval();
+        logger.tac_tic();
 
         usleep(1);
     }
 
-    logger.print_status();
+    logger.print_statistics();
 }
 
 
@@ -131,15 +146,19 @@ TEST(threadsafe_timeseries, partial_history)
     mlockall(MCL_CURRENT | MCL_FUTURE);
     osi::initialize_realtime_printing();
 
+    std::vector<RealTimeThread> threads;
     std::vector<size_t> output_indices(n_outputs);
     for(size_t i = 0; i < n_outputs; i++)
     {
         output_indices[i] = i;
-        osi::start_thread(timeseries_to_output, &output_indices[i]);
+        threads.push_back(RealTimeThread());
+        create_realtime_thread(
+          threads.back(), &timeseries_to_output, &output_indices[i]);
     }
     usleep(1000);
-
-    osi::start_thread(input_to_timeseries_slow);
+    threads.push_back(RealTimeThread());
+    create_realtime_thread(
+          threads.back(), &input_to_timeseries_slow);
     usleep(1000000);
 
     // check that the outputs written by the individual threads
