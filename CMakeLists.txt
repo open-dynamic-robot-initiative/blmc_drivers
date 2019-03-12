@@ -149,6 +149,7 @@ macro(add_demo demo_name)
   add_executable(${demo_name}
     demos/pd_control.cpp
     demos/sine_torque_control.cpp
+    demos/sine_position_control.cpp
     demos/${demo_name}.cpp
   )
   target_link_libraries(${demo_name}
@@ -158,6 +159,7 @@ macro(add_demo demo_name)
 endmacro()
 
 add_demo(demo_sine_torque_1_motor)
+add_demo(demo_sine_position_1_motor)
 add_demo(demo_single_board)
 add_demo(demo_leg)
 add_demo(demo_3_motors)
