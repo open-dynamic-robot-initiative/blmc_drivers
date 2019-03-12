@@ -35,15 +35,18 @@ public:
   {
     encoders_.clear();
     velocities_.clear();
+    currents_.clear();
     control_buffer_.clear();
 
     for(int i=0 ; i<motor_list.size() ; ++i)
     {
       encoders_.push_back(std::deque<double>());
+      currents_.push_back(std::deque<double>());
       velocities_.push_back(std::deque<double>());
       control_buffer_.push_back(std::deque<double>());
       encoders_.back().clear();
       velocities_.back().clear();
+      currents_.back().clear();
       control_buffer_.back().clear();
     }
     stop_loop_=false;
@@ -117,9 +120,14 @@ private:
   std::vector<std::deque<double> > encoders_;
   
   /**
-   * @brief Velcoity data
+   * @brief Velocity data
    */
   std::vector<std::deque<double> > velocities_;
+
+  /**
+   * @brief current data
+   */
+  std::vector<std::deque<double> > currents_;
 
   /**
    * @brief control_buffer_

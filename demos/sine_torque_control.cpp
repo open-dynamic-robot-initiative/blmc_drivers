@@ -20,15 +20,17 @@ void SineTorqueControl::loop()
 {
   const int & blmc_position_index = MotorInterface::MeasurementIndex::position;
   const int & blmc_velocity_index = MotorInterface::MeasurementIndex::velocity;
+  const int & blmc_current_index = MotorInterface::MeasurementIndex::current;
   // some data
   double actual_position = 0.0;
   double actual_velocity = 0.0;
+  double actual_current = 0.0;
   double local_time = 0.0;
   // sine torque params
   double current_amplitude = 0.3;
   double current_period = 2.0;
   double current_pulsation = 2*3.1415 / current_period;
-  // here is the control in current (Amper)
+  // here is the control in current (Ampere)
   double desired_current = 0.0;
 
   real_time_tools::Spinner spinner;
@@ -47,6 +49,8 @@ void SineTorqueControl::loop()
         blmc_position_index)->newest_element();
       actual_velocity = motor_list_[i]->get_measurement(
         blmc_velocity_index)->newest_element();
+      actual_current = motor_list_[i]->get_measurement(
+        blmc_current_index)->newest_element();
       
       desired_current = current_amplitude * sin(current_pulsation * local_time);
 
@@ -55,6 +59,7 @@ void SineTorqueControl::loop()
 
       encoders_[i].push_back(actual_position);
       velocities_[i].push_back(actual_velocity);
+      currents_[i].push_back(actual_current);
       control_buffer_[i].push_back(desired_current);
 
       // we sleep here 1ms.
@@ -83,14 +88,16 @@ void SineTorqueControl::stop_loop()
     log_file.precision(10);
     
     assert(encoders_[0].size() == velocities_[0].size() &&
-           velocities_[0].size() == control_buffer_[0].size());
+           velocities_[0].size() == control_buffer_[0].size() &&
+           control_buffer_[0].size() == currents_[0].size());
     for(int j=0 ; j<encoders_[0].size() ; ++j)
     {
       for(int i=0 ; i<encoders_.size() ; ++i)
       {  
         log_file << encoders_[i][j] << " "
                  << velocities_[i][j] << " "
-                 << control_buffer_[i][j] << " ";
+                 << control_buffer_[i][j] << " "
+                 << currents_[i][j] << " ";
       }
       log_file << std::endl;
     }
