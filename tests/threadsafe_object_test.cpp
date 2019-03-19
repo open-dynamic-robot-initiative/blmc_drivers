@@ -3,11 +3,12 @@
 #include <gtest/gtest.h>
 
 #include <blmc_drivers/utils/threadsafe_object.hpp>
-#include <blmc_drivers/utils/timer.hpp>
+#include <real_time_tools/timer.hpp>
 
 #include <tuple>
 
-
+using namespace blmc_drivers;
+using namespace real_time_tools;
 
 
 const int DATA_LENGTH = 10000;
@@ -41,16 +42,18 @@ input_function(void* void_ptr)
     ThreadsafeObjectType* threadsafe_object_ptr =
             static_cast<ThreadsafeObjectType*>(void_ptr);
 
-    Timer<100> logger("input " + std::to_string(INDEX));
-
+    Timer logger;
+    logger.set_memory_size(100);
+    logger.set_name("input " + std::to_string(INDEX));
+    
     for(size_t i = 0; i < DATA_LENGTH; i++)
     {
         threadsafe_object_ptr->template set<INDEX>(
                     std::get<INDEX>(input_data)[i]);
-        logger.end_and_start_interval();
+        logger.tac_tic();
     }
 
-    logger.print_status();
+    logger.print_statistics();
 }
 
 
@@ -66,19 +69,20 @@ output_function(void * void_ptr)
     ThreadsafeObjectType* threadsafe_object_ptr =
             static_cast<ThreadsafeObjectType*>(void_ptr);
 
-    Timer<100> logger("output " + std::to_string(DATA_INDEX) +
-                           ", " + std::to_string(OUTPUT_INDEX));
-
+    Timer logger;
+    logger.set_memory_size(100);
+    logger.set_name("output " + std::to_string(DATA_INDEX) +
+                    ", " + std::to_string(OUTPUT_INDEX));
 
     for(size_t i = 0; i < DATA_LENGTH; i++)
     {
         threadsafe_object_ptr->template wait_for_update<DATA_INDEX>();
         std::get<DATA_INDEX>(output_data[OUTPUT_INDEX])[i] =
                 threadsafe_object_ptr->template get<DATA_INDEX>();
-        logger.end_and_start_interval();
+        logger.tac_tic();
     }
 
-    //    logger.print_status();
+    //    logger.print_statistics();
 }
 
 
@@ -92,7 +96,9 @@ complete_output_function(void * void_ptr)
     ThreadsafeObjectType* threadsafe_object_ptr =
             static_cast<ThreadsafeObjectType*>(void_ptr);
 
-    Timer<100> logger("complete output " + std::to_string(OUTPUT_INDEX));
+    Timer logger;
+    logger.set_memory_size(100);
+    logger.set_name("complete output " + std::to_string(OUTPUT_INDEX));
 
     int i_0, i_1, i_2, i_3 = 0;
     for(size_t i = 0; i < 4 * DATA_LENGTH; i++)
@@ -117,10 +123,10 @@ complete_output_function(void * void_ptr)
                     threadsafe_object_ptr-> template get<3>();
             break;
         }
-        logger.end_and_start_interval();
+        logger.tac_tic();
     }
 
-    logger.print_status();
+    logger.print_statistics();
 }
 
 
