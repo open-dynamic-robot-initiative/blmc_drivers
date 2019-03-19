@@ -227,7 +227,9 @@ public:
      */
     SafeMotor(Ptr<MotorBoardInterface> board, bool motor_id,
               const double& max_current_target = 2.0,
-              const size_t& history_length = 1000);
+              const size_t& history_length = 1000,
+              const double& max_velocity = std::numeric_limits<
+                    double>::quiet_NaN());
 
     /**
      * Getters
@@ -264,11 +266,26 @@ public:
       max_current_target_ = max_current_target;
     }
 
+    /**
+     * @brief Set the max_velocity_ constant.
+     *
+     * @param max_velocity
+     */
+    void set_max_velocity(double max_velocity)
+    {
+      max_velocity_ = max_velocity;
+    }
+
 private:
     /**
      * @brief max_current_target_ is the limit of the current.
      */
     double max_current_target_;
+
+    /**
+     * @brief max_velocity_ limits the motor velocity.
+     */
+    double max_velocity_;
 
     /**
      * @brief History of the target current sent.

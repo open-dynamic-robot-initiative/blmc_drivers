@@ -101,9 +101,11 @@ SafeMotor::SafeMotor(
   Motor::Ptr<MotorBoardInterface> board,
   bool motor_id,
   const double& max_current_target,
-  const size_t& history_length):
+  const size_t& history_length,
+  const double& max_velocity):
       Motor(board, motor_id),
-      max_current_target_(max_current_target)
+      max_current_target_(max_current_target),
+      max_velocity_(max_velocity)
 {
     current_target_ = std::make_shared<ScalarTimeseries>(history_length);
 }
@@ -118,17 +120,11 @@ void SafeMotor::set_current_target(const double& current_target)
     safe_current_target = std::max(safe_current_target,
                                     -max_current_target_);
 
-    if(-max_current_target_ <= safe_current_target <= max_current_target_)
-    {
-        Motor::set_current_target(safe_current_target);
-    }
-
-
-//    // limit velocity to avoid breaking the robot --------------------------
-//    if(get_measurement(velocity)->length() > 0 &&
-//            std::fabs(get_measurement(velocity)->newest_element()) > 0.5)
-//        safe_current_target = 0;
-
+    // limit velocity to avoid breaking the robot --------------------------
+    if(!std::isnan(max_velocity_) && get_measurement(velocity)->length() > 0 &&
+            std::fabs(get_measurement(velocity)->newest_element()) > max_velocity_)
+        safe_current_target = 0;
+    Motor::set_current_target(safe_current_target);
 }
 
 } // namespace blmc_drivers
