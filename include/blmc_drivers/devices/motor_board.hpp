@@ -540,12 +540,6 @@ private:
     }
 
     /**
-     * @brief enable the MotorBoard card.
-     * todo: this should go away
-     */
-    void enable();
-
-    /**
      * @brief send the controls to the cards.
      * 
      * @param controls are the controls to be sent.
@@ -655,6 +649,12 @@ private:
      * of this object.
      */
     bool is_loop_active_;
+
+    /**
+     * @brief This boolean is set to true once the first external control input
+     * has been sent
+     */
+    bool control_loop_has_started_;
 
 
     /**

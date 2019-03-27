@@ -21,7 +21,8 @@ CanBusMotorBoard::CanBusMotorBoard(
         const size_t& history_length,
         const int& control_timeout_ms):
     can_bus_(can_bus),
-    control_timeout_ms_(control_timeout_ms)
+    control_timeout_ms_(control_timeout_ms),
+    control_loop_has_started_(false)
 {
     measurement_  = create_vector_of_pointers<ScalarTimeseries>(
                 measurement_count,
@@ -35,10 +36,6 @@ CanBusMotorBoard::CanBusMotorBoard(
                 control_count,
                 history_length);
     sent_command_ = std::make_shared<CommandTimeseries>(history_length);
-
-    // initialize outputs --------------------------------------------------
-    for(size_t i = 0; i < control_.size(); i++)
-        control_[i]->append(0);
 
     is_loop_active_ = true;
     real_time_tools::create_realtime_thread(
@@ -75,45 +72,17 @@ void CanBusMotorBoard::send_if_input_changed()
         // if this is the first time a control is sent, we set the timeout
         // on the board, such that it will shut down if it does not receive
         // any control in more than control_timeout_ms_ milliseconds
-        bool is_first_control = true;
-        for(auto control : sent_control_)
-        {
-            if(control->length() > 0)
-                is_first_control = false;
-        }
-        if(is_first_control)
+        if(!control_loop_has_started_)
         {
             set_command(MotorBoardCommand(
                             MotorBoardCommand::IDs::SET_CAN_RECV_TIMEOUT,
                             control_timeout_ms_));
             send_newest_command();
+            control_loop_has_started_ = true;
         }
 
         send_newest_controls();
     }
-}
-
-void CanBusMotorBoard::enable()
-{
-    set_command(MotorBoardCommand(
-                    MotorBoardCommand::IDs::ENABLE_SYS,
-                    MotorBoardCommand::Contents::ENABLE));
-    send_newest_command();
-
-    set_command(MotorBoardCommand(
-                    MotorBoardCommand::IDs::SEND_ALL,
-                    MotorBoardCommand::Contents::ENABLE));
-    send_newest_command();
-
-    set_command(MotorBoardCommand(
-                    MotorBoardCommand::IDs::ENABLE_MTR1,
-                    MotorBoardCommand::Contents::ENABLE));
-    send_newest_command();
-
-    set_command(MotorBoardCommand(
-                    MotorBoardCommand::IDs::ENABLE_MTR2,
-                    MotorBoardCommand::Contents::ENABLE));
-    send_newest_command();
 }
 
 
@@ -238,8 +207,40 @@ void CanBusMotorBoard::send_newest_command()
 
 void CanBusMotorBoard::loop()
 {
-    enable();
+    // initialize outputs ------------------------------------------------------
+    for(size_t i = 0; i < control_.size(); i++)
+    {
+        control_[i]->append(0);
+    }
+    send_newest_controls(); // this seems to be necessary to reset the board
 
+    // initialize board --------------------------------------------------------
+    set_command(MotorBoardCommand(
+                    MotorBoardCommand::IDs::ENABLE_SYS,
+                    MotorBoardCommand::Contents::ENABLE));
+    send_newest_command();
+
+    set_command(MotorBoardCommand(
+                    MotorBoardCommand::IDs::SEND_ALL,
+                    MotorBoardCommand::Contents::ENABLE));
+    send_newest_command();
+
+    set_command(MotorBoardCommand(
+                    MotorBoardCommand::IDs::ENABLE_MTR1,
+                    MotorBoardCommand::Contents::ENABLE));
+    send_newest_command();
+
+    set_command(MotorBoardCommand(
+                    MotorBoardCommand::IDs::ENABLE_MTR2,
+                    MotorBoardCommand::Contents::ENABLE));
+    send_newest_command();
+
+    set_command(MotorBoardCommand(
+                    MotorBoardCommand::IDs::SET_CAN_RECV_TIMEOUT,
+                    MotorBoardCommand::Contents::DISABLE));
+    send_newest_command();
+
+    // receive data from board in a loop ---------------------------------------
     long int timeindex = can_bus_->get_output_frame()->newest_timeindex();
     while(is_loop_active_)
     {
@@ -322,12 +323,12 @@ void CanBusMotorBoard::loop()
         }
         }
 
-        //         static int count = 0;
-        //         if(count % 4000 == 0)
-        //         {
-        //             print_status();
-        //         }
-        //         count++;
+        //        static int count = 0;
+        //        if(count % 4000 == 0)
+        //        {
+        //            print_status();
+        //        }
+        //        count++;
     }
 }
 
