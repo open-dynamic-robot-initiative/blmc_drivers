@@ -546,17 +546,6 @@ private:
     void wait_until_ready();
 
     /**
-     * @brief append_and_send_command set the command and send it to the cards.
-     * 
-     * @param command the command to be sent.
-     */
-    void append_and_send_command(const MotorBoardCommand& command)
-    {
-        command_->append(command);
-        send_if_input_changed();
-    }
-
-    /**
      * @brief send the controls to the cards.
      * 
      * @param controls are the controls to be sent.

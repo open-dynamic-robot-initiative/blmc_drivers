@@ -6,9 +6,9 @@
  * "blmc_drivers/devices/motor_board.hpp"
  * @version 0.1
  * @date 2018-11-26
- * 
+ *
  * @copyright Copyright (c) 2018
- * 
+ *
  */
 
 #include <blmc_drivers/devices/motor_board.hpp>
@@ -17,9 +17,9 @@ namespace blmc_drivers
 {
 
 CanBusMotorBoard::CanBusMotorBoard(
-  std::shared_ptr<CanBusInterface> can_bus,
-  const size_t& history_length,
-  const int& control_timeout_ms):
+        std::shared_ptr<CanBusInterface> can_bus,
+        const size_t& history_length,
+        const int& control_timeout_ms):
     can_bus_(can_bus),
     control_timeout_ms_(control_timeout_ms)
 {
@@ -42,16 +42,16 @@ CanBusMotorBoard::CanBusMotorBoard(
 
     is_loop_active_ = true;
     real_time_tools::create_realtime_thread(
-          rt_thread_, &CanBusMotorBoard::loop, this);
+                rt_thread_, &CanBusMotorBoard::loop, this);
 }
 
 CanBusMotorBoard::~CanBusMotorBoard()
 {
     is_loop_active_ = false;
     real_time_tools::join_thread(rt_thread_);
-    append_and_send_command(
-                MotorBoardCommand(MotorBoardCommand::IDs::ENABLE_SYS,
+    set_command(MotorBoardCommand(MotorBoardCommand::IDs::ENABLE_SYS,
                                   MotorBoardCommand::Contents::DISABLE));
+    send_newest_command();
 }
 
 void CanBusMotorBoard::send_if_input_changed()
@@ -95,18 +95,25 @@ void CanBusMotorBoard::send_if_input_changed()
 
 void CanBusMotorBoard::enable()
 {
-    append_and_send_command(MotorBoardCommand(
-                                MotorBoardCommand::IDs::ENABLE_SYS,
-                                MotorBoardCommand::Contents::ENABLE));
-    append_and_send_command(MotorBoardCommand(
-                                MotorBoardCommand::IDs::SEND_ALL,
-                                MotorBoardCommand::Contents::ENABLE));
-    append_and_send_command(MotorBoardCommand(
-                                MotorBoardCommand::IDs::ENABLE_MTR1,
-                                MotorBoardCommand::Contents::ENABLE));
-    append_and_send_command(MotorBoardCommand(
-                                MotorBoardCommand::IDs::ENABLE_MTR2,
-                                MotorBoardCommand::Contents::ENABLE));
+    set_command(MotorBoardCommand(
+                    MotorBoardCommand::IDs::ENABLE_SYS,
+                    MotorBoardCommand::Contents::ENABLE));
+    send_newest_command();
+
+    set_command(MotorBoardCommand(
+                    MotorBoardCommand::IDs::SEND_ALL,
+                    MotorBoardCommand::Contents::ENABLE));
+    send_newest_command();
+
+    set_command(MotorBoardCommand(
+                    MotorBoardCommand::IDs::ENABLE_MTR1,
+                    MotorBoardCommand::Contents::ENABLE));
+    send_newest_command();
+
+    set_command(MotorBoardCommand(
+                    MotorBoardCommand::IDs::ENABLE_MTR2,
+                    MotorBoardCommand::Contents::ENABLE));
+    send_newest_command();
 }
 
 
@@ -243,9 +250,9 @@ void CanBusMotorBoard::loop()
         if(received_timeindex != timeindex)
         {
             rt_printf("did not get the timeindex we expected! "
-                                  "received_timeindex: %d, "
-                                  "desired_timeindex: %d\n",
-                                  int(received_timeindex), int(timeindex));
+                      "received_timeindex: %d, "
+                      "desired_timeindex: %d\n",
+                      int(received_timeindex), int(timeindex));
             exit(-1);
         }
 
@@ -294,7 +301,7 @@ void CanBusMotorBoard::loop()
             else
             {
                 rt_printf("ERROR: Invalid motor number"
-                                      "for encoder index: %d\n", motor_index);
+                          "for encoder index: %d\n", motor_index);
                 exit(-1);
             }
             break;
@@ -315,12 +322,12 @@ void CanBusMotorBoard::loop()
         }
         }
 
-//         static int count = 0;
-//         if(count % 4000 == 0)
-//         {
-//             print_status();
-//         }
-//         count++;
+        //         static int count = 0;
+        //         if(count % 4000 == 0)
+        //         {
+        //             print_status();
+        //         }
+        //         count++;
     }
 }
 
