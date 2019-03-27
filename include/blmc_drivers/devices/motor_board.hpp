@@ -348,33 +348,15 @@ public:
      * @param history_length 
      */
     CanBusMotorBoard(std::shared_ptr<CanBusInterface> can_bus,
-                     const size_t& history_length = 1000);
+                     const size_t& history_length = 1000,
+                     const int &control_timeout_ms = 100);
 
     /**
      * @brief Destroy the CanBusMotorBoard object
      */
     ~CanBusMotorBoard();
 
-    /**
-     * @brief Create a vector of pointers.
-     * 
-     * @tparam Type of the data
-     * @param size is number of pointers to be created.
-     * @param length is the dimension of the data arrays.
-     * @return Vector<Ptr<Type>> which is the a list of list of data of type
-     * Type
-     */
-    template<typename Type> Vector<Ptr<Type>> 
-    create_vector_of_pointers(const size_t& size, const size_t& length)
-    {
-        Vector<Ptr<Type>> vector(size);
-        for(size_t i = 0; i < size; i++)
-        {
-            vector[i] = std::make_shared<Type>(length);
-        }
 
-        return vector;
-    }
 
     /**
      * Getters
@@ -480,6 +462,28 @@ public:
     /// private methods ========================================================
 private:
     /**
+     * @brief Create a vector of pointers.
+     *
+     * @tparam Type of the data
+     * @param size is number of pointers to be created.
+     * @param length is the dimension of the data arrays.
+     * @return Vector<Ptr<Type>> which is the a list of list of data of type
+     * Type
+     */
+    template<typename Type> Vector<Ptr<Type>>
+    create_vector_of_pointers(const size_t& size, const size_t& length)
+    {
+        Vector<Ptr<Type>> vector(size);
+        for(size_t i = 0; i < size; i++)
+        {
+            vector[i] = std::make_shared<Type>(length);
+        }
+
+        return vector;
+    }
+
+
+    /**
      * Useful converters
      */
 
@@ -537,6 +541,11 @@ private:
     void enable();
 
     /**
+     * @brief returns only once board and motors are ready.
+     */
+    void wait_until_ready();
+
+    /**
      * @brief append_and_send_command set the command and send it to the cards.
      * 
      * @param command the command to be sent.
@@ -552,14 +561,13 @@ private:
      * 
      * @param controls are the controls to be sent.
      */
-    void send_controls(std::array<double, 2> controls);
+    void send_newest_controls();
 
     /**
-     * @brief send the commands to the cards.
+     * @brief send the latest commands to the cards.
      * 
-     * @param command is the commands to be sent
      */
-    void send_command(MotorBoardCommand command);
+    void send_newest_command();
 
     /**
      * @brief This is the helper function used for spawning the real time
@@ -658,6 +666,13 @@ private:
      * of this object.
      */
     bool is_loop_active_;
+
+
+    /**
+     * @brief If no control is sent for more than control_timeout_ms_ the board
+     * will shut down
+     */
+    int control_timeout_ms_;
 
     /**
      * @brief This is the thread object that allow to spwan a real-time thread

@@ -18,8 +18,10 @@ namespace blmc_drivers
 
 CanBusMotorBoard::CanBusMotorBoard(
   std::shared_ptr<CanBusInterface> can_bus,
-  const size_t& history_length):
-    can_bus_(can_bus)
+  const size_t& history_length,
+  const int& control_timeout_ms):
+    can_bus_(can_bus),
+    control_timeout_ms_(control_timeout_ms)
 {
     measurement_  = create_vector_of_pointers<ScalarTimeseries>(
                 measurement_count,
@@ -54,7 +56,13 @@ CanBusMotorBoard::~CanBusMotorBoard()
 
 void CanBusMotorBoard::send_if_input_changed()
 {
-    // initialize outputs --------------------------------------------------
+    // send command if a new one has been set ----------------------------------
+    if(command_->has_changed_since_tag())
+    {
+        send_newest_command();
+    }
+
+    // send controls if a new one has been set ---------------------------------
     bool controls_have_changed = false;
 
     for(auto control : control_)
@@ -64,26 +72,24 @@ void CanBusMotorBoard::send_if_input_changed()
     }
     if(controls_have_changed)
     {
-        std::array<double, 2> controls_to_send;
-        for(size_t i = 0; i < control_.size(); i++)
+        // if this is the first time a control is sent, we set the timeout
+        // on the board, such that it will shut down if it does not receive
+        // any control in more than control_timeout_ms_ milliseconds
+        bool is_first_control = true;
+        for(auto control : sent_control_)
         {
-            Index timeindex_to_send = control_[i]->newest_timeindex();
-            controls_to_send[i] = (*control_[i])[timeindex_to_send];
-            control_[i]->tag(timeindex_to_send);
-
-            sent_control_[i]->append(controls_to_send[i]);
+            if(control->length() > 0)
+                is_first_control = false;
         }
-        send_controls(controls_to_send);
-    }
+        if(is_first_control)
+        {
+            set_command(MotorBoardCommand(
+                            MotorBoardCommand::IDs::SET_CAN_RECV_TIMEOUT,
+                            control_timeout_ms_));
+            send_newest_command();
+        }
 
-    if(command_->has_changed_since_tag())
-    {
-        Index timeindex_to_send = command_->newest_timeindex();
-        MotorBoardCommand command_to_send = (*command_)[timeindex_to_send];
-        command_->tag(timeindex_to_send);
-        sent_command_->append(command_to_send);
-
-        send_command(command_to_send);
+        send_newest_controls();
     }
 }
 
@@ -101,13 +107,52 @@ void CanBusMotorBoard::enable()
     append_and_send_command(MotorBoardCommand(
                                 MotorBoardCommand::IDs::ENABLE_MTR2,
                                 MotorBoardCommand::Contents::ENABLE));
-    append_and_send_command(MotorBoardCommand(
-                                MotorBoardCommand::IDs::SET_CAN_RECV_TIMEOUT,
-                                100));
 }
 
-void CanBusMotorBoard::send_controls(std::array<double, 2> controls)
+
+void CanBusMotorBoard::wait_until_ready()
 {
+    rt_printf("waiting for board and motors to be ready \n");
+    ThreadsafeTimeseries<>::Index time_index = 0;
+    bool is_ready = false;
+    while(!is_ready)
+    {
+        MotorBoardStatus status = (*status_)[time_index];
+        time_index++;
+
+        if(status.system_enabled &&
+                status.motor1_enabled &&
+                status.motor1_ready &&
+                status.motor2_enabled &&
+                status.motor2_ready &&
+                !status.error_code)
+        {
+            is_ready = true;
+        }
+    }
+    rt_printf("board and motors are ready \n");
+}
+
+
+
+void CanBusMotorBoard::send_newest_controls()
+{
+    std::array<double, 2> controls;
+    for(size_t i = 0; i < control_.size(); i++)
+    {
+        if(control_[i]->length() == 0)
+        {
+            rt_printf("you tried to send control but no control has been set\n");
+            exit(-1);
+        }
+
+        Index timeindex = control_[i]->newest_timeindex();
+        controls[i] = (*control_[i])[timeindex];
+        control_[i]->tag(timeindex);
+
+        sent_control_[i]->append(controls[i]);
+    }
+
     float current_mtr1 = controls[0];
     float current_mtr2 = controls[1];
 
@@ -142,8 +187,19 @@ void CanBusMotorBoard::send_controls(std::array<double, 2> controls)
     can_bus_->send_if_input_changed();
 }
 
-void CanBusMotorBoard::send_command(MotorBoardCommand command)
+void CanBusMotorBoard::send_newest_command()
 {
+    if(command_->length() == 0)
+    {
+        rt_printf("you tried to send command but no command has been set\n");
+        exit(-1);
+    }
+
+    Index timeindex = command_->newest_timeindex();
+    MotorBoardCommand command = (*command_)[timeindex];
+    command_->tag(timeindex);
+    sent_command_->append(command);
+
     uint32_t id = command.id_;
     int32_t content = command.content_;
 
@@ -259,12 +315,12 @@ void CanBusMotorBoard::loop()
         }
         }
 
-        // static int count = 0;
-        // if(count % 4000 == 0)
-        // {
-        //     print_status();
-        // }
-        // count++;
+//         static int count = 0;
+//         if(count % 4000 == 0)
+//         {
+//             print_status();
+//         }
+//         count++;
     }
 }
 
@@ -282,9 +338,9 @@ void CanBusMotorBoard::print_status()
         }
     }
 
-    //        rt_printf("status: ---------------------------------\n");
-    //        if(status_[status]->length() > 0)
-    //            status_[status]->newest_element().print();
+    rt_printf("status: ---------------------------------\n");
+    if(status_->length() > 0)
+        status_->newest_element().print();
 
     //        rt_printf("inputs ======================================\n");
 
