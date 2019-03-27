@@ -459,6 +459,11 @@ public:
      */
     virtual void send_if_input_changed();
 
+    /**
+     * @brief returns only once board and motors are ready.
+     */
+    void wait_until_ready();
+
     /// private methods ========================================================
 private:
     /**
@@ -539,11 +544,6 @@ private:
      * todo: this should go away
      */
     void enable();
-
-    /**
-     * @brief returns only once board and motors are ready.
-     */
-    void wait_until_ready();
 
     /**
      * @brief send the controls to the cards.
