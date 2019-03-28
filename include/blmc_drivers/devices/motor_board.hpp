@@ -464,6 +464,8 @@ public:
      */
     void wait_until_ready();
 
+    void pause_motors();
+
     /// private methods ========================================================
 private:
     /**
@@ -650,11 +652,8 @@ private:
      */
     bool is_loop_active_;
 
-    /**
-     * @brief This boolean is set to true once the first external control input
-     * has been sent
-     */
-    bool control_loop_has_started_;
+
+    bool motors_are_paused_;
 
 
     /**

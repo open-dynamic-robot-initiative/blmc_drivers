@@ -22,7 +22,7 @@ CanBusMotorBoard::CanBusMotorBoard(
         const int& control_timeout_ms):
     can_bus_(can_bus),
     control_timeout_ms_(control_timeout_ms),
-    control_loop_has_started_(false)
+    motors_are_paused_(false)
 {
     measurement_  = create_vector_of_pointers<ScalarTimeseries>(
                 measurement_count,
@@ -69,18 +69,6 @@ void CanBusMotorBoard::send_if_input_changed()
     }
     if(controls_have_changed)
     {
-        // if this is the first time a control is sent, we set the timeout
-        // on the board, such that it will shut down if it does not receive
-        // any control in more than control_timeout_ms_ milliseconds
-        if(!control_loop_has_started_)
-        {
-            set_command(MotorBoardCommand(
-                            MotorBoardCommand::IDs::SET_CAN_RECV_TIMEOUT,
-                            control_timeout_ms_));
-            send_newest_command();
-            control_loop_has_started_ = true;
-        }
-
         send_newest_controls();
     }
 }
@@ -109,10 +97,31 @@ void CanBusMotorBoard::wait_until_ready()
     rt_printf("board and motors are ready \n");
 }
 
+void CanBusMotorBoard::pause_motors()
+{
+    set_control(0, current_target_0);
+    set_control(0, current_target_1);
+    send_newest_controls();
+
+    set_command(MotorBoardCommand(MotorBoardCommand::IDs::ENABLE_SYS,
+                                  MotorBoardCommand::Contents::DISABLE));
+    send_newest_command();
+
+    motors_are_paused_ = true;
+}
 
 
 void CanBusMotorBoard::send_newest_controls()
 {
+    if(motors_are_paused_)
+    {
+        set_command(MotorBoardCommand(
+                        MotorBoardCommand::IDs::SET_CAN_RECV_TIMEOUT,
+                        control_timeout_ms_));
+        send_newest_command();
+        motors_are_paused_ = false;
+    }
+
     std::array<double, 2> controls;
     for(size_t i = 0; i < control_.size(); i++)
     {
@@ -207,12 +216,9 @@ void CanBusMotorBoard::send_newest_command()
 
 void CanBusMotorBoard::loop()
 {
-    // initialize outputs ------------------------------------------------------
-    for(size_t i = 0; i < control_.size(); i++)
-    {
-        control_[i]->append(0);
-    }
-    send_newest_controls(); // this seems to be necessary to reset the board
+
+
+    pause_motors();
 
     // initialize board --------------------------------------------------------
     set_command(MotorBoardCommand(
@@ -233,11 +239,6 @@ void CanBusMotorBoard::loop()
     set_command(MotorBoardCommand(
                     MotorBoardCommand::IDs::ENABLE_MTR2,
                     MotorBoardCommand::Contents::ENABLE));
-    send_newest_command();
-
-    set_command(MotorBoardCommand(
-                    MotorBoardCommand::IDs::SET_CAN_RECV_TIMEOUT,
-                    MotorBoardCommand::Contents::DISABLE));
     send_newest_command();
 
     // receive data from board in a loop ---------------------------------------
