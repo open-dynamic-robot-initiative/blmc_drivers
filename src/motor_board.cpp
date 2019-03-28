@@ -103,7 +103,7 @@ void CanBusMotorBoard::pause_motors()
     set_control(0, current_target_1);
     send_newest_controls();
 
-    set_command(MotorBoardCommand(MotorBoardCommand::IDs::ENABLE_SYS,
+    set_command(MotorBoardCommand(MotorBoardCommand::IDs::SET_CAN_RECV_TIMEOUT,
                                   MotorBoardCommand::Contents::DISABLE));
     send_newest_command();
 
@@ -216,8 +216,6 @@ void CanBusMotorBoard::send_newest_command()
 
 void CanBusMotorBoard::loop()
 {
-
-
     pause_motors();
 
     // initialize board --------------------------------------------------------
