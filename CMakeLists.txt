@@ -165,6 +165,7 @@ add_demo(demo_const_torque_1_motor)
 add_demo(demo_single_board)
 add_demo(demo_leg)
 add_demo(demo_2_motors)
+add_demo(demo_1_motor_print_everything)
 add_demo(demo_8_motors)
 
 ##########################

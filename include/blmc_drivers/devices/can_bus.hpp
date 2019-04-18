@@ -18,6 +18,8 @@
 
 #include "real_time_tools/timer.hpp"
 #include "real_time_tools/realtime_thread_creation.hpp"
+#include "real_time_tools/realtime_iostream.hpp"
+#include "real_time_tools/spinner.hpp"
 
 #include "blmc_drivers/utils/threadsafe_object.hpp"
 #include "blmc_drivers/utils/threadsafe_timeseries.hpp"
@@ -44,9 +46,26 @@ public:
      */
     uint8_t dlc;
     /**
-     * @brief id is the id number return by the CAN bus. Not currently used.
+     * @brief id is the id number return by the CAN bus.
      */
     can_id_t id;
+
+    void print() const
+    {
+        rt_printf("---------------------------\n");
+        rt_printf("can bus frame data");
+        for(auto& datum : data)
+        {
+            rt_printf(" :%d", datum);
+        }
+        rt_printf("\n");
+
+        rt_printf("id: %d\n", id);
+
+        rt_printf("dlc: %d\n", dlc);
+
+        rt_printf("---------------------------\n");
+    }
 };
 
 /**
