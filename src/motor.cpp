@@ -55,6 +55,8 @@ Motor::Ptr<const Motor::ScalarTimeseries> Motor::get_measurement(
                         MotorBoardInterface::encoder_index_1);
         }
     }
+
+    throw std::invalid_argument("index needs to match one of the measurements");
 }
 
 Motor::Ptr<const Motor::ScalarTimeseries> Motor::get_current_target() const

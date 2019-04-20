@@ -93,6 +93,7 @@ private:
   static THREAD_FUNCTION_RETURN_TYPE loop(void* instance_pointer)
   {
     ((ConstTorqueControl*)(instance_pointer))->loop();
+    return THREAD_FUNCTION_RETURN_VALUE;
   }
 
   /**

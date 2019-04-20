@@ -70,6 +70,7 @@ public:
     static THREAD_FUNCTION_RETURN_TYPE loop(void* instance_pointer)
     {
         ((Controller*)(instance_pointer))->loop();
+        return THREAD_FUNCTION_RETURN_VALUE;
     }
 
 private:
@@ -171,6 +172,7 @@ public:
     static THREAD_FUNCTION_RETURN_TYPE loop(void* instance_pointer)
     {
         ((LegController*)(instance_pointer))->loop();
+        return THREAD_FUNCTION_RETURN_VALUE;
     }
 
 private:

@@ -564,6 +564,7 @@ private:
     static THREAD_FUNCTION_RETURN_TYPE loop(void* instance_pointer)
     {
         ((CanBusMotorBoard*)(instance_pointer))->loop();
+        return THREAD_FUNCTION_RETURN_VALUE;
     }
 
     /**

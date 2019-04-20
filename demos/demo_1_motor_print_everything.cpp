@@ -69,9 +69,10 @@ static THREAD_FUNCTION_RETURN_TYPE printing_loop(void* hardware_ptr)
                 (*hardware.can_bus->get_output_frame())[received_timeindex];
         timeindex++;
 
-        rt_printf("timeindex: %d\n", timeindex);
+        rt_printf("timeindex: %ld\n", timeindex);
         can_frame.print();
     }
+    return THREAD_FUNCTION_RETURN_VALUE;
 }
 
 
