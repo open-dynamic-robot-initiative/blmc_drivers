@@ -39,7 +39,7 @@ static THREAD_FUNCTION_RETURN_TYPE control_loop(void* hardware_ptr)
         double desired_current = (slider_position - 0.5) * 4.0;
 
         // We send the current to the motor
-        hardware.motor->set_current_target(desired_current);
+        hardware.motor->set_current_target(/*desired_current*/0.0);
         hardware.motor->send_if_input_changed();
 
         spinner.spin();
@@ -116,5 +116,6 @@ int main(int argc, char **argv)
 
     rt_printf("control loop started \n");
     real_time_tools::join_thread(control_thread);
+    real_time_tools::join_thread(printing_thread);
     return 0;
 }

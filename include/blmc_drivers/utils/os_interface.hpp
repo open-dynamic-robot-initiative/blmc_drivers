@@ -106,6 +106,7 @@ typedef uint64_t 	nanosecs_abs_t;
  */
 #endif
 
+#include <sstream>
 #include <mutex>
 #include <condition_variable>
 
@@ -247,9 +248,11 @@ inline void send_to_can_device(int fd, const void *buf, size_t len,
 
     if (ret < 0)
     {
-        rt_printf("something went wrong with "
-                  "sending CAN frame, error code: %d, errno=%d\n", ret, errno);
-        exit(-1);
+        std::ostringstream oss;
+        oss << "something went wrong with sending "
+            << "CAN frame, error code: "
+            << ret << ", errno=" << errno << std::endl;
+        throw std::runtime_error(oss.str());
     }
 }
 
@@ -282,9 +285,11 @@ inline void receive_message_from_can_device(int fd, struct msghdr *msg, int flag
     int ret = rt_dev_recvmsg(fd, msg, flags);
     if (ret < 0)
     {
-        rt_printf("something went wrong with receiving "
-                  "CAN frame, error code: %d, errno=%d\n", ret, errno);
-        exit(-1);
+        std::ostringstream oss;
+        oss << "something went wrong with receiving "
+            << "CAN frame, error code: "
+            << ret << ", errno=" << errno << std::endl;
+        throw std::runtime_error(oss.str());
     }
 
 }
