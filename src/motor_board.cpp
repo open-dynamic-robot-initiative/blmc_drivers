@@ -38,14 +38,13 @@ CanBusMotorBoard::CanBusMotorBoard(
     sent_command_ = std::make_shared<CommandTimeseries>(history_length);
 
     is_loop_active_ = true;
-    real_time_tools::create_realtime_thread(
-                rt_thread_, &CanBusMotorBoard::loop, this);
+    rt_thread_.create_realtime_thread(&CanBusMotorBoard::loop, this);
 }
 
 CanBusMotorBoard::~CanBusMotorBoard()
 {
     is_loop_active_ = false;
-    real_time_tools::join_thread(rt_thread_);
+    rt_thread_.join();
     set_command(MotorBoardCommand(MotorBoardCommand::IDs::ENABLE_SYS,
                                   MotorBoardCommand::Contents::DISABLE));
     send_newest_command();

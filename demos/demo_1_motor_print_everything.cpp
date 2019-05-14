@@ -104,18 +104,14 @@ int main(int argc, char **argv)
 
     // start real-time control loop --------------------------------------------
     real_time_tools::RealTimeThread control_thread;
-    real_time_tools::create_realtime_thread(control_thread,
-                                            &control_loop,
-                                            &hardware);
+    control_thread.create_realtime_thread(&control_loop, &hardware);
 
     // start real-time printing loop -------------------------------------------
     real_time_tools::RealTimeThread printing_thread;
-    real_time_tools::create_realtime_thread(printing_thread,
-                                            &printing_loop,
-                                            &hardware);
+    printing_thread.create_realtime_thread(&printing_loop, &hardware);
 
     rt_printf("control loop started \n");
-    real_time_tools::join_thread(control_thread);
-    real_time_tools::join_thread(printing_thread);
+    control_thread.join();
+    printing_thread.join();
     return 0;
 }

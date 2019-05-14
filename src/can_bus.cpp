@@ -28,13 +28,13 @@ CanBus::CanBus(const std::string& can_interface_name,
     can_connection_.set(setup_can(can_interface_name, 0));
 
     is_loop_active_ = true;
-    real_time_tools::create_realtime_thread(rt_thread_, &CanBus::loop, this);
+    rt_thread_.create_realtime_thread(&CanBus::loop, this);
 }
 
 CanBus::~CanBus()
 {
     is_loop_active_ = false;
-    real_time_tools::join_thread(rt_thread_);
+    rt_thread_.join();
     osi::close_can_device(can_connection_.get().socket);
 }
 

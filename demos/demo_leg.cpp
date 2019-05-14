@@ -59,8 +59,7 @@ public:
      */
     void start_loop()
     {
-        real_time_tools::create_realtime_thread(
-          rt_thread_, &Controller::loop, this);
+        rt_thread_.create_realtime_thread(&Controller::loop, this);
     }
 
     /**
@@ -153,7 +152,7 @@ public:
     ~LegController()
     {
       stop_loop_=true;
-      real_time_tools::join_thread(rt_thread_);
+      rt_thread_.join();
     }
 
     /**
@@ -161,8 +160,7 @@ public:
      */
     void start_loop()
     {
-        real_time_tools::create_realtime_thread(
-          rt_thread_, &Controller::loop, this);
+      rt_thread_.create_realtime_thread(&Controller::loop, this);
     }
 
     /**

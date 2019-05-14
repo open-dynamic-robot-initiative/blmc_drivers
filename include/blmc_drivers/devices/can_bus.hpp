@@ -17,8 +17,8 @@
 #include <string>
 
 #include "real_time_tools/timer.hpp"
-#include "real_time_tools/realtime_thread_creation.hpp"
-#include "real_time_tools/realtime_iostream.hpp"
+#include "real_time_tools/thread.hpp"
+#include "real_time_tools/iostream.hpp"
 #include "real_time_tools/spinner.hpp"
 
 #include "blmc_drivers/utils/threadsafe_object.hpp"

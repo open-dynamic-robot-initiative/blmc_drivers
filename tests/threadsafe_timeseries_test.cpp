@@ -5,7 +5,7 @@
 #include <blmc_drivers/utils/os_interface.hpp>
 #include <blmc_drivers/utils/threadsafe_timeseries.hpp>
 #include <real_time_tools/timer.hpp>
-#include "real_time_tools/realtime_thread_creation.hpp"
+#include "real_time_tools/thread.hpp"
 
 using namespace blmc_drivers;
 using namespace real_time_tools;
@@ -85,15 +85,14 @@ TEST(threadsafe_timeseries, full_history)
     for(size_t i = 0; i < n_outputs; i++)
     {
         output_indices[i] = i;
-        threads.push_back(RealTimeThread());
-        create_realtime_thread(
-          threads.back(), &timeseries_to_output, &output_indices[i]);
+        threads.emplace_back();
+        threads.back().create_realtime_thread(
+          &timeseries_to_output, &output_indices[i]);
     }
     usleep(1000);
 
-    threads.push_back(RealTimeThread());
-    create_realtime_thread(
-      threads.back(), &input_to_timeseries);
+    threads.emplace_back();
+    threads.back().create_realtime_thread(&input_to_timeseries);
     usleep(1000000);
 
     // check that the outputs written by the individual threads
@@ -151,14 +150,14 @@ TEST(threadsafe_timeseries, partial_history)
     for(size_t i = 0; i < n_outputs; i++)
     {
         output_indices[i] = i;
-        threads.push_back(RealTimeThread());
-        create_realtime_thread(
-          threads.back(), &timeseries_to_output, &output_indices[i]);
+        threads.emplace_back();
+        threads.back().create_realtime_thread(
+          &timeseries_to_output, &output_indices[i]);
     }
     usleep(1000);
-    threads.push_back(RealTimeThread());
-    create_realtime_thread(
-          threads.back(), &input_to_timeseries_slow);
+    threads.emplace_back();
+    threads.back().create_realtime_thread(
+      &input_to_timeseries_slow);
     usleep(1000000);
 
     // check that the outputs written by the individual threads
