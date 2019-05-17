@@ -110,6 +110,13 @@ void CanBusMotorBoard::pause_motors()
     motors_are_paused_ = true;
 }
 
+void CanBusMotorBoard::disable_can_recv_timeout()
+{
+    set_command(MotorBoardCommand(MotorBoardCommand::IDs::SET_CAN_RECV_TIMEOUT,
+                                  MotorBoardCommand::Contents::DISABLE));
+    send_newest_command();
+}
+
 
 void CanBusMotorBoard::send_newest_controls()
 {

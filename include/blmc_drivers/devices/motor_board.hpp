@@ -466,6 +466,11 @@ public:
 
     void pause_motors();
 
+    /**
+     * @brief Disable the can reciever timeout.
+     */
+    void disable_can_recv_timeout();
+
     /// private methods ========================================================
 private:
     /**
