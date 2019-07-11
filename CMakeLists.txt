@@ -110,9 +110,13 @@ set(EXPORTED_LIBRAIRIES ${EXPORTED_LIBRAIRIES} blmc_drivers)
 ##########################################
 # export the package as a catkin package #
 ##########################################
+set(catkin_export_include_dirs include)
+if(Xenomai_FOUND)
+  set(catkin_export_include_dirs ${catkin_export_include_dirs} ${Xenomai_INCLUDE_DIR})
+endif(Xenomai_FOUND)
 
 catkin_package(
-  INCLUDE_DIRS include ${Xenomai_INCLUDE_DIR}
+  INCLUDE_DIRS include ${catkin_export_include_dirs}
   LIBRARIES ${EXPORTED_LIBRAIRIES}
   DEPENDS ${catkin_depends}
 )
