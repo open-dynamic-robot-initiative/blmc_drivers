@@ -125,23 +125,7 @@ catkin_package(
 # manage the unit tests #
 #########################
 
-catkin_add_gtest(test_threadsafe_object
-  tests/main.cpp
-  tests/threadsafe_object_test.cpp
-)
-target_link_libraries(test_threadsafe_object 
-  blmc_drivers 
-  ${catkin_LIBRARIES}
-)
 
-catkin_add_gtest(test_threadsafe_timeseries
- tests/main.cpp
- tests/threadsafe_timeseries_test.cpp
-)
-target_link_libraries(test_threadsafe_timeseries 
-  blmc_drivers
-  ${catkin_LIBRARIES}
-)
 
 ####################
 # manage the demos #

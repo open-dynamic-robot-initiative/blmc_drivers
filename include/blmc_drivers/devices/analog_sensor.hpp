@@ -17,7 +17,7 @@
 
 #include "real_time_tools/timer.hpp"
 
-#include "blmc_drivers/utils/threadsafe_timeseries.hpp"
+#include "real_time_tools/threadsafe/threadsafe_timeseries.hpp"
 #include "blmc_drivers/devices/device_interface.hpp"
 #include "blmc_drivers/devices/motor_board.hpp"
 
