@@ -17,8 +17,8 @@
 
 #include "real_time_tools/timer.hpp"
 
-#include "blmc_drivers/utils/os_interface.hpp"
-
+#include <mutex>
+#include <condition_variable>
 
 namespace blmc_drivers{
 
@@ -118,12 +118,12 @@ private:
      * @brief A condition variable that protect the data during copy and
      * reading.
      */
-    mutable std::shared_ptr<osi::ConditionVariable> condition_;
+    mutable std::shared_ptr<std::condition_variable> condition_;
     /** 
      * @brief A mutex variable that protect the data during copy and
      * reading.
      */
-    mutable std::shared_ptr<osi::Mutex> mutex_;
+    mutable std::shared_ptr<std::mutex> mutex_;
 
 };
 

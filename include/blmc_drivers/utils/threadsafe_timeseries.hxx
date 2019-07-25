@@ -29,28 +29,28 @@ ThreadsafeTimeseries<Type>::ThreadsafeTimeseries(
     history_elements_ = std::make_shared<std::vector<Type>>(max_length);
     history_timestamps_ = std::make_shared<std::vector<Timestamp>>(max_length);
 
-    condition_ = std::make_shared<osi::ConditionVariable>();
-    mutex_ = std::make_shared<osi::Mutex>();
+    condition_ = std::make_shared<std::condition_variable>();
+    mutex_ = std::make_shared<std::mutex>();
 }
 
 template<typename Type>
 void ThreadsafeTimeseries<Type>::tag(const Index& timeindex)
 {
-    std::unique_lock<osi::Mutex> lock(*mutex_);
+    std::unique_lock<std::mutex> lock(*mutex_);
     tagged_timeindex_ = timeindex;
 }
 
 template<typename Type>
 bool ThreadsafeTimeseries<Type>::has_changed_since_tag() const
 {
-    std::unique_lock<osi::Mutex> lock(*mutex_);
+    std::unique_lock<std::mutex> lock(*mutex_);
     return tagged_timeindex_ != newest_timeindex_;
 }
 
 template<typename Type> typename ThreadsafeTimeseries<Type>::Index
 ThreadsafeTimeseries<Type>::newest_timeindex() const
 {
-    std::unique_lock<osi::Mutex> lock(*mutex_);
+    std::unique_lock<std::mutex> lock(*mutex_);
     while(newest_timeindex_ < oldest_timeindex_)
     {
         condition_->wait(lock);
@@ -69,7 +69,7 @@ ThreadsafeTimeseries<Type>::newest_element() const
 template<typename Type> Type
 ThreadsafeTimeseries<Type>::operator[](Index& timeindex) const
 {
-    std::unique_lock<osi::Mutex> lock(*mutex_);
+    std::unique_lock<std::mutex> lock(*mutex_);
 
     while(newest_timeindex_ < timeindex ||
           newest_timeindex_ < oldest_timeindex_)
@@ -90,7 +90,7 @@ ThreadsafeTimeseries<Type>::operator[](Index& timeindex) const
 template<typename Type> typename ThreadsafeTimeseries<Type>::Timestamp
 ThreadsafeTimeseries<Type>::timestamp_ms(Index& timeindex) const
 {
-    std::unique_lock<osi::Mutex> lock(*mutex_);
+    std::unique_lock<std::mutex> lock(*mutex_);
 
     while(newest_timeindex_ < timeindex ||
           newest_timeindex_ < oldest_timeindex_)
@@ -112,7 +112,7 @@ template<typename Type>
 void ThreadsafeTimeseries<Type>::append(const Type& element)
 {
     {
-        std::unique_lock<osi::Mutex> lock(*mutex_);
+        std::unique_lock<std::mutex> lock(*mutex_);
         newest_timeindex_++;
         if(newest_timeindex_ - oldest_timeindex_ + 1
                 > history_elements_->size())
@@ -130,7 +130,7 @@ void ThreadsafeTimeseries<Type>::append(const Type& element)
 template<typename Type>
 size_t ThreadsafeTimeseries<Type>::length() const
 {
-    std::unique_lock<osi::Mutex> lock(*mutex_);
+    std::unique_lock<std::mutex> lock(*mutex_);
     return newest_timeindex_ - oldest_timeindex_ + 1;
 }
 

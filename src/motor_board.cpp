@@ -89,7 +89,7 @@ void CanBusMotorBoard::wait_until_ready()
 }
 
 
-bool is_ready()
+bool CanBusMotorBoard::is_ready()
 {
     if(status_->length() == 0)
     {

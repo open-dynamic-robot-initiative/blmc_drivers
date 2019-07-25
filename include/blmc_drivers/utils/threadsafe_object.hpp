@@ -20,7 +20,8 @@
 
 #include "real_time_tools/timer.hpp"
 
-#include "blmc_drivers/utils/os_interface.hpp"
+#include <mutex>
+#include <condition_variable>
 
 namespace blmc_drivers{
 
@@ -149,7 +150,7 @@ public:
      */
     Type get(const size_t& index = 0) const
     {
-        std::unique_lock<osi::Mutex> lock((*data_mutexes_)[index]);
+        std::unique_lock<std::mutex> lock((*data_mutexes_)[index]);
         return (*data_)[index];
     }
 
@@ -240,16 +241,16 @@ private:
      * @brief This condition variable is used to wait untils any data has been
      * changed.
      */
-    mutable std::shared_ptr<osi::ConditionVariable> condition_;
+    mutable std::shared_ptr<std::condition_variable> condition_;
     /**
      * @brief This is the mutex of the condition varaible.
      */
-    mutable std::shared_ptr<osi::Mutex> condition_mutex_;
+    mutable std::shared_ptr<std::mutex> condition_mutex_;
     /**
      * @brief These are the individual mutexes of each data upon setting and
      * getting.
      */
-    mutable std::shared_ptr<std::array<osi::Mutex, SIZE>> data_mutexes_;
+    mutable std::shared_ptr<std::array<std::mutex, SIZE>> data_mutexes_;
 };
 
 /**
@@ -339,11 +340,11 @@ private:
      * @brief a condition variable that allow to wait until one data has been
      * changed in the buffer.
      */
-    mutable std::shared_ptr<osi::ConditionVariable> condition_;
+    mutable std::shared_ptr<std::condition_variable> condition_;
     /**
      * @brief The mutex of the condition variable.
      */
-    mutable std::shared_ptr<osi::Mutex> condition_mutex_;
+    mutable std::shared_ptr<std::mutex> condition_mutex_;
     /**
      * @brief This is counting the data modification occurences for each
      * individual buffers.
@@ -359,7 +360,7 @@ private:
      * @brief These are the individual mutexes of each data upon setting and
      * getting.
      */
-    std::shared_ptr<std::array<osi::Mutex, SIZE>> data_mutexes_;
+    std::shared_ptr<std::array<std::mutex, SIZE>> data_mutexes_;
 };
 
 } // namespace blmc_drivers

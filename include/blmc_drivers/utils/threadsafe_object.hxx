@@ -21,11 +21,11 @@ SingletypeThreadsafeObject<Type, SIZE>::SingletypeThreadsafeObject()
 {
     // initialize shared pointers ------------------------------------------
     data_ = std::make_shared<std::array<Type, SIZE>>();
-    condition_ = std::make_shared<osi::ConditionVariable>();
-    condition_mutex_ = std::make_shared<osi::Mutex>();
+    condition_ = std::make_shared<std::condition_variable>();
+    condition_mutex_ = std::make_shared<std::mutex>();
     modification_counts_ = std::make_shared<std::array<size_t, SIZE>>();
     total_modification_count_ = std::make_shared<size_t>();
-    data_mutexes_ = std::make_shared<std::array<osi::Mutex, SIZE>>();
+    data_mutexes_ = std::make_shared<std::array<std::mutex, SIZE>>();
 
     // initialize counts ---------------------------------------------------
     for(size_t i = 0; i < SIZE; i++)
@@ -66,13 +66,13 @@ void SingletypeThreadsafeObject<Type, SIZE>::set(
     real_time_tools::Timer::sleep_sec(1e-9);
     // set datum in our data_ member ---------------------------------------
     {
-        std::unique_lock<osi::Mutex> lock((*data_mutexes_)[index]);
+        std::unique_lock<std::mutex> lock((*data_mutexes_)[index]);
         (*data_)[index] = datum;
     }
 
     // notify --------------------------------------------------------------
     {
-        std::unique_lock<osi::Mutex> lock(*condition_mutex_);
+        std::unique_lock<std::mutex> lock(*condition_mutex_);
         (*modification_counts_)[index] += 1;
         *total_modification_count_ += 1;
         condition_->notify_all();
@@ -83,7 +83,7 @@ template<typename Type, size_t SIZE>
 void SingletypeThreadsafeObject<Type, SIZE>::wait_for_update(
   const size_t& index) const
 {
-    std::unique_lock<osi::Mutex> lock(*condition_mutex_);
+    std::unique_lock<std::mutex> lock(*condition_mutex_);
 
     // wait until the datum with the right index is modified ---------------
     size_t initial_modification_count =
@@ -106,7 +106,7 @@ void SingletypeThreadsafeObject<Type, SIZE>::wait_for_update(
 template<typename Type, size_t SIZE>
 size_t SingletypeThreadsafeObject<Type, SIZE>::wait_for_update() const
 {
-    std::unique_lock<osi::Mutex> lock(*condition_mutex_);
+    std::unique_lock<std::mutex> lock(*condition_mutex_);
 
     // wait until any datum is modified ------------------------------------
     std::array<size_t, SIZE>
@@ -160,12 +160,12 @@ ThreadsafeObject<Types ...>::ThreadsafeObject()
 {
     // initialize shared pointers ------------------------------------------
     data_ = std::make_shared<std::tuple<Types ...> >();
-    condition_ = std::make_shared<osi::ConditionVariable>();
-    condition_mutex_ = std::make_shared<osi::Mutex>();
+    condition_ = std::make_shared<std::condition_variable>();
+    condition_mutex_ = std::make_shared<std::mutex>();
     modification_counts_ =
             std::make_shared<std::array<size_t, SIZE>>();
     total_modification_count_ = std::make_shared<size_t>();
-    data_mutexes_ = std::make_shared<std::array<osi::Mutex, SIZE>>();
+    data_mutexes_ = std::make_shared<std::array<std::mutex, SIZE>>();
 
     // initialize counts ---------------------------------------------------
     for(size_t i = 0; i < SIZE; i++)
@@ -179,7 +179,7 @@ template<class ... Types>
 template<int INDEX>
 ThreadsafeObject<Types ...>::Type<INDEX> ThreadsafeObject<Types ...>::get() const
 {
-    std::unique_lock<osi::Mutex> lock((*data_mutexes_)[INDEX]);
+    std::unique_lock<std::mutex> lock((*data_mutexes_)[INDEX]);
     return std::get<INDEX>(*data_);
 }
 
@@ -192,13 +192,13 @@ ThreadsafeObject<Types ...>::set(ThreadsafeObject<Types ...>::Type<INDEX> datum)
     real_time_tools::Timer::sleep_sec(1e-9);
     // set datum in our data_ member ---------------------------------------
     {
-        std::unique_lock<osi::Mutex> lock((*data_mutexes_)[INDEX]);
+        std::unique_lock<std::mutex> lock((*data_mutexes_)[INDEX]);
         std::get<INDEX>(*data_) = datum;
     }
 
     // notify --------------------------------------------------------------
     {
-        std::unique_lock<osi::Mutex> lock(*condition_mutex_);
+        std::unique_lock<std::mutex> lock(*condition_mutex_);
         (*modification_counts_)[INDEX] += 1;
         *total_modification_count_ += 1;
         condition_->notify_all();
@@ -208,7 +208,7 @@ ThreadsafeObject<Types ...>::set(ThreadsafeObject<Types ...>::Type<INDEX> datum)
 template<class ... Types>
 void ThreadsafeObject<Types ...>::wait_for_update(unsigned index) const
 {
-    std::unique_lock<osi::Mutex> lock(*condition_mutex_);
+    std::unique_lock<std::mutex> lock(*condition_mutex_);
 
     // wait until the datum with the right index is modified ---------------
     size_t initial_modification_count =
@@ -231,7 +231,7 @@ void ThreadsafeObject<Types ...>::wait_for_update(unsigned index) const
 template<class ... Types>
 size_t ThreadsafeObject<Types ...>::wait_for_update() const
 {
-    std::unique_lock<osi::Mutex> lock(*condition_mutex_);
+    std::unique_lock<std::mutex> lock(*condition_mutex_);
 
     // wait until any datum is modified ------------------------------------
     std::array<size_t, SIZE>
