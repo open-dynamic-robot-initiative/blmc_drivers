@@ -83,17 +83,22 @@ void CanBusMotorBoard::wait_until_ready()
         MotorBoardStatus status = (*status_)[time_index];
         time_index++;
 
-        if(status.system_enabled &&
-                status.motor1_enabled &&
-                status.motor1_ready &&
-                status.motor2_enabled &&
-                status.motor2_ready &&
-                !status.error_code)
-        {
-            is_ready = true;
-        }
+        is_ready = status.is_ready();
     }
     rt_printf("board and motors are ready \n");
+}
+
+
+bool is_ready()
+{
+    if(status_->length() == 0)
+    {
+        return false;
+    }
+    else
+    {
+        return status_->newest_element().is_ready();
+    }
 }
 
 void CanBusMotorBoard::pause_motors()

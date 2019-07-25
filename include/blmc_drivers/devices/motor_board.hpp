@@ -6,9 +6,9 @@
  * communication with control board. And in particular with can boards.
  * @version 0.1
  * @date 2018-11-26
- * 
+ *
  * @copyright Copyright (c) 2018
- * 
+ *
  */
 
 #pragma once
@@ -45,7 +45,7 @@ public:
 
     /**
      * @brief Construct a new MotorBoardCommand object
-     * 
+     *
      * @param id defines the command to apply.
      * @param content defines of the command is enabled or disabled.
      */
@@ -64,7 +64,7 @@ public:
     }
 
     /**
-     * @brief IDs are the different implemented commands that one can send to 
+     * @brief IDs are the different implemented commands that one can send to
      * the MotorBoard.
      */
     enum IDs
@@ -108,7 +108,7 @@ public:
 
 //==============================================================================
 /**
- * @brief This class represent a 8 bits message that describe the state 
+ * @brief This class represent a 8 bits message that describe the state
  * (enable/disabled) of the card and the two motors.
  */
 class MotorBoardStatus
@@ -182,6 +182,23 @@ public:
         rt_printf("\tMotor 2 ready: %d\n", motor2_ready);
         rt_printf("\tError Code: %d\n", error_code);
     }
+
+    bool is_ready()
+    {
+        if(system_enabled &&
+           motor1_enabled &&
+           motor1_ready &&
+           motor2_enabled &&
+           motor2_ready &&
+           !error_code)
+        {
+            return true;
+        }
+        else
+        {
+            return false;
+        }
+    }
 };
 
 
@@ -248,7 +265,7 @@ public:
 
     /**
      * @brief Get the measurements
-     * 
+     *
      * @param index is the kind of measurement we are looking for.
      * @return Ptr<const ScalarTimeseries>  is the list of the last time stamped
      * measurement acquiered.
@@ -258,7 +275,7 @@ public:
 
     /**
      * @brief Get the status of the motor board.
-     * 
+     *
      * @return Ptr<const StatusTimeseries> is the list of the last status of
      * the card.
      */
@@ -270,7 +287,7 @@ public:
 
     /**
      * @brief Get the controls to be send.
-     * 
+     *
      * @param index define the kind of control we are looking for.
      * @return Ptr<const ScalarTimeseries> is the list of the controls to be
      * send.
@@ -279,7 +296,7 @@ public:
 
     /**
      * @brief Get the commands to be send.
-     * 
+     *
      * @return Ptr<const CommandTimeseries> is the list of the commands to be
      * send.
      */
@@ -287,7 +304,7 @@ public:
 
     /**
      * @brief Get the sent controls.
-     * 
+     *
      * @param index define the kind of control we are looking for.
      * @return Ptr<const ScalarTimeseries> is the list of the controls sent
      * recently.
@@ -297,7 +314,7 @@ public:
 
     /**
      * @brief Get the sent commands.
-     * 
+     *
      * @return Ptr<const CommandTimeseries>  is the list of the commands sent
      * recently.
      */
@@ -310,7 +327,7 @@ public:
     /**
      * @brief set_control save the control internally. In order to actaully send
      * the controls to the network please call "send_if_input_changed"
-     * 
+     *
      * @param control is the value of the control.
      * @param index define the kind of control we want to send.
      */
@@ -319,7 +336,7 @@ public:
     /**
      * @brief set_command save the command internally. In order to actaully send
      * the controls to the network please call "send_if_input_changed"
-     * 
+     *
      * @param command is the command to be sent.
      */
     virtual void set_command(const MotorBoardCommand& command) = 0;
@@ -343,9 +360,9 @@ public:
 
     /**
      * @brief Construct a new CanBusMotorBoard object
-     * 
-     * @param can_bus 
-     * @param history_length 
+     *
+     * @param can_bus
+     * @param history_length
      */
     CanBusMotorBoard(std::shared_ptr<CanBusInterface> can_bus,
                      const size_t& history_length = 1000,
@@ -364,7 +381,7 @@ public:
 
     /**
      * @brief Get the measurement data.
-     * 
+     *
      * @param index is the kind of measurement we are insterested in.
      * @return Ptr<const ScalarTimeseries> is the list of the last measurements
      * acquiered from the CAN card.
@@ -376,7 +393,7 @@ public:
 
     /**
      * @brief Get the status of the CAN card.
-     * 
+     *
      * @return Ptr<const StatusTimeseries> is the list of last acquiered status.
      */
     virtual Ptr<const StatusTimeseries> get_status() const
@@ -386,7 +403,7 @@ public:
 
     /**
      * @brief Get the controls to be sent.
-     * 
+     *
      * @param index the kind of control we are interested in.
      * @return Ptr<const ScalarTimeseries> is the list of the control to be
      * sent.
@@ -398,7 +415,7 @@ public:
 
     /**
      * @brief Get the commands to be sent.
-     * 
+     *
      * @return Ptr<const CommandTimeseries> is the list of the command to be
      * sent.
      */
@@ -409,7 +426,7 @@ public:
 
     /**
      * @brief Get the already sent controls.
-     * 
+     *
      * @param index the kind of control we are interested in.
      * @return Ptr<const ScalarTimeseries> is the list of the sent cotnrols.
      */
@@ -421,7 +438,7 @@ public:
 
     /**
      * @brief Get the already sent commands.
-     * 
+     *
      * @return Ptr<const CommandTimeseries> is the list of the sent cotnrols.
      */
     virtual Ptr<const CommandTimeseries> get_sent_command() const
@@ -435,9 +452,9 @@ public:
 
     /**
      * @brief Set the controls, see MotorBoardInterface::set_control
-     * 
-     * @param control 
-     * @param index 
+     *
+     * @param control
+     * @param index
      */
     virtual void set_control(const double& control, const int& index)
     {
@@ -446,8 +463,8 @@ public:
 
     /**
      * @brief Set the commands, see MotorBoardInterface::set_command
-     * 
-     * @param command 
+     *
+     * @param command
      */
     virtual void set_command(const MotorBoardCommand& command)
     {
@@ -464,6 +481,10 @@ public:
      */
     void wait_until_ready();
 
+    bool is_ready();
+
+    /// \todo: this function should go away,
+    /// and we should add somewhere a warning in case there is a timeout
     void pause_motors();
 
     /**
@@ -501,7 +522,7 @@ private:
 
     /**
      * @brief Converts from bytes to int32.
-     * 
+     *
      * @tparam T this is the type of the bytes convert.
      * @param bytes The bytes value
      * @return int32_t the output integer in int32.
@@ -514,7 +535,7 @@ private:
 
     /**
      * @brief Convert from 24-bit normalized fixed-point to float.
-     * 
+     *
      * @param qval is the floating base point.
      * @return float is the converted value
      */
@@ -525,9 +546,9 @@ private:
 
     /**
      * @brief Converts from float to 24-bit normalized fixed-point.
-     * 
-     * @param fval 
-     * @return int32_t 
+     *
+     * @param fval
+     * @return int32_t
      */
     int32_t float_to_q24(float fval)
     {
@@ -536,7 +557,7 @@ private:
 
     /**
      * @brief Converts from qbytes to float
-     * 
+     *
      * @tparam T the type of byte to manage
      * @param qbytes the input value in bytes
      * @return float the output value.
@@ -548,21 +569,21 @@ private:
 
     /**
      * @brief send the controls to the cards.
-     * 
+     *
      * @param controls are the controls to be sent.
      */
     void send_newest_controls();
 
     /**
      * @brief send the latest commands to the cards.
-     * 
+     *
      */
     void send_newest_command();
 
     /**
      * @brief This is the helper function used for spawning the real time
      * thread.
-     * 
+     *
      * @param instance_pointer is the current object in this case.
      * @return THREAD_FUNCTION_RETURN_TYPE depends on the current OS.
      */
@@ -578,7 +599,7 @@ private:
     void loop();
 
     /**
-     * @brief Display details of this object. 
+     * @brief Display details of this object.
      */
     void print_status();
 
@@ -630,7 +651,7 @@ private:
     Vector<Ptr<ScalarTimeseries>> control_;
 
     /**
-     * @brief This is the buffer of the commands to be sent to the card. 
+     * @brief This is the buffer of the commands to be sent to the card.
      */
     Ptr<CommandTimeseries> command_;
 
