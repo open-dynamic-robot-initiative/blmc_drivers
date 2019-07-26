@@ -37,7 +37,7 @@ public:
     /**
      * @brief This is a useful alias.
      */
-    typedef ThreadsafeTimeseries<double> ScalarTimeseries;
+    typedef real_time_tools::ThreadsafeTimeseries<double> ScalarTimeseries;
     /**
      * @brief This a useful alias for the shared Pointer creation.
      * 

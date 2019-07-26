@@ -35,7 +35,7 @@ public:
     /**
      * @brief This is just a short cut for the time series types
      */
-    typedef ThreadsafeTimeseries<double> ScalarTimeseries;
+    typedef real_time_tools::ThreadsafeTimeseries<double> ScalarTimeseries;
 
 
     /**

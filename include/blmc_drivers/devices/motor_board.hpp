@@ -218,7 +218,7 @@ public:
     /**
      * @brief A useful shortcut
      */
-    typedef ThreadsafeTimeseries<double> ScalarTimeseries;
+    typedef real_time_tools::ThreadsafeTimeseries<double> ScalarTimeseries;
     /**
      * @brief A useful shortcut
      */
@@ -226,15 +226,15 @@ public:
     /**
      * @brief A useful shortcut
      */
-    typedef ThreadsafeTimeseries<Index> IndexTimeseries;
+    typedef real_time_tools::ThreadsafeTimeseries<Index> IndexTimeseries;
     /**
      * @brief A useful shortcut
      */
-    typedef ThreadsafeTimeseries<MotorBoardStatus> StatusTimeseries;
+    typedef real_time_tools::ThreadsafeTimeseries<MotorBoardStatus> StatusTimeseries;
     /**
      * @brief A useful shortcut
      */
-    typedef ThreadsafeTimeseries<MotorBoardCommand> CommandTimeseries;
+    typedef real_time_tools::ThreadsafeTimeseries<MotorBoardCommand> CommandTimeseries;
     /**
      * @brief A useful shortcut
      */

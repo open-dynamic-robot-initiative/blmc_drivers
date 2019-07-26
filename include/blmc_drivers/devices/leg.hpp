@@ -41,7 +41,7 @@ public:
     /**
      * @brief ScalarTimeseries is a simple shortcut for more intelligible code.
      */
-    typedef ThreadsafeTimeseries<double> ScalarTimeseries;
+    typedef real_time_tools::ThreadsafeTimeseries<double> ScalarTimeseries;
     
     /**
      * @brief This is a shortcut for creating shared pointer in a simpler

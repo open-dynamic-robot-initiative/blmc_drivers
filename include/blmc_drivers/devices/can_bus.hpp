@@ -101,7 +101,7 @@ public:
     /**
      * @brief CanframeTimeseries is a simple sohortcut
      */
-    typedef ThreadsafeTimeseries<CanBusFrame> CanframeTimeseries;
+    typedef real_time_tools::ThreadsafeTimeseries<CanBusFrame> CanframeTimeseries;
 
     /**
      * getters
@@ -283,23 +283,23 @@ private:
      * @brief can_connection_ is the communication object allowing to send or
      * receive can frames.
      */
-    SingletypeThreadsafeObject<CanBusConnection, 1> can_connection_;
+    real_time_tools::SingletypeThreadsafeObject<CanBusConnection, 1> can_connection_;
 
     /**
      * @brief input_ is a list of time stamped frame to be send to the can
      * network.
      */
-    std::shared_ptr<ThreadsafeTimeseries<CanBusFrame> > input_;
+    std::shared_ptr<real_time_tools::ThreadsafeTimeseries<CanBusFrame> > input_;
 
     /**
      * @brief sent_inupt_ is the list of the input already sent to the network.
      */
-    std::shared_ptr<ThreadsafeTimeseries<CanBusFrame> > sent_input_;
+    std::shared_ptr<real_time_tools::ThreadsafeTimeseries<CanBusFrame> > sent_input_;
 
     /**
      * @brief output_ is the list of the frames received from the can network.
      */
-    std::shared_ptr<ThreadsafeTimeseries<CanBusFrame> > output_;
+    std::shared_ptr<real_time_tools::ThreadsafeTimeseries<CanBusFrame> > output_;
 
     /**
      * @brief This boolean makes sure that the loop is not active upon
