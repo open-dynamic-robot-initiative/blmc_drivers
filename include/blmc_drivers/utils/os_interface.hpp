@@ -12,7 +12,6 @@
 
 #pragma once
 
-
 /**
  * xeno specific include
  */
@@ -65,7 +64,7 @@ typedef canid_t can_id_t;
 /**
  * @brief Create a common type_def to wrap xenomai and posix.
  */
-typedef uint64_t 	nanosecs_abs_t;
+typedef uint64_t nanosecs_abs_t;
 
 /**
  * @brief Create a common type_def to wrap xenomai and posix.
@@ -128,7 +127,7 @@ namespace osi
 
 /**
  * Namespace to wrap the xenomai specific implementation xenomai
- */ 
+ */
 namespace xenomai
 {
 /**
@@ -157,7 +156,6 @@ public:
     void lock()
     {
         rt_mutex_acquire(&rt_mutex_, TM_INFINITE);
-
     }
 
     /**
@@ -167,7 +165,6 @@ public:
     {
         rt_mutex_release(&rt_mutex_);
     }
-
 };
 
 /**
@@ -194,7 +191,7 @@ public:
      * 
      * @param lock is the mutex to be used for locking the scope.
      */
-    void wait(std::unique_lock<mutex>& lock )
+    void wait(std::unique_lock<mutex> &lock)
     {
         rt_cond_wait(&rt_condition_variable_,
                      &lock.mutex()->rt_mutex_, TM_INFINITE);
@@ -208,30 +205,29 @@ public:
         rt_cond_broadcast(&rt_condition_variable_);
     }
 };
-}
-    /**
+} // namespace xenomai
+/**
      * @brief Wrapper around the xenomai specific Mutex implementation.
      */
-    typedef xenomai::mutex Mutex;
+typedef xenomai::mutex Mutex;
 
-    /**
+/**
      * @brief Wrapper around the xenomai specific ConditionVariable
      * implementation
      */
-    typedef xenomai::condition_variable ConditionVariable;
-
+typedef xenomai::condition_variable ConditionVariable;
 
 #else
-    /**
+/**
      * @brief Wrapper around the posix specific Mutex implementation.
      */
-    typedef std::mutex Mutex;
+typedef std::mutex Mutex;
 
-    /**
+/**
      * @brief Wrapper around the posix specific ConditionVariable
      * implementation
      */
-    typedef std::condition_variable ConditionVariable;
+typedef std::condition_variable ConditionVariable;
 #endif
 
 /**
@@ -245,8 +241,8 @@ public:
  * @param tolen 
  */
 inline void send_to_can_device(int fd, const void *buf, size_t len,
-                       int flags, const struct sockaddr *to,
-                       socklen_t tolen)
+                               int flags, const struct sockaddr *to,
+                               socklen_t tolen)
 {
     // int ret = rt_dev_sendto(fd, buf, len, flags, to, tolen);
 
@@ -262,23 +258,23 @@ inline void send_to_can_device(int fd, const void *buf, size_t len,
     for (size_t i = 0; true; i++)
     {
         int ret = rt_dev_sendto(fd, buf, len, flags, to, tolen);
-        if(ret >= 0)
+        if (ret >= 0)
         {
-            if(i > 0)
+            if (i > 0)
             {
-                std::cout << " Managed to send after " 
-                << i << " attempts." << std::endl;
+                std::cout << " Managed to send after "
+                          << i << " attempts." << std::endl;
             }
             return;
         }
 
-        if(i == 0)
+        if (i == 0)
         {
             std::cout << "WARNING: Something went wrong with sending "
-                << "CAN frame, error code: "
-            << ret << ", errno: " << errno << 
-            ". Possibly you have been attempting to send at a rate which is too" 
-            << " high. We keep trying" << std::flush;
+                      << "CAN frame, error code: "
+                      << ret << ", errno: " << errno << ". Possibly you have "
+                      << "been attempting to send at a rate which is too "
+                      << "high. We keep trying" << std::flush;
         }
         else
         {
@@ -287,11 +283,6 @@ inline void send_to_can_device(int fd, const void *buf, size_t len,
 
         real_time_tools::Timer::sleep_ms(0.1);
     }
-
-
-    
-
-
 }
 
 /**
@@ -329,18 +320,7 @@ inline void receive_message_from_can_device(int fd, struct msghdr *msg, int flag
             << ret << ", errno=" << errno << std::endl;
         throw std::runtime_error(oss.str());
     }
-
 }
-
-/**
- * @brief This Macro define the return type for the call back function of the
- * real time thread.
- */
-#ifdef __XENO__
-#define THREAD_FUNCTION_RETURN_TYPE void
-#else
-#define THREAD_FUNCTION_RETURN_TYPE void*
-#endif
 
 /**
  * @brief This function is needed in xenomai to initialize the real time console
@@ -358,7 +338,7 @@ inline void initialize_realtime_printing()
  * 
  * @param sleep_time_ms is the sleeping time in milli seconds.
  */
-inline void sleep_ms(const double& sleep_time_ms)
+inline void sleep_ms(const double &sleep_time_ms)
 {
 #ifdef __XENO__
     rt_task_sleep(int(sleep_time_ms * 1000000.));
@@ -380,7 +360,7 @@ inline double get_current_time_ms()
 #else
     struct timespec now;
     clock_gettime(CLOCK_REALTIME, &now);
-    double current_time_ms = (double)(now.tv_sec*1e3) + (now.tv_nsec/1e6);
+    double current_time_ms = (double)(now.tv_sec * 1e3) + (now.tv_nsec / 1e6);
 
     return current_time_ms;
 #endif
