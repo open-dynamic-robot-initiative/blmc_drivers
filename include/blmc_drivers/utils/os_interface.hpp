@@ -46,6 +46,10 @@
 
 #include <limits.h>
 
+#include <real_time_tools/timer.hpp>
+
+#include <iostream>
+
 /**
  * Define typedefs to make code compatible with Xenomai code.
  */
@@ -244,16 +248,50 @@ inline void send_to_can_device(int fd, const void *buf, size_t len,
                        int flags, const struct sockaddr *to,
                        socklen_t tolen)
 {
-    int ret = rt_dev_sendto(fd, buf, len, flags, to, tolen);
+    // int ret = rt_dev_sendto(fd, buf, len, flags, to, tolen);
 
-    if (ret < 0)
+    // if (ret < 0)
+    // {
+    //     std::ostringstream oss;
+    //     oss << "something went wrong with sending "
+    //         << "CAN frame, error code: "
+    //         << ret << ", errno=" << errno << std::endl;
+    //     throw std::runtime_error(oss.str());
+    // }
+
+    for (size_t i = 0; true; i++)
     {
-        std::ostringstream oss;
-        oss << "something went wrong with sending "
-            << "CAN frame, error code: "
-            << ret << ", errno=" << errno << std::endl;
-        throw std::runtime_error(oss.str());
+        int ret = rt_dev_sendto(fd, buf, len, flags, to, tolen);
+        if(ret >= 0)
+        {
+            if(i > 0)
+            {
+                std::cout << " Managed to send after " 
+                << i << " attempts." << std::endl;
+            }
+            return;
+        }
+
+        if(i == 0)
+        {
+            std::cout << "WARNING: Something went wrong with sending "
+                << "CAN frame, error code: "
+            << ret << ", errno: " << errno << 
+            ". Possibly you have been attempting to send at a rate which is too" 
+            << " high. We keep trying" << std::flush;
+        }
+        else
+        {
+            std::cout << "." << std::flush;
+        }
+
+        real_time_tools::Timer::sleep_ms(0.1);
     }
+
+
+    
+
+
 }
 
 /**
