@@ -43,12 +43,12 @@ Documentations will be in <Workspace>/install/share/
 Authors
 -------
 
-Felix Widmaier
-Manuel Wuethrich
-Maximilien Naveau
-Steve Heim
-Diego Agudelo
-Julian Viereck
+- Felix Widmaier
+- Manuel Wuethrich
+- Maximilien Naveau
+- Steve Heim
+- Diego Agudelo
+- Julian Viereck
 
 
 Copyrights
