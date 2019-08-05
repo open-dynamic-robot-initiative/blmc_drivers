@@ -15,8 +15,10 @@ library.
 Dependencies and other Requirements
 -----------------------------------
 
-Requires Xenomai and the
-[xenomai_ros](https://git-amd.tuebingen.mpg.de/amd-clmc/xenomai-ros) package.
+Supports (tested)  Ubuntu patched with RT-preempt. 
+Supports (experimental) Mac OS , Ubuntu patched with Xenomai
+
+(see: https://github.com/machines-in-motion/real_time_tools)
 
 A real-time CAN driver has to be loaded and the interface to be set up.  This
 can be done with the script `start_rtcan` that is included in the xenomai-core
@@ -31,9 +33,31 @@ Documentation
 -------------
 
 The code is well documented with Doxygen comments.  To generate a HTML
-documentation, simply run the command
+documentation, build with
 
-    doxygen
+    catkin_make install -DBUILD_DOCUMENTATION=ON
 
-in the root directory.  The files are written to the subdirectory `docs` (which
-will be created if it does not exist already).
+Documentations will be in <Workspace>/install/share/
+
+
+Authors
+-------
+
+Felix Widmaier
+Manuel Wuethrich
+Maximilien Naveau
+Steve Heim
+Diego Agudelo
+Julian Viereck
+
+
+Copyrights
+----------
+
+Copyright(c) 2018-2019 Max Planck Gesellschaft, New York University
+
+
+License
+-------
+
+BSD 3-Clause License

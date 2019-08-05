@@ -1,13 +1,8 @@
 /**
  * @file motor.hpp
- * @author Manuel Wuthrich (manuel.wuthrich@gmail.com)
- * @author Maximilien Naveau (maximilien.naveau@gmail.com)
- * @brief 
- * @version 0.1
- * @date 2018-11-27
- * 
- * @copyright Copyright (c) 2018
- * 
+ * @license License BSD-3-Clause
+ * @copyright Copyright (c) 2019, New York University and Max Planck Gesellshaft.
+ * @date 2019-07-11
  */
 
 #pragma once

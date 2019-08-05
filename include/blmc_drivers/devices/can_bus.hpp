@@ -1,14 +1,8 @@
 /**
  * @file can_bus.hpp
- * @author Manuel Wuthrich (manuel.wuthrich@gmail.com)
- * @author Maximilien Naveau (maximilien.naveau@gmail.com)
- * @brief This file declares classes that allow communication with a Can
- * network.
- * @version 0.1
- * @date 2018-11-23
- * 
- * @copyright Copyright (c) 2018
- * 
+ * @license License BSD-3-Clause
+ * @copyright Copyright (c) 2019, New York University and Max Planck Gesellshaft.
+ * @date 2019-07-11
  */
 
 #pragma once

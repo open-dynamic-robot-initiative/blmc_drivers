@@ -1,14 +1,8 @@
 /**
  * @file motor_board.hpp
- * @author Manuel Wuthrich (manuel.wuthrich@gmail.com)
- * @author Maximilien Naveau (maximilien.naveau@gmail.com)
- * @brief This files declares a set of class that encapuslate the network
- * communication with control board. And in particular with can boards.
- * @version 0.1
- * @date 2018-11-26
- *
- * @copyright Copyright (c) 2018
- *
+ * @license License BSD-3-Clause
+ * @copyright Copyright (c) 2019, New York University and Max Planck Gesellshaft.
+ * @date 2019-07-11
  */
 
 #pragma once

@@ -1,20 +1,8 @@
 /**
  * @file leg.hpp
- * @author Manuel Wuthrich (manuel.wuthrich@gmail.com)
- * @author Maximilien Naveau (maximilien.naveau@gmail.com)
- * @brief This file declares and define a wrapper around the blmc_drivers
- * conventionnal classes.
- * It implements a simple leg class that concatenate 2 motors, one for teh hip
- * and one for the knee.
- * 
- * Warning: The class implemented here are extremely simple.
- * So there do **NOT** exists a leg.cpp file.
- * 
- * @version 0.1
- * @date 2018-11-26
- * 
- * @copyright Copyright (c) 2018
- * 
+ * @license License BSD-3-Clause
+ * @copyright Copyright (c) 2019, New York University and Max Planck Gesellshaft.
+ * @date 2019-07-11
  */
 
 #pragma once
