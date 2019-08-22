@@ -1,5 +1,6 @@
 /**
  * @file motor_board.cpp
+ * @author Felix Widmaier (felix.widmaier@tuebingen.mpg.de)
  * @author Manuel Wuthrich (manuel.wuthrich@gmail.com)
  * @author Maximilien Naveau (maximilien.naveau@gmail.com)
  * @brief This file implements the classes from
