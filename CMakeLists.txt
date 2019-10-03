@@ -27,10 +27,6 @@ set(CATKIN_PKGS ${CATKIN_PKGS}
 )
 find_package(catkin REQUIRED COMPONENTS ${CATKIN_PKGS})
 
-# This macro sets the C++ preprocessor flags "XENOMAI", "RT_PREEMPT", or
-# "NON_REAL_TIME" according to the current operating system.
-define_os()
-
 # Get eigen3
 search_for_eigen()
 
