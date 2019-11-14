@@ -177,6 +177,12 @@ public:
         rt_printf("\tError Code: %d\n", error_code);
     }
 
+    /**
+     * @brief Check if the all status are green.
+     * 
+     * @return true 
+     * @return false 
+     */
     bool is_ready()
     {
         if(system_enabled &&
