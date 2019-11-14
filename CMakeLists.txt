@@ -24,6 +24,7 @@ set(CMAKE_INSTALL_RPATH ${CMAKE_INSTALL_PREFIX}/lib)
 set(CATKIN_PKGS ${CATKIN_PKGS}
   mpi_cmake_modules
   real_time_tools
+  master_board_sdk_catkin
 )
 find_package(catkin REQUIRED COMPONENTS ${CATKIN_PKGS})
 
