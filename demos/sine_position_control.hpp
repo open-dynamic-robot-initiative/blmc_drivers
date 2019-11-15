@@ -38,7 +38,7 @@ public:
     currents_.clear();
     control_buffer_.clear();
 
-    for(int i=0 ; i<int(motor_list.size()) ; ++i)
+    for(size_t i=0 ; i<motor_list.size() ; ++i)
     {
       encoders_.push_back(std::deque<double>());
       currents_.push_back(std::deque<double>());
