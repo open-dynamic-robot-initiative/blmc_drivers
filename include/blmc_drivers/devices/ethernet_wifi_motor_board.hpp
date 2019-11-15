@@ -40,7 +40,8 @@ public:
      * 2 motors.
      */
     EthernetWifiMotorBoard(const std::string& network_id,
-                           const int n_slaves_controlled);
+                           const int n_slaves_controlled,
+                           const size_t history_length);
     /**
      * @brief Destroy the EthernetWifiMotorBoard object
      */
@@ -114,6 +115,11 @@ public:
      */
     virtual void send_if_input_changed();
 
+    /**
+     * @brief returns only once board and motors are ready.
+     */
+    void wait_until_ready();
+
 private:
     /**
      * Private methods
@@ -178,6 +184,10 @@ private:
      */
     std::shared_ptr<CommandTimeseries> command_;
 
+    /*! @brief history_length_ is the length of data buffers in number of
+    iteration. */
+    size_t history_length_;
+
     /**
      * Log
      */
@@ -202,9 +212,10 @@ private:
      */
     bool is_loop_active_;
 
-
+    /**
+     * @brief Are motor in idle mode = 0 torques?
+     */
     bool motors_are_paused_;
-
 
     /**
      * @brief If no control is sent for more than control_timeout_ms_ the board

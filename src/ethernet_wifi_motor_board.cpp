@@ -12,22 +12,45 @@
  *
  */
 
+#include "real_time_tools/timer.hpp"
 #include "blmc_drivers/devices/ethernet_wifi_motor_board.hpp"
+
+
+namespace rt = real_time_tools;
 
 
 namespace blmc_drivers
 {
 
 EthernetWifiMotorBoard::EthernetWifiMotorBoard(
-  const std::string& network_id, const int n_slaves_controlled):
+  const std::string& network_id,
+  const int n_slaves_controlled,
+  const size_t history_length):
     MotorBoardInterface(),
     master_board_interface_(network_id)
 {
   // Save the ser input
   network_id_ = network_id;
   n_slaves_controlled_ = n_slaves_controlled;
+  history_length_ = history_length;
   
+  // initialize the data buffers
+  measurement_ = create_vector_of_pointers<ScalarTimeseries>(
+    2 * n_slaves_controlled, history_length_);
+  status_ = create_vector_of_pointers<StatusTimeseries>(
+    n_slaves_controlled, history_length_);
+  control_ = create_vector_of_pointers<ScalarTimeseries>(
+    2 * n_slaves_controlled, history_length_);
+  command_ = create_vector_of_pointers<CommandTimeseries>(
+    n_slaves_controlled, history_length_);
+  sent_control_ = create_vector_of_pointers<ScalarTimeseries>(
+    2 * n_slaves_controlled, history_length_);
+  sent_command_ = create_vector_of_pointers<CommandTimeseries>(
+    n_slaves_controlled, history_length_);
+
+  // Start the communication loop
   master_board_interface_.Init();
+
 	// Initialisation, send the init commands
 	for (int i = 0; i < n_slaves_controlled_; ++i)
 	{
@@ -38,7 +61,10 @@ EthernetWifiMotorBoard::EthernetWifiMotorBoard(
 		master_board_interface_.motor_drivers[i].EnablePositionRolloverError();
 		master_board_interface_.motor_drivers[i].SetTimeout(5);
 		master_board_interface_.motor_drivers[i].Enable();
-	}  
+	}
+
+  
+
 }
 
 EthernetWifiMotorBoard::~EthernetWifiMotorBoard()
@@ -93,7 +119,7 @@ EthernetWifiMotorBoard::get_sent_command() const
 /**
  * Setters
  */
-    
+
 void EthernetWifiMotorBoard::set_control(
     const double& control, const int& index)
 {
@@ -107,124 +133,110 @@ void EthernetWifiMotorBoard::set_command(const MotorBoardCommand& command)
 
 void EthernetWifiMotorBoard::send_if_input_changed()
 {
+    // in here this method does nothing, the commands/controls are set at
+    // constant intervals.
+}
 
+void EthernetWifiMotorBoard::wait_until_ready()
+{
+    rt_printf("waiting for board and motors to be ready \n");
+    bool is_ready = false;
+    while(!is_ready)
+    {
+        // This will read the last incomming packet and update all sensor fields.
+        master_board_interface_.ParseSensorData();
+        bool is_hardware_ready = true;
+        for (int i = 0; i < n_slaves_controlled_ * 2; i++)
+				{
+					is_hardware_ready = is_hardware_ready &&
+                              master_board_interface_.motors[i].IsEnabled() &&
+                              master_board_interface_.motors[i].IsReady();
+				}
+        is_ready = is_hardware_ready;
+        rt::Timer::sleep_ms(2.0);
+    }
+    rt_printf("board and motors are ready \n");
 }
 
 THREAD_FUNCTION_RETURN_TYPE EthernetWifiMotorBoard::loop()
 {
-    // pause_motors();
+    // receive data from board in a loop ---------------------------------------
+    rt::Spinner spinner;
+    spinner.set_period(0.001); // period of 1ms
+    while(is_loop_active_)
+    {
+        // This will read the last incomming packet and update all sensor fields.
+        master_board_interface_.ParseSensorData();
+        for(int i = 0 ; i < n_slaves_controlled_ ; ++i)
+        {
+            measurement_[current_0]
+        }
+        switch(can_frame.id)
+        {
+        case CanframeIDs::Iq:
+            measurement_[current_0]->append(measurement_0);
+            measurement_[current_1]->append(measurement_1);
+            break;
+        case CanframeIDs::POS:
+            // Convert the position unit from the blmc card (kilo-rotations)
+            // into rad.
+            measurement_[position_0]->append(measurement_0 * 2 * M_PI);
+            measurement_[position_1]->append(measurement_1 * 2 * M_PI);
+            break;
+        case CanframeIDs::SPEED:
+            // Convert the speed unit from the blmc card (kilo-rotations-per-minutes)
+            // into rad/s.
+            measurement_[velocity_0]->append(measurement_0 * 2 * M_PI * (1000./60.));
+            measurement_[velocity_1]->append(measurement_1 * 2 * M_PI * (1000./60.));
+            break;
+        case CanframeIDs::ADC6:
+            measurement_[analog_0]->append(measurement_0);
+            measurement_[analog_1]->append(measurement_1);
+            break;
+        case CanframeIDs::ENC_INDEX:
+        {
+            // here the interpretation of the message is different,
+            // we get a motor index and a measurement
+            uint8_t motor_index = can_frame.data[4];
+            if(motor_index == 0)
+            {
+                measurement_[encoder_index_0]->append(measurement_0 * 2 * M_PI);
+            }
+            else if(motor_index == 1)
+            {
+                measurement_[encoder_index_1]->append(measurement_0 * 2 * M_PI);
+            }
+            else
+            {
+                rt_printf("ERROR: Invalid motor number"
+                          "for encoder index: %d\n", motor_index);
+                exit(-1);
+            }
+            break;
+        }
+        case CanframeIDs::STATUSMSG:
+        {
+            MotorBoardStatus status;
+            uint8_t data = can_frame.data[0];
+            status.system_enabled = data >> 0;
+            status.motor1_enabled = data >> 1;
+            status.motor1_ready   = data >> 2;
+            status.motor2_enabled = data >> 3;
+            status.motor2_ready   = data >> 4;
+            status.error_code     = data >> 5;
 
-    // // initialize board --------------------------------------------------------
-    // set_command(MotorBoardCommand(
-    //                 MotorBoardCommand::IDs::ENABLE_SYS,
-    //                 MotorBoardCommand::Contents::ENABLE));
-    // send_newest_command();
+            status_->append(status);
+            break;
+        }
+        }
 
-    // set_command(MotorBoardCommand(
-    //                 MotorBoardCommand::IDs::SEND_ALL,
-    //                 MotorBoardCommand::Contents::ENABLE));
-    // send_newest_command();
-
-    // set_command(MotorBoardCommand(
-    //                 MotorBoardCommand::IDs::ENABLE_MTR1,
-    //                 MotorBoardCommand::Contents::ENABLE));
-    // send_newest_command();
-
-    // set_command(MotorBoardCommand(
-    //                 MotorBoardCommand::IDs::ENABLE_MTR2,
-    //                 MotorBoardCommand::Contents::ENABLE));
-    // send_newest_command();
-
-    // // receive data from board in a loop ---------------------------------------
-    // long int timeindex = can_bus_->get_output_frame()->newest_timeindex();
-    // while(is_loop_active_)
-    // {
-    //     CanBusFrame can_frame;
-    //     Index received_timeindex = timeindex;
-    //     can_frame = (*can_bus_->get_output_frame())[received_timeindex];
-
-    //     if(received_timeindex != timeindex)
-    //     {
-    //         rt_printf("did not get the timeindex we expected! "
-    //                   "received_timeindex: %d, "
-    //                   "desired_timeindex: %d\n",
-    //                   int(received_timeindex), int(timeindex));
-    //         exit(-1);
-    //     }
-
-    //     timeindex++;
-
-    //     // convert to measurement ------------------------------------------
-    //     double measurement_0 = qbytes_to_float(can_frame.data.begin());
-    //     double measurement_1 = qbytes_to_float((can_frame.data.begin() + 4));
-
-
-    //     switch(can_frame.id)
-    //     {
-    //     case CanframeIDs::Iq:
-    //         measurement_[current_0]->append(measurement_0);
-    //         measurement_[current_1]->append(measurement_1);
-    //         break;
-    //     case CanframeIDs::POS:
-    //         // Convert the position unit from the blmc card (kilo-rotations)
-    //         // into rad.
-    //         measurement_[position_0]->append(measurement_0 * 2 * M_PI);
-    //         measurement_[position_1]->append(measurement_1 * 2 * M_PI);
-    //         break;
-    //     case CanframeIDs::SPEED:
-    //         // Convert the speed unit from the blmc card (kilo-rotations-per-minutes)
-    //         // into rad/s.
-    //         measurement_[velocity_0]->append(measurement_0 * 2 * M_PI * (1000./60.));
-    //         measurement_[velocity_1]->append(measurement_1 * 2 * M_PI * (1000./60.));
-    //         break;
-    //     case CanframeIDs::ADC6:
-    //         measurement_[analog_0]->append(measurement_0);
-    //         measurement_[analog_1]->append(measurement_1);
-    //         break;
-    //     case CanframeIDs::ENC_INDEX:
-    //     {
-    //         // here the interpretation of the message is different,
-    //         // we get a motor index and a measurement
-    //         uint8_t motor_index = can_frame.data[4];
-    //         if(motor_index == 0)
-    //         {
-    //             measurement_[encoder_index_0]->append(measurement_0 * 2 * M_PI);
-    //         }
-    //         else if(motor_index == 1)
-    //         {
-    //             measurement_[encoder_index_1]->append(measurement_0 * 2 * M_PI);
-    //         }
-    //         else
-    //         {
-    //             rt_printf("ERROR: Invalid motor number"
-    //                       "for encoder index: %d\n", motor_index);
-    //             exit(-1);
-    //         }
-    //         break;
-    //     }
-    //     case CanframeIDs::STATUSMSG:
-    //     {
-    //         MotorBoardStatus status;
-    //         uint8_t data = can_frame.data[0];
-    //         status.system_enabled = data >> 0;
-    //         status.motor1_enabled = data >> 1;
-    //         status.motor1_ready   = data >> 2;
-    //         status.motor2_enabled = data >> 3;
-    //         status.motor2_ready   = data >> 4;
-    //         status.error_code     = data >> 5;
-
-    //         status_->append(status);
-    //         break;
-    //     }
-    //     }
-
-    //     //        static int count = 0;
-    //     //        if(count % 4000 == 0)
-    //     //        {
-    //     //            print_status();
-    //     //        }
-    //     //        count++;
-    // }
+        //        static int count = 0;
+        //        if(count % 4000 == 0)
+        //        {
+        //            print_status();
+        //        }
+        //        count++;
+    }
     return THREAD_FUNCTION_RETURN_VALUE;
 }
 
@@ -305,7 +317,7 @@ THREAD_FUNCTION_RETURN_TYPE EthernetWifiMotorBoard::loop()
 // void EthernetWifiMotorBoard::wait_until_ready()
 // {
 //     // rt_printf("waiting for board and motors to be ready \n");
-//     // real_time_tools::ThreadsafeTimeseries<>::Index time_index = status_->newest_timeindex();
+//     // rt::ThreadsafeTimeseries<>::Index time_index = status_->newest_timeindex();
 //     // bool is_ready = false;
 //     // while(!is_ready)
 //     // {
