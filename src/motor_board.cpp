@@ -23,7 +23,11 @@ CanBusMotorBoard::CanBusMotorBoard(
         const int& control_timeout_ms):
     can_bus_(can_bus),
     motors_are_paused_(false),
+<<<<<<< HEAD
     control_timeout_ms_(control_timeout_ms)
+=======
+    control_timeout_ms_(control_timeout_ms),
+>>>>>>> fix re-order warning
 {
     measurement_  = create_vector_of_pointers<ScalarTimeseries>(
                 measurement_count,
