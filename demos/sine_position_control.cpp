@@ -47,7 +47,7 @@ void SinePositionControl::loop()
     local_time = count * 0.001;
 
     // compute the control
-    for(int i=0; i<int(motor_list_.size()) ; ++i)
+    for(size_t i=0; i<motor_list_.size() ; ++i)
     {
       actual_position = motor_list_[i]->get_measurement(
         blmc_position_index)->newest_element();
@@ -97,9 +97,9 @@ void SinePositionControl::stop_loop()
     assert(encoders_[0].size() == velocities_[0].size() &&
            velocities_[0].size() == control_buffer_[0].size() &&
            control_buffer_[0].size() == currents_[0].size());
-    for(int j=0 ; j<int(encoders_[0].size()) ; ++j)
+    for(size_t j=0 ; j<encoders_[0].size() ; ++j)
     {
-      for(int i=0 ; i<int(encoders_.size()) ; ++i)
+      for(size_t i=0 ; i<encoders_.size() ; ++i)
       {  
         log_file << encoders_[i][j] << " "
                  << velocities_[i][j] << " "
