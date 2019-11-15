@@ -19,6 +19,7 @@
 #include "blmc_drivers/devices/can_bus.hpp"
 #include "blmc_drivers/devices/device_interface.hpp"
 
+namespace rt = real_time_tools;
 
 namespace blmc_drivers
 {
@@ -218,7 +219,7 @@ public:
     /**
      * @brief A useful shortcut
      */
-    typedef real_time_tools::ThreadsafeTimeseries<double> ScalarTimeseries;
+    typedef rt::ThreadsafeTimeseries<double> ScalarTimeseries;
     /**
      * @brief A useful shortcut
      */
@@ -226,15 +227,15 @@ public:
     /**
      * @brief A useful shortcut
      */
-    typedef real_time_tools::ThreadsafeTimeseries<Index> IndexTimeseries;
+    typedef rt::ThreadsafeTimeseries<Index> IndexTimeseries;
     /**
      * @brief A useful shortcut
      */
-    typedef real_time_tools::ThreadsafeTimeseries<MotorBoardStatus> StatusTimeseries;
+    typedef rt::ThreadsafeTimeseries<MotorBoardStatus> StatusTimeseries;
     /**
      * @brief A useful shortcut
      */
-    typedef real_time_tools::ThreadsafeTimeseries<MotorBoardCommand> CommandTimeseries;
+    typedef rt::ThreadsafeTimeseries<MotorBoardCommand> CommandTimeseries;
     /**
      * @brief A useful shortcut
      */
@@ -347,7 +348,27 @@ public:
     virtual void send_if_input_changed() = 0;
 };
 
-
+/**
+ * @brief Create a vector of pointers.
+ *
+ * @tparam Type of the data
+ * @param size is number of pointers to be created.
+ * @param length is the dimension of the data arrays.
+ * @return Vector<Ptr<Type>> which is the a list of list of data of type
+ * Type
+ */
+template<typename Type>
+std::vector<std::shared_ptr<Type> > create_vector_of_pointers(
+  const size_t& size, const size_t& length)
+{
+    std::vector<std::shared_ptr<Type> > vector;
+    vector.resize(length);
+    for(size_t i = 0; i < size; i++)
+    {
+        vector[i] = std::make_shared<Type>(length);
+    }
+    return vector;
+}
 
 //==============================================================================
 /**
@@ -494,27 +515,6 @@ public:
 
     /// private methods ========================================================
 private:
-    /**
-     * @brief Create a vector of pointers.
-     *
-     * @tparam Type of the data
-     * @param size is number of pointers to be created.
-     * @param length is the dimension of the data arrays.
-     * @return Vector<Ptr<Type>> which is the a list of list of data of type
-     * Type
-     */
-    template<typename Type> Vector<Ptr<Type>>
-    create_vector_of_pointers(const size_t& size, const size_t& length)
-    {
-        Vector<Ptr<Type>> vector(size);
-        for(size_t i = 0; i < size; i++)
-        {
-            vector[i] = std::make_shared<Type>(length);
-        }
-
-        return vector;
-    }
-
 
     /**
      * Useful converters
@@ -693,7 +693,7 @@ private:
      * @brief This is the thread object that allow to spwan a real-time thread
      * or not dependening on the current OS.
      */
-    real_time_tools::RealTimeThread rt_thread_;
+    rt::RealTimeThread rt_thread_;
 
 };
 
