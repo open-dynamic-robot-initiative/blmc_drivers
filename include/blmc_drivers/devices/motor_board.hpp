@@ -362,7 +362,7 @@ std::vector<std::shared_ptr<Type> > create_vector_of_pointers(
   const size_t& size, const size_t& length)
 {
     std::vector<std::shared_ptr<Type> > vector;
-    vector.resize(length);
+    vector.resize(size);
     for(size_t i = 0; i < size; i++)
     {
         vector[i] = std::make_shared<Type>(length);

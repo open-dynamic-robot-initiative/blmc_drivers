@@ -23,53 +23,54 @@ namespace blmc_drivers
 {
 
 EthernetWifiMotorBoard::EthernetWifiMotorBoard(
-  const std::string& network_id,
-  const int n_slaves_controlled,
-  const size_t history_length):
-    MotorBoardInterface(),
-    master_board_interface_(network_id)
+    std::shared_ptr<MasterBoardInterface> master_board_interface,
+    const size_t slave_id, const size_t history_length): MotorBoardInterface()
 {
   // Save the ser input
-  network_id_ = network_id;
-  n_slaves_controlled_ = n_slaves_controlled;
+  master_board_interface_ = master_board_interface;
+  slave_id_ = slave_id;
   history_length_ = history_length;
   
-  // initialize the data buffers
-  measurement_ = create_vector_of_pointers<ScalarTimeseries>(
-    2 * n_slaves_controlled, history_length_);
-  status_ = create_vector_of_pointers<StatusTimeseries>(
-    n_slaves_controlled, history_length_);
-  control_ = create_vector_of_pointers<ScalarTimeseries>(
-    2 * n_slaves_controlled, history_length_);
-  command_ = create_vector_of_pointers<CommandTimeseries>(
-    n_slaves_controlled, history_length_);
-  sent_control_ = create_vector_of_pointers<ScalarTimeseries>(
-    2 * n_slaves_controlled, history_length_);
-  sent_command_ = create_vector_of_pointers<CommandTimeseries>(
-    n_slaves_controlled, history_length_);
+  // get the udriver from its index:
+  assert(N_SLAVES > slave_id_ && "The slave_id is not valid.");
+  udriver_ = &(master_board_interface_->motor_drivers[slave_id_]);
 
-  // Start the communication loop
-  master_board_interface_.Init();
+ 	// Initialisation of the slave (udriver), send the init commands
+	udriver_->motor1->SetCurrentReference(0);
+	udriver_->motor2->SetCurrentReference(0);
+	udriver_->motor1->Enable();
+	udriver_->motor2->Enable();
+	udriver_->EnablePositionRolloverError();
+	udriver_->SetTimeout(5);
+	udriver_->Enable();
 
-	// Initialisation, send the init commands
-	for (int i = 0; i < n_slaves_controlled_; ++i)
-	{
-		master_board_interface_.motor_drivers[i].motor1->SetCurrentReference(0);
-		master_board_interface_.motor_drivers[i].motor2->SetCurrentReference(0);
-		master_board_interface_.motor_drivers[i].motor1->Enable();
-		master_board_interface_.motor_drivers[i].motor2->Enable();
-		master_board_interface_.motor_drivers[i].EnablePositionRolloverError();
-		master_board_interface_.motor_drivers[i].SetTimeout(5);
-		master_board_interface_.motor_drivers[i].Enable();
-	}
+  // initialize the buffers
+  measurement_ = create_vector_of_pointers<ScalarTimeseries>(measurement_count,
+                                                             history_length);
+  status_ = std::make_shared<StatusTimeseries>(history_length);
+  control_ = create_vector_of_pointers<ScalarTimeseries>(control_count,
+                                                         history_length);
+  command_ = std::make_shared<CommandTimeseries>(history_length);
+  sent_control_ = create_vector_of_pointers<ScalarTimeseries>(control_count,
+                                                              history_length);
+  sent_command_ = std::make_shared<CommandTimeseries>(history_length);
 
-  
-
+  // start the communication loop
+  is_loop_active_ = true;
+  rt_thread_.create_realtime_thread(&EthernetWifiMotorBoard::loop, this);
 }
 
 EthernetWifiMotorBoard::~EthernetWifiMotorBoard()
 {
-    
+    is_loop_active_ = false;
+    rt_thread_.join();
+    // Initialisation of the slave (udriver), send the init commands
+    udriver_->motor1->SetCurrentReference(0);
+    udriver_->motor2->SetCurrentReference(0);
+    udriver_->motor1->Disable();
+    udriver_->motor2->Disable();
+    udriver_->DisablePositionRolloverError();
+    udriver_->Disable();
 }
 
 /**
@@ -123,6 +124,7 @@ EthernetWifiMotorBoard::get_sent_command() const
 void EthernetWifiMotorBoard::set_control(
     const double& control, const int& index)
 {
+    rt_printf("EthernetWifiMotorBoard::set_control(): called.\n");
     control_[index]->append(control);
 }
     
@@ -133,32 +135,109 @@ void EthernetWifiMotorBoard::set_command(const MotorBoardCommand& command)
 
 void EthernetWifiMotorBoard::send_if_input_changed()
 {
-    // in here this method does nothing, the commands/controls are set at
-    // constant intervals.
-}
-
-void EthernetWifiMotorBoard::wait_until_ready()
-{
-    rt_printf("waiting for board and motors to be ready \n");
-    bool is_ready = false;
-    while(!is_ready)
+    // send command if a new one has been set ----------------------------------
+    if(command_->has_changed_since_tag())
     {
-        // This will read the last incomming packet and update all sensor fields.
-        master_board_interface_.ParseSensorData();
-        bool is_hardware_ready = true;
-        for (int i = 0; i < n_slaves_controlled_ * 2; i++)
-				{
-					is_hardware_ready = is_hardware_ready &&
-                              master_board_interface_.motors[i].IsEnabled() &&
-                              master_board_interface_.motors[i].IsReady();
-				}
-        is_ready = is_hardware_ready;
-        rt::Timer::sleep_ms(2.0);
+        switch (command_->newest_element().id_)
+        {
+        case MotorBoardCommand::ENABLE_SYS:
+            if(command_->newest_element().content_ == MotorBoardCommand::ENABLE)
+            {
+                udriver_->Enable();
+            }else
+            {
+                udriver_->Disable();
+            }
+            break;
+        case MotorBoardCommand::ENABLE_MTR1:
+            if(command_->newest_element().content_ == MotorBoardCommand::ENABLE)
+            {
+                udriver_->motor1->Enable();
+            }else
+            {
+                udriver_->motor1->Disable();
+            }
+            break;
+        case MotorBoardCommand::ENABLE_MTR2:
+            if(command_->newest_element().content_ == MotorBoardCommand::ENABLE)
+            {
+                udriver_->motor2->Enable();
+            }else
+            {
+                udriver_->motor2->Disable();
+            }
+            break;
+        case MotorBoardCommand::ENABLE_VSPRING1:
+            break;
+        case MotorBoardCommand::ENABLE_VSPRING2:
+            break;
+        case MotorBoardCommand::SEND_CURRENT:
+            break;
+        case MotorBoardCommand::SEND_POSITION:
+            break;
+        case MotorBoardCommand::SEND_VELOCITY:
+            break;
+        case MotorBoardCommand::SEND_ADC6:
+            break;
+        case MotorBoardCommand::SEND_ENC_INDEX:
+            break;
+        case MotorBoardCommand::SEND_ALL:
+            break;
+        case MotorBoardCommand::SET_CAN_RECV_TIMEOUT:
+            break;
+        case MotorBoardCommand::ENABLE_POS_ROLLOVER_ERROR:
+            if(command_->newest_element().content_ == MotorBoardCommand::ENABLE)
+            {
+                udriver_->
+                    EnablePositionRolloverError();
+            }else
+            {
+                udriver_->
+                    DisablePositionRolloverError();
+            }
+            break;        
+        default:
+          throw std::runtime_error("EthernetWifiMotorBoard::send_if_input_changed:"
+                                   " Error cannot send unkown command");
+          break;
+        }
     }
-    rt_printf("board and motors are ready \n");
+
+    // send controls -----------------------------------------------------------
+    std::array<double, control_count> controls;
+    assert(controls.size() == control_.size() && "Wrong control vector size");
+    for(size_t i = 0; i < control_.size(); ++i)
+    {
+        if(control_[i]->length() == 0)
+        {
+            rt_printf("you tried to send control but no control has been set\n");
+            exit(-1);
+        }
+        Index timeindex = control_[i]->newest_timeindex();
+        controls[i] = (*control_[i])[timeindex];
+        control_[i]->tag(timeindex);
+
+        sent_control_[i]->append(controls[i]);
+    }
+    udriver_->motor1->SetCurrentReference(controls[0]);
+    udriver_->motor2->SetCurrentReference(controls[1]);
+
 }
 
-THREAD_FUNCTION_RETURN_TYPE EthernetWifiMotorBoard::loop()
+bool EthernetWifiMotorBoard::is_ready()
+{
+    // check if the motors and if the udriver are enabled and ready.
+    bool is_hardware_ready = true;
+    is_hardware_ready =
+        is_hardware_ready &&
+        udriver_->motor1->IsEnabled() &&
+        udriver_->motor2->IsEnabled() &&
+        udriver_->motor1->IsReady() &&
+        udriver_->motor2->IsReady();
+    return is_hardware_ready;
+}
+
+void EthernetWifiMotorBoard::loop()
 {
     // receive data from board in a loop ---------------------------------------
     rt::Spinner spinner;
@@ -166,302 +245,38 @@ THREAD_FUNCTION_RETURN_TYPE EthernetWifiMotorBoard::loop()
     while(is_loop_active_)
     {
         // This will read the last incomming packet and update all sensor fields.
-        master_board_interface_.ParseSensorData();
-        for(int i = 0 ; i < n_slaves_controlled_ ; ++i)
+        master_board_interface_->ParseSensorData();
+        if(is_ready())
         {
-            measurement_[current_0]
-        }
-        switch(can_frame.id)
-        {
-        case CanframeIDs::Iq:
-            measurement_[current_0]->append(measurement_0);
-            measurement_[current_1]->append(measurement_1);
-            break;
-        case CanframeIDs::POS:
-            // Convert the position unit from the blmc card (kilo-rotations)
-            // into rad.
-            measurement_[position_0]->append(measurement_0 * 2 * M_PI);
-            measurement_[position_1]->append(measurement_1 * 2 * M_PI);
-            break;
-        case CanframeIDs::SPEED:
-            // Convert the speed unit from the blmc card (kilo-rotations-per-minutes)
-            // into rad/s.
-            measurement_[velocity_0]->append(measurement_0 * 2 * M_PI * (1000./60.));
-            measurement_[velocity_1]->append(measurement_1 * 2 * M_PI * (1000./60.));
-            break;
-        case CanframeIDs::ADC6:
-            measurement_[analog_0]->append(measurement_0);
-            measurement_[analog_1]->append(measurement_1);
-            break;
-        case CanframeIDs::ENC_INDEX:
-        {
+            measurement_[current_0]->append(udriver_->motor1->GetCurrent());
+            measurement_[current_1]->append(udriver_->motor2->GetCurrent());
+            measurement_[position_0]->append(udriver_->motor1->GetPosition() /* * 2 * M_PI */);
+            measurement_[position_1]->append(udriver_->motor2->GetPosition() /* * 2 * M_PI */);
+            measurement_[velocity_0]->append(udriver_->motor1->GetVelocity() /* * 2 * M_PI * (1000./60.) */);
+            measurement_[velocity_1]->append(udriver_->motor2->GetVelocity() /* * 2 * M_PI * (1000./60.) */);
+            measurement_[analog_0]->append(0.0 /* udriver_->analogue1->getData() */);// not implemented yet in the API
+            measurement_[analog_1]->append(0.0 /* udriver_->analogue2->getData() */);// not implemented yet in the API
             // here the interpretation of the message is different,
             // we get a motor index and a measurement
-            uint8_t motor_index = can_frame.data[4];
-            if(motor_index == 0)
+            if(udriver_->motor1->GetIndexToggleBit())
             {
-                measurement_[encoder_index_0]->append(measurement_0 * 2 * M_PI);
+              measurement_[encoder_index_0]->append(udriver_->motor1->GetPosition() /* * 2 * M_PI */);
             }
-            else if(motor_index == 1)
+            if(udriver_->motor2->GetIndexToggleBit())
             {
-                measurement_[encoder_index_1]->append(measurement_0 * 2 * M_PI);
+              measurement_[encoder_index_0]->append(udriver_->motor2->GetPosition() /* * 2 * M_PI */);
             }
-            else
-            {
-                rt_printf("ERROR: Invalid motor number"
-                          "for encoder index: %d\n", motor_index);
-                exit(-1);
-            }
-            break;
-        }
-        case CanframeIDs::STATUSMSG:
-        {
             MotorBoardStatus status;
-            uint8_t data = can_frame.data[0];
-            status.system_enabled = data >> 0;
-            status.motor1_enabled = data >> 1;
-            status.motor1_ready   = data >> 2;
-            status.motor2_enabled = data >> 3;
-            status.motor2_ready   = data >> 4;
-            status.error_code     = data >> 5;
-
+            status.system_enabled = udriver_->is_enabled;
+            status.motor1_enabled = udriver_->motor1->is_enabled;
+            status.motor1_ready   = udriver_->motor1->is_ready;
+            status.motor2_enabled = udriver_->motor2->is_enabled;
+            status.motor2_ready   = udriver_->motor2->is_ready;
+            status.error_code     = udriver_->error_code;
             status_->append(status);
-            break;
+            spinner.spin();
         }
-        }
-
-        //        static int count = 0;
-        //        if(count % 4000 == 0)
-        //        {
-        //            print_status();
-        //        }
-        //        count++;
     }
-    return THREAD_FUNCTION_RETURN_VALUE;
 }
 
-
 } // namespace blmc_drivers
-
-
-
-
-
-
-
-
-
-
-
-// void EthernetWifiMotorBoard::print_status()
-// {
-//     // rt_printf("ouptus ======================================\n");
-//     // rt_printf("measurements: -------------------------------\n");
-//     // for(size_t i = 0; i < measurement_.size(); i++)
-//     // {
-//     //     rt_printf("%d: ---------------------------------\n", int(i));
-//     //     if(measurement_[i]->length() > 0)
-//     //     {
-//     //         double measurement = measurement_[i]->newest_element();
-//     //         rt_printf("value %f:\n", measurement);
-//     //     }
-//     // }
-
-//     // rt_printf("status: ---------------------------------\n");
-//     // if(status_->length() > 0)
-//     //     status_->newest_element().print();
-
-//     // //        rt_printf("inputs ======================================\n");
-
-//     // //        for(size_t i = 0; i < control_names.size(); i++)
-//     // //        {
-//     // //            rt_printf("%s: ---------------------------------\n",
-//     // //                                 control_names[i].c_str());
-//     // //            if(control_.at(control_names[i])->length() > 0)
-//     // //            {
-//     // //                double control =
-//     // //                        control_.at(control_names[i])->newest_element();
-//     // //                rt_printf("value %f:\n", control);
-//     // //            }
-//     // //        }
-
-//     // //        rt_printf("command: ---------------------------------\n");
-//     // //        if(command_[command]->length() > 0)
-//     // //            command_[command]->newest_element().print();
-// }
-
-
-// void EthernetWifiMotorBoard::send_if_input_changed()
-// {
-//     // // send command if a new one has been set ----------------------------------
-//     // if(command_->has_changed_since_tag())
-//     // {
-//     //     send_newest_command();
-//     // }
-
-//     // // send controls if a new one has been set ---------------------------------
-//     // bool controls_have_changed = false;
-
-//     // for(auto control : control_)
-//     // {
-//     //     if(control->has_changed_since_tag())
-//     //         controls_have_changed = true;
-//     // }
-//     // if(controls_have_changed)
-//     // {
-//     //     send_newest_controls();
-//     // }
-// }
-
-
-// void EthernetWifiMotorBoard::wait_until_ready()
-// {
-//     // rt_printf("waiting for board and motors to be ready \n");
-//     // rt::ThreadsafeTimeseries<>::Index time_index = status_->newest_timeindex();
-//     // bool is_ready = false;
-//     // while(!is_ready)
-//     // {
-//     //     MotorBoardStatus status = (*status_)[time_index];
-//     //     time_index++;
-
-//     //     is_ready = status.is_ready();
-//     // }
-//     // rt_printf("board and motors are ready \n");
-// }
-
-
-// bool EthernetWifiMotorBoard::is_ready()
-// {
-//     // if(status_->length() == 0)
-//     // {
-//     //     return false;
-//     // }
-//     // else
-//     // {
-//     //     return status_->newest_element().is_ready();
-//     // }
-// }
-
-// void EthernetWifiMotorBoard::pause_motors()
-// {
-//     // set_control(0, current_target_0);
-//     // set_control(0, current_target_1);
-//     // send_newest_controls();
-
-//     // set_command(MotorBoardCommand(MotorBoardCommand::IDs::SET_CAN_RECV_TIMEOUT,
-//     //                               MotorBoardCommand::Contents::DISABLE));
-//     // send_newest_command();
-
-//     // motors_are_paused_ = true;
-// }
-
-// void EthernetWifiMotorBoard::disable_can_recv_timeout()
-// {
-//     // set_command(MotorBoardCommand(MotorBoardCommand::IDs::SET_CAN_RECV_TIMEOUT,
-//     //                               MotorBoardCommand::Contents::DISABLE));
-//     // send_newest_command();
-// }
-
-
-// void EthernetWifiMotorBoard::send_newest_controls()
-// {
-//     // if(motors_are_paused_)
-//     // {
-//     //     set_command(MotorBoardCommand(
-//     //                     MotorBoardCommand::IDs::SET_CAN_RECV_TIMEOUT,
-//     //                     control_timeout_ms_));
-//     //     send_newest_command();
-//     //     motors_are_paused_ = false;
-//     // }
-
-//     // std::array<double, 2> controls;
-//     // for(size_t i = 0; i < control_.size(); i++)
-//     // {
-//     //     if(control_[i]->length() == 0)
-//     //     {
-//     //         rt_printf("you tried to send control but no control has been set\n");
-//     //         exit(-1);
-//     //     }
-
-//     //     Index timeindex = control_[i]->newest_timeindex();
-//     //     controls[i] = (*control_[i])[timeindex];
-//     //     control_[i]->tag(timeindex);
-
-//     //     sent_control_[i]->append(controls[i]);
-//     // }
-
-//     // float current_mtr1 = controls[0];
-//     // float current_mtr2 = controls[1];
-
-//     // uint8_t data[8];
-//     // uint32_t q_current1, q_current2;
-
-//     // // Convert floats to Q24 values
-//     // q_current1 = float_to_q24(current_mtr1);
-//     // q_current2 = float_to_q24(current_mtr2);
-
-//     // // Motor 1
-//     // data[0] = (q_current1 >> 24) & 0xFF;
-//     // data[1] = (q_current1 >> 16) & 0xFF;
-//     // data[2] = (q_current1 >> 8) & 0xFF;
-//     // data[3] =  q_current1 & 0xFF;
-
-//     // // Motor 2
-//     // data[4] = (q_current2 >> 24) & 0xFF;
-//     // data[5] = (q_current2 >> 16) & 0xFF;
-//     // data[6] = (q_current2 >> 8) & 0xFF;
-//     // data[7] =  q_current2 & 0xFF;
-
-//     // CanBusFrame can_frame;
-//     // can_frame.id = CanframeIDs::IqRef;
-//     // for(size_t i = 0; i < 7; i++)
-//     // {
-//     //     can_frame.data[i] = data[i];
-//     // }
-//     // can_frame.dlc = 8;
-
-//     // can_bus_->set_input_frame(can_frame);
-//     // can_bus_->send_if_input_changed();
-// }
-
-// void EthernetWifiMotorBoard::send_newest_command()
-// {
-//     // if(command_->length() == 0)
-//     // {
-//     //     rt_printf("you tried to send command but no command has been set\n");
-//     //     exit(-1);
-//     // }
-
-//     // Index timeindex = command_->newest_timeindex();
-//     // MotorBoardCommand command = (*command_)[timeindex];
-//     // command_->tag(timeindex);
-//     // sent_command_->append(command);
-
-//     // uint32_t id = command.id_;
-//     // int32_t content = command.content_;
-
-//     // uint8_t data[8];
-
-//     // // content
-//     // data[0] = (content >> 24) & 0xFF;
-//     // data[1] = (content >> 16) & 0xFF;
-//     // data[2] = (content >> 8) & 0xFF;
-//     // data[3] = content & 0xFF;
-
-//     // // command
-//     // data[4] = (id >> 24) & 0xFF;
-//     // data[5] = (id >> 16) & 0xFF;
-//     // data[6] = (id >> 8) & 0xFF;
-//     // data[7] = id & 0xFF;
-
-//     // CanBusFrame can_frame;
-//     // can_frame.id = CanframeIDs::COMMAND_ID;
-//     // for(size_t i = 0; i < 8; i++)
-//     // {
-//     //     can_frame.data[i] = data[i];
-//     // }
-//     // can_frame.dlc = 8;
-
-//     // can_bus_->set_input_frame(can_frame);
-//     // can_bus_->send_if_input_changed();
-// }
