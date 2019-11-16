@@ -26,24 +26,24 @@ class EthernetWifiMotorBoard: public MotorBoardInterface
 
 public:
     /**
-     * @brief Construct a new EthernetWifiMotorBoard object.
+     * @brief Construct a new EthernetWifiMotorBoard object
      * 
-     * The constructor initializes the connexion with the
-     * master board and start a real time thread: EthernetWifiMotorBoard::loop()
+     * The constructor starts a real time thread: EthernetWifiMotorBoard::loop().
      * This thread streams the data back and forth collecting the sensor data
-     * and sening the control/commands.
+     * and sends the control/commands.
      * 
-     * @param network_id Full name one can find on the left cloumn
-     * with the bash command ifconfig.
-     * @param n_slaves_controlled is the number of udriver plug to master
-     * board via SPI connexion. Currently (15/11/2019) one udriver can control
-     * 2 motors.
+     * @param master_board_interface is the object that communicate with the
+     * master board. The master board provides the hardware informations.
+     * @param slave_id is the id of the udriver this class represents.
+     * @param history_length is the size of the buffer of messages stored.
      */
-    EthernetWifiMotorBoard(const std::string& network_id,
-                           const int n_slaves_controlled,
-                           const size_t history_length);
+    EthernetWifiMotorBoard(
+      std::shared_ptr<MasterBoardInterface> master_board_interface,
+      const size_t slave_id, const size_t history_length=1000);
+
     /**
-     * @brief Destroy the EthernetWifiMotorBoard object
+     * @brief Destroy the EthernetWifiMotorBoard object. The destructor handles
+     * the proper shutdown of the class and the threads.
      */
     ~EthernetWifiMotorBoard();
 
@@ -111,14 +111,16 @@ public:
 
     /**
      * @copydoc MotorBoardInterface::send_if_input_changed()
-     * Inherited from MotorBoardInterface
+     * Inherited from MotorBoardInterface. This particualr instance does not
+     * actually check if it is is a new command or control as the full status of
+     * the robot is exchange at every tick.
      */
     virtual void send_if_input_changed();
 
     /**
-     * @brief returns only once board and motors are ready.
+     * @brief return s only once board and motors are ready.
      */
-    void wait_until_ready();
+    bool is_ready();
 
 private:
     /**
@@ -126,12 +128,23 @@ private:
      */
 
     /**
-     * @brief This is the real time thread that streams the data to/from the
-     * master board.
-     * 
-     * @return THREAD_FUNCTION_RETURN_TYPE 
+     * @brief This is the helper function used for spawning the real time
+     * thread.
+     *
+     * @param instance_pointer is the current object in this case.
+     * @return THREAD_FUNCTION_RETURN_TYPE depends on the current OS.
      */
-    THREAD_FUNCTION_RETURN_TYPE loop();
+    static THREAD_FUNCTION_RETURN_TYPE loop(void* instance_pointer)
+    {
+        static_cast<EthernetWifiMotorBoard*>(instance_pointer)->loop();
+        return THREAD_FUNCTION_RETURN_VALUE;
+    }
+
+    /**
+     * @brief This is the real time thread that streams the data to/from the
+     * master board. 
+     */
+    void loop();
 
     /**
      * Communication related attributes
@@ -141,19 +154,20 @@ private:
      * @brief Master board interface sdk:
      * https://github.com/open-dynamic-robot-initiative/master-board
      */
-    MasterBoardInterface master_board_interface_;
+    std::shared_ptr<MasterBoardInterface> master_board_interface_;
 
     /**
-     * @brief Full name one can find on the left cloumn
-     * with the bash command ifconfig.
+     * @brief This is the driver of the udriver. It allows to communicate with
+     * the motors.
      */
-    std::string network_id_;
+    MotorDriver* udriver_;
 
     /**
-     * @brief Number of udriver the master is controlling [0-6]. Here a slave
-     * is a control card not a motor. For the blmc robots 1 slaves has 2 motors.
+     * @brief slave_id_ is the index of the udriver (slave) controlled by the
+     * master board. The index is the one used in MasterBoardInterface. The
+     * index should correspond to the hardware SPI index onboard the card.
      */
-    int n_slaves_controlled_;
+    size_t slave_id_;
 
     /**
      * Outputs
@@ -163,7 +177,7 @@ private:
      * @brief measurement_ contains all the measurements acquiered from the CAN
      * board.
      */
-    std::vector<std::shared_ptr<ScalarTimeseries>> measurement_;
+    std::vector<std::shared_ptr<ScalarTimeseries> > measurement_;
 
     /**
      * @brief This is the status history of the CAN board.
@@ -177,7 +191,7 @@ private:
     /**
      * @brief This is the buffer of the controls to be sent to card.
      */
-    std::vector<std::shared_ptr<ScalarTimeseries>> control_;
+    std::vector<std::shared_ptr<ScalarTimeseries> > control_;
 
     /**
      * @brief This is the buffer of the commands to be sent to the card.
@@ -195,7 +209,7 @@ private:
     /**
      * @brief This is the history of the already sent controls.
      */
-    std::vector<std::shared_ptr<ScalarTimeseries>> sent_control_;
+    std::vector<std::shared_ptr<ScalarTimeseries> > sent_control_;
 
     /**
      * @brief This is the history of the already sent commands.
