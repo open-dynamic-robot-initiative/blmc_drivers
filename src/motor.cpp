@@ -2,22 +2,75 @@
  * @file motor.cpp
  * @author Manuel Wuthrich (manuel.wuthrich@gmail.com)
  * @author Maximilien Naveau (maximilien.naveau@gmail.com)
- * @brief 
+ * @brief
  * @version 0.1
  * @date 2018-11-27
- * 
+ *
  * @copyright Copyright (c) 2018
- * 
+ *
  */
 
 #include <blmc_drivers/devices/motor.hpp>
 
 namespace blmc_drivers
 {
-  
+
+SPIMotor::SPIMotor(Motor::Ptr<MasterBoardInterface> board, const int& motor_index):
+    board_(board),
+    motor_index_(motor_index)
+{
+    timeseries_ = std::make_shared<MotorInterface::ScalarTimeseries>(1);
+}
+
+SPIMotor::Ptr<const MotorInterface::ScalarTimeseries> SPIMotor::get_measurement(
+  const int& index) const
+{
+    switch(index)
+    {
+    case current:
+        timeseries_->append(board_->motors[motor_index_].GetCurrent());
+        break;
+    case position:
+        timeseries_->append(board_->motors[motor_index_].GetPosition());
+        break;
+    case velocity:
+        timeseries_->append(board_->motors[motor_index_].GetVelocity());
+        break;
+    case encoder_index:
+        throw std::invalid_argument("Reading encoder not supported yet.");
+    default:
+        throw std::invalid_argument(
+            "index needs to match one of the measurements.");
+    }
+
+    return timeseries_;
+}
+
+SPIMotor::Ptr<const Motor::ScalarTimeseries> SPIMotor::get_current_target()
+const
+{
+    timeseries_->append(board_->motors[motor_index_].GetCurrentReference());
+    return timeseries_;
+}
+
+SPIMotor::Ptr<const Motor::ScalarTimeseries> SPIMotor::get_sent_current_target()
+const
+{
+    // The SPIMotor doesn't store the last sent current. Using the reference
+    // current instead.
+    timeseries_->append(board_->motors[motor_index_].GetCurrentReference());
+    return timeseries_;
+}
+
+void SPIMotor::set_current_target(const double& current_target)
+{
+    board_->motors[motor_index_].SetCurrentReference(current_target);
+}
+
+
 Motor::Motor(Ptr<MotorBoardInterface> board, bool motor_id):
     board_(board),
-    motor_id_(motor_id) 
+    motor_id_(motor_id)
 {
 
 }

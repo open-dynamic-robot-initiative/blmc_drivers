@@ -17,6 +17,8 @@
 #include "blmc_drivers/devices/motor_board.hpp"
 #include "blmc_drivers/devices/device_interface.hpp"
 
+#include <master_board_sdk/master_board_interface.h>
+
 namespace blmc_drivers
 {
 
@@ -35,13 +37,13 @@ public:
     typedef real_time_tools::ThreadsafeTimeseries<double> ScalarTimeseries;
     /**
      * @brief This a useful alias for the shared Pointer creation.
-     * 
+     *
      * @tparam Type is the Class to crate the pointer from.
      */
     template<typename Type> using Ptr = std::shared_ptr<Type>;
 
     /**
-     * @brief Here is a list of the different measurement available on the 
+     * @brief Here is a list of the different measurement available on the
      * blmc card.
      */
     enum MeasurementIndex {current, position, velocity, encoder_index,
@@ -63,9 +65,9 @@ public:
 
     /**
      * @brief Get the measurements.
-     * 
-     * @param index 
-     * @return Ptr<const ScalarTimeseries> the pointer to the desired 
+     *
+     * @param index
+     * @return Ptr<const ScalarTimeseries> the pointer to the desired
      * measurement history.
      */
     virtual Ptr<const ScalarTimeseries> get_measurement(
@@ -73,7 +75,7 @@ public:
 
     /**
      * @brief Get the current target object
-     * 
+     *
      * @return Ptr<const ScalarTimeseries> the list of the current values to
      * be sent.
      */
@@ -81,8 +83,8 @@ public:
 
     /**
      * @brief Get the history of the sent current targets.
-     * 
-     * @return Ptr<const ScalarTimeseries> 
+     *
+     * @return Ptr<const ScalarTimeseries>
      */
     virtual Ptr<const ScalarTimeseries> get_sent_current_target() const = 0;
 
@@ -93,8 +95,8 @@ public:
     /**
      * @brief Set the current target. This function saves the data internally.
      * Please call send_if_input_changed() to actually send the data.
-     * 
-     * @param current_target 
+     *
+     * @param current_target
      */
     virtual void set_current_target(const double& current_target) = 0;
 
@@ -102,10 +104,89 @@ public:
      * @brief Set the command. Save internally a command to be apply by the
      * motor board. This function save the command internally. Please call
      * send_if_input_changed() to actually send the data.
-     * 
-     * @param command 
+     *
+     * @param command
      */
     virtual void set_command(const MotorBoardCommand& command) = 0;
+};
+
+class SPIMotor: public MotorInterface
+{
+public:
+    SPIMotor(Ptr<MasterBoardInterface> board, const int& motor_index_);
+
+    /**
+     * @brief Destroy the MotorInterface object
+     */
+    virtual ~SPIMotor() {}
+
+    /**
+     * @brief Actually send the commands and controls.
+     */
+    virtual void send_if_input_changed()
+    {
+        throw std::runtime_error("SPIMotor::send_if_input_changed:"
+                " Not supported for SPIMotor. Use board.SendCommand() instead.");
+    };
+
+    /**
+     * Getters
+     */
+
+    /**
+     * @brief Get the measurements.
+     *
+     * @param index
+     * @return Ptr<const ScalarTimeseries> the pointer to the desired
+     * measurement history.
+     */
+    virtual Ptr<const ScalarTimeseries> get_measurement(const int& index = 0)
+    const;
+
+    /**
+     * @brief Get the current target object
+     *
+     * @return Ptr<const ScalarTimeseries> the list of the current values to
+     * be sent.
+     */
+    virtual Ptr<const ScalarTimeseries> get_current_target() const;
+
+    /**
+     * @brief Get the history of the sent current targets.
+     *
+     * @return Ptr<const ScalarTimeseries>
+     */
+    virtual Ptr<const ScalarTimeseries> get_sent_current_target() const;
+
+    /**
+     * Setters
+     */
+
+    /**
+     * @brief Set the current target. This function saves the data internally.
+     * Please call send_if_input_changed() to actually send the data.
+     *
+     * @param current_target
+     */
+    virtual void set_current_target(const double& current_target);
+
+    /**
+     * @brief Set the command. Save internally a command to be apply by the
+     * motor board. This function save the command internally. Please call
+     * send_if_input_changed() to actually send the data.
+     *
+     * @param command
+     */
+    virtual void set_command(const MotorBoardCommand& command)
+    {
+        throw std::runtime_error("SPIMotor::set_command:"
+                " Not supported for SPIMotor.");
+    };
+
+private:
+    int motor_index_;
+    Ptr<MasterBoardInterface> board_;
+    Ptr<ScalarTimeseries> timeseries_;
 };
 
 /**
@@ -116,7 +197,7 @@ class Motor: public MotorInterface
 public:
     /**
      * @brief Construct a new Motor object
-     * 
+     *
      * @param board is the MotorBoard to be used.
      * @param motor_id is the id of the motor on the on-board card
      */
@@ -124,7 +205,7 @@ public:
 
     /**
      * @brief Destroy the Motor object
-     * 
+     *
      */
     virtual ~Motor() { }
 
@@ -136,14 +217,14 @@ public:
     {
         board_->send_if_input_changed();
     }
-    
+
     /**
      * Getters
      */
 
     /**
      * @brief Get the measurements
-     * 
+     *
      * @param index is the kind of measurement we are instersted in.
      * see MotorInterface::MeasurementIndex.
      * @return Ptr<const ScalarTimeseries> The history of the measurement
@@ -153,7 +234,7 @@ public:
 
     /**
      * @brief Get the current target to be sent.
-     * 
+     *
      * @return Ptr<const ScalarTimeseries> the list of current values to be
      * sent.
      */
@@ -161,8 +242,8 @@ public:
 
     /**
      * @brief Get the already sent current target values.
-     * 
-     * @return Ptr<const ScalarTimeseries> 
+     *
+     * @return Ptr<const ScalarTimeseries>
      */
     virtual Ptr<const ScalarTimeseries> get_sent_current_target() const;
 
@@ -173,15 +254,15 @@ public:
     /**
      * @brief Set the current (Ampere) target. See MotorInterface for more
      * information.
-     * 
+     *
      * @param current_target in Ampere
      */
     virtual void set_current_target(const double& current_target);
 
     /**
      * @brief Set the command. See MotorInterface for more information.
-     * 
-     * @param command 
+     *
+     * @param command
      */
     virtual void set_command(const MotorBoardCommand& command)
     {
@@ -205,7 +286,7 @@ protected:
  * It contains utilities to bound the control input.
  * It could also contains some velocity limits at the motor level and why not
  * some temperature management.
- * 
+ *
  * \todo the velocity limit should be implemented in a smoother way,
  * and the parameters should be passed in the constructor.
  */
@@ -214,11 +295,11 @@ class SafeMotor: public Motor
 public:
     /**
      * @brief Construct a new SafeMotor object
-     * 
-     * @param board 
-     * @param motor_id 
-     * @param max_current_target 
-     * @param history_length 
+     *
+     * @param board
+     * @param motor_id
+     * @param max_current_target
+     * @param history_length
      */
     SafeMotor(Ptr<MotorBoardInterface> board, bool motor_id,
               const double& max_current_target = 2.0,
@@ -232,8 +313,8 @@ public:
 
     /**
      * @brief Get the _current_target object
-     * 
-     * @return Ptr<const ScalarTimeseries> 
+     *
+     * @return Ptr<const ScalarTimeseries>
      */
     virtual Ptr<const ScalarTimeseries> get_current_target() const
     {
@@ -246,15 +327,15 @@ public:
 
     /**
      * @brief Set the current target (Ampere)
-     * 
-     * @param current_target 
+     *
+     * @param current_target
      */
     virtual void set_current_target(const double& current_target);
-    
+
     /**
      * @brief Set the max_current_target_ object
-     * 
-     * @param max_current_target 
+     *
+     * @param max_current_target
      */
     void set_max_current(double max_current_target)
     {
