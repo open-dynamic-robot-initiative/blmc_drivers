@@ -21,7 +21,7 @@
 namespace blmc_drivers
 {
 
-class EthernetWifiMotorBoard: public MotorBoardInterface
+class EthernetWifiMotorBoard: public DeviceInterface
 {
 
 public:
