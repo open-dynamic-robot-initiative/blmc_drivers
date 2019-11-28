@@ -679,7 +679,10 @@ private:
      */
     bool is_loop_active_;
 
-
+    /**
+     * @brief Are motor in idle mode = 0 torques?
+     * @TODO update this documentation with the actual behavior
+     */
     bool motors_are_paused_;
 
 
