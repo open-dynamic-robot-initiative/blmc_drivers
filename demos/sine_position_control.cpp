@@ -34,8 +34,8 @@ void SinePositionControl::loop()
   double desired_position = 0.0;
   double desired_velocity = 0.0;
   double desired_current = 0.0;
-  double kp = 4.0;
-  double kd = 0.1;
+  double kp = 2.0;
+  double kd = 0.01;
 
   real_time_tools::Spinner spinner;
   spinner.set_period(0.001); // here we spin every 1ms
@@ -62,6 +62,10 @@ void SinePositionControl::loop()
                         kd*(desired_velocity - actual_velocity);
 
       motor_list_[i]->set_current_target(desired_current);
+    }
+    // Send the controls and log stuff
+    for(size_t i=0; i<motor_list_.size() ; ++i)
+    {
       motor_list_[i]->send_if_input_changed();
 
       encoders_[i].push_back(actual_position);
