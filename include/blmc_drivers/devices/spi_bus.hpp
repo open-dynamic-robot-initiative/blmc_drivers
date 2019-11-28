@@ -1,7 +1,7 @@
 /**
  * @file ethernet_wifi_motor_board.hpp
  * @author Maximilien Naveau (maximilien.naveau@gmail.com)
- * @brief Interface for the master board designed by Thomas Floyols
+ * @brief Interface for the main board designed by Thomas Floyols
  * https://github.com/open-dynamic-robot-initiative/master-board
  * @version 0.1
  * @date 2019-11-14
@@ -13,6 +13,7 @@
 #pragma once
 
 #include "master_board_sdk/master_board_interface.h"
+#include "blmc_drivers/devices/motor.hpp"
 #include "real_time_tools/thread.hpp"
 #include "real_time_tools/threadsafe/threadsafe_timeseries.hpp"
 
@@ -21,48 +22,54 @@
 namespace blmc_drivers
 {
 
-class EthernetWifiMotorBoard: public DeviceInterface
+class SpiBus: public DeviceInterface
 {
 
 public:
     /**
-     * @brief Construct a new EthernetWifiMotorBoard object
+     * @brief Construct a new SpiBus object
      * 
-     * The constructor starts a real time thread: EthernetWifiMotorBoard::loop().
+     * The constructor starts a real time thread: SpiBus::loop().
      * This thread streams the data back and forth collecting the sensor data
      * and sends the control/commands.
      * 
      * @param master_board_interface is the object that communicate with the
-     * master board. The master board provides the hardware informations.
-     * @param slave_id is the id of the udriver this class represents.
+     * main board. The main board provides the hardware informations.
+     * @param nb_udrivers is the number udrivers plugged on the main board.
      * @param history_length is the size of the buffer of messages stored.
      */
-    EthernetWifiMotorBoard(
+    SpiBus(
       std::shared_ptr<MasterBoardInterface> master_board_interface,
-      const size_t slave_id, const size_t history_length=1000);
+      const size_t& nb_udrivers, const size_t& history_length=1000);
 
     /**
-     * @brief Destroy the EthernetWifiMotorBoard object. The destructor handles
+     * @brief Destroy the SpiBus object. The destructor handles
      * the proper shutdown of the class and the threads.
      */
-    ~EthernetWifiMotorBoard();
+    ~SpiBus();
 
     /**
      * Output and status
      */
 
     /**
-     * @copydoc MotorBoardInterface::get_measurement()
-     * Inherited from MotorBoardInterface
+     * @brief Get the measurements from the main board.
+     * 
+     * @param udriver_id is the index of the spi port on the control board
+     * @param index 
+     * @return std::shared_ptr<const MotorInterface::ScalarTimeseries> 
      */
-    virtual std::shared_ptr<const ScalarTimeseries> get_measurement(
-      const int& index) const ;
+    virtual std::shared_ptr<const MotorInterface::ScalarTimeseries>
+    get_measurement(
+      const size_t udriver_id,
+      const MotorBoardInterface::MeasurementIndex& index) const ;
 
     /**
      * @copydoc MotorBoardInterface::get_status()
      * Inherited from MotorBoardInterface
      */
-    virtual std::shared_ptr<const StatusTimeseries> get_status() const;
+    virtual std::shared_ptr<const MotorBoardInterface::StatusTimeseries>
+    get_status(const size_t udriver_id) const;
 
     /**
      * input logs
@@ -72,26 +79,32 @@ public:
      * @copydoc MotorBoardInterface::get_control()
      * Inherited from MotorBoardInterface
      */
-    virtual std::shared_ptr<const ScalarTimeseries> get_control(const int& index) const;
+    virtual std::shared_ptr<const MotorInterface::ScalarTimeseries> get_control(
+      const size_t udriver_id,
+      const MotorBoardInterface::ControlIndex& index) const;
 
     /**
      * @copydoc MotorBoardInterface::get_command()
      * Inherited from MotorBoardInterface
      */
-    virtual std::shared_ptr<const CommandTimeseries> get_command() const;
+    virtual std::shared_ptr<const MotorBoardInterface::CommandTimeseries>
+    get_command(const size_t udriver_id) const;
 
     /**
      * @copydoc MotorBoardInterface::get_sent_control()
      * Inherited from MotorBoardInterface
      */
-    virtual std::shared_ptr<const ScalarTimeseries> get_sent_control(
-            const int& index) const;
+    virtual std::shared_ptr<const MotorInterface::ScalarTimeseries>
+    get_sent_control(
+        const size_t udriver_id,
+        const MotorBoardInterface::ControlIndex& index) const;
 
     /**
      * @copydoc MotorBoardInterface::get_sent_command()
      * Inherited from MotorBoardInterface
      */
-    virtual std::shared_ptr<const CommandTimeseries> get_sent_command() const;
+    virtual std::shared_ptr<const MotorBoardInterface::CommandTimeseries>
+    get_sent_command(const size_t udriver_id) const;
 
     /**
      * Setters
@@ -101,13 +114,15 @@ public:
      * @copydoc MotorBoardInterface::set_control()
      * Inherited from MotorBoardInterface
      */
-    virtual void set_control(const double& control, const int& index);
+    virtual void set_control(const size_t udriver_id, const double& control,
+                             const MotorBoardInterface::ControlIndex& index);
     
     /**
      * @copydoc MotorBoardInterface::set_command()
      * Inherited from MotorBoardInterface
      */
-    virtual void set_command(const MotorBoardCommand& command);
+    virtual void set_command(const size_t udriver_id, 
+                             const MotorBoardCommand& command);
 
     /**
      * @copydoc MotorBoardInterface::send_if_input_changed()
@@ -121,6 +136,11 @@ public:
      * @brief return s only once board and motors are ready.
      */
     bool is_ready();
+
+    /**
+     * @brief Wait until the robot is ready.
+     */
+    void wait_is_ready();
 
 private:
     /**
@@ -136,38 +156,41 @@ private:
      */
     static THREAD_FUNCTION_RETURN_TYPE loop(void* instance_pointer)
     {
-        static_cast<EthernetWifiMotorBoard*>(instance_pointer)->loop();
+        static_cast<SpiBus*>(instance_pointer)->loop();
         return THREAD_FUNCTION_RETURN_VALUE;
     }
 
     /**
      * @brief This is the real time thread that streams the data to/from the
-     * master board. 
+     * main board. 
      */
     void loop();
+
+    /**
+     * @brief Send the newest control stored in the time series.
+     */
+    void send_newest_command();
+
+    /**
+     * @brief Send the newest control stored in the time series.
+     */
+    void send_newest_controls();
 
     /**
      * Communication related attributes
      */
 
     /**
-     * @brief Master board interface sdk:
+     * @brief Main board interface sdk:
      * https://github.com/open-dynamic-robot-initiative/master-board
      */
-    std::shared_ptr<MasterBoardInterface> master_board_interface_;
+    std::shared_ptr<MasterBoardInterface> main_board_interface_;
 
     /**
-     * @brief This is the driver of the udriver. It allows to communicate with
-     * the motors.
+     * @brief nb_udrivers_ is the number of the udriver controlled by the
+     * main board.
      */
-    MotorDriver* udriver_;
-
-    /**
-     * @brief slave_id_ is the index of the udriver (slave) controlled by the
-     * master board. The index is the one used in MasterBoardInterface. The
-     * index should correspond to the hardware SPI index onboard the card.
-     */
-    size_t slave_id_;
+    size_t nb_udrivers_;
 
     /**
      * Outputs
@@ -177,12 +200,12 @@ private:
      * @brief measurement_ contains all the measurements acquiered from the CAN
      * board.
      */
-    std::vector<std::shared_ptr<ScalarTimeseries> > measurement_;
+    std::vector<std::shared_ptr<MotorInterface::ScalarTimeseries> > measurement_;
 
     /**
-     * @brief This is the status history of the CAN board.
+     * @brief This is the status history of the udriver board.
      */
-    std::shared_ptr<StatusTimeseries> status_;
+    std::vector<std::shared_ptr<MotorBoardInterface::StatusTimeseries> > status_;
 
     /**
      * Inputs
@@ -191,15 +214,15 @@ private:
     /**
      * @brief This is the buffer of the controls to be sent to card.
      */
-    std::vector<std::shared_ptr<ScalarTimeseries> > control_;
+    std::vector<std::shared_ptr<MotorInterface::ScalarTimeseries> > control_;
 
     /**
      * @brief This is the buffer of the commands to be sent to the card.
      */
-    std::shared_ptr<CommandTimeseries> command_;
+    std::vector<std::shared_ptr<MotorBoardInterface::CommandTimeseries> >command_;
 
     /*! @brief history_length_ is the length of data buffers in number of
-    iteration. */
+        iteration. */
     size_t history_length_;
 
     /**
@@ -209,12 +232,12 @@ private:
     /**
      * @brief This is the history of the already sent controls.
      */
-    std::vector<std::shared_ptr<ScalarTimeseries> > sent_control_;
+    std::vector<std::shared_ptr<MotorInterface::ScalarTimeseries> > sent_control_;
 
     /**
      * @brief This is the history of the already sent commands.
      */
-    std::shared_ptr<CommandTimeseries> sent_command_;
+    std::vector<std::shared_ptr<MotorBoardInterface::CommandTimeseries> > sent_command_;
 
     /**
      * Loop management
@@ -227,7 +250,7 @@ private:
     bool is_loop_active_;
 
     /**
-     * @brief Are motor in idle mode = 0 torques?
+     * @brief Are motor in idle mode = 0 torques.
      */
     bool motors_are_paused_;
 
