@@ -87,7 +87,8 @@ set(blmc_drivers_src
   src/analog_sensors.cpp
   src/can_bus.cpp
   src/motor_board.cpp
-  src/ethernet_wifi_motor_board.cpp
+  src/spi_bus.cpp
+  src/spi_motor_board.cpp
   src/motor.cpp
 )
 # if xenomai is found we need to add the definition of the
