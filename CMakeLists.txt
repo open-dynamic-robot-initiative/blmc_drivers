@@ -62,6 +62,22 @@ if(Xenomai_FOUND)
   )
 endif()
 
+
+##########################################
+# export the package as a catkin package #
+##########################################
+set(catkin_export_include_dirs include)
+if(Xenomai_FOUND)
+  set(catkin_export_include_dirs ${catkin_export_include_dirs} ${Xenomai_INCLUDE_DIR})
+endif(Xenomai_FOUND)
+
+catkin_package(
+  INCLUDE_DIRS include ${catkin_export_include_dirs}
+  LIBRARIES blmc_drivers
+  CATKIN_DEPENDS ${catkin_depends}
+)
+
+
 ########################################################
 # manage the creation of the libraries and executables #
 ########################################################
@@ -87,7 +103,7 @@ endif()
 add_library(blmc_drivers SHARED ${blmc_drivers_src})
 
 # link the catkin dependencies
-target_link_libraries(blmc_drivers  ${catkin_LIBRARIES})
+target_link_libraries(blmc_drivers ${catkin_LIBRARIES})
 
 # if on ubuntu based OS we link to the rt and pthread packages
 if(NOT ${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
@@ -102,23 +118,6 @@ if(Xenomai_FOUND)
     ${Xenomai_LIBRARY_RTDM}
   )
 endif()
-
-# here we ask to catkin to export this library in the devel folder
-set(EXPORTED_LIBRAIRIES ${EXPORTED_LIBRAIRIES} blmc_drivers)
-
-##########################################
-# export the package as a catkin package #
-##########################################
-set(catkin_export_include_dirs include)
-if(Xenomai_FOUND)
-  set(catkin_export_include_dirs ${catkin_export_include_dirs} ${Xenomai_INCLUDE_DIR})
-endif(Xenomai_FOUND)
-
-catkin_package(
-  INCLUDE_DIRS include ${catkin_export_include_dirs}
-  LIBRARIES ${EXPORTED_LIBRAIRIES}
-  DEPENDS ${catkin_depends}
-)
 
 #########################
 # manage the unit tests #
