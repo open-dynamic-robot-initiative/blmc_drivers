@@ -23,11 +23,11 @@ namespace blmc_drivers
 {
 
 SpiBus::SpiBus(
-    std::shared_ptr<MasterBoardInterface> master_board_interface,
+    std::shared_ptr<MasterBoardInterface> main_board_interface,
     const size_t& nb_udrivers, const size_t& history_length): DeviceInterface()
 {
   // Save the ser input
-  main_board_interface_ = master_board_interface;
+  main_board_interface_ = main_board_interface;
   nb_udrivers_ = nb_udrivers;
   history_length_ = history_length;
   
@@ -90,7 +90,8 @@ SpiBus::get_measurement(
     const size_t udriver_id,
     const MotorBoardInterface::MeasurementIndex& index) const
 {
-    return measurement_[udriver_id * 2 + index];
+    return measurement_[udriver_id *
+        MotorBoardInterface::MeasurementIndex::measurement_count + index];
 }
 
 std::shared_ptr<const MotorBoardInterface::StatusTimeseries>
@@ -107,7 +108,8 @@ std::shared_ptr<const MotorBoardInterface::ScalarTimeseries>
 SpiBus::get_control(const size_t udriver_id,
     const MotorBoardInterface::ControlIndex& index) const
 {
-    return control_[udriver_id * 2 + index];
+    return control_[udriver_id *
+        MotorBoardInterface::ControlIndex::control_count + index];
 }
 
 std::shared_ptr<const MotorBoardInterface::CommandTimeseries>
@@ -120,7 +122,8 @@ std::shared_ptr<const MotorBoardInterface::ScalarTimeseries>
 SpiBus::get_sent_control(const size_t udriver_id,
     const MotorBoardInterface::ControlIndex& index) const
 {
-    return control_[udriver_id * 2 + index];
+    return control_[udriver_id *
+        MotorBoardInterface::ControlIndex::control_count + index];
 }
 
 std::shared_ptr<const MotorBoardInterface::CommandTimeseries>
@@ -182,6 +185,12 @@ void SpiBus::send_newest_command()
 {
     for(size_t i = 0 ; i < nb_udrivers_ ; ++i)
     {
+        MotorInterface::ScalarTimeseries::Index timeindex =
+            command_[i]->newest_timeindex();
+        MotorBoardCommand command = (*command_[i])[timeindex];
+        command_[i]->tag(timeindex);
+        sent_command_[i]->append(command);
+
         // Some aliases
         MotorDriver& udriver = main_board_interface_->motor_drivers[i];
         const uint32_t& command_id = command_[i]->newest_element().id_;
@@ -339,7 +348,7 @@ void SpiBus::loop()
             status_[i]->append(status);
         }
     
-        if(!is_ready() && motors_are_paused_)
+        if(!is_ready() || motors_are_paused_)
         {
             for(size_t i = 0 ; i < nb_udrivers_ ; ++i)
             {
@@ -353,7 +362,7 @@ void SpiBus::loop()
     }
 }
 
-void SpiBus::wait_is_ready()
+void SpiBus::wait_until_ready()
 {
     while(!is_ready())
     {

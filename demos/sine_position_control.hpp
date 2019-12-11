@@ -50,6 +50,8 @@ public:
       control_buffer_.back().clear();
     }
     stop_loop_=false;
+    kp_ = 0.0;
+    kd_ = 0.0;
   }
 
   /**
@@ -73,6 +75,12 @@ public:
    * @brief Stop the control and dump the data
    */
   void stop_loop();
+
+  void set_gains(double kp, double kd)
+  {
+    kp_ = kp;
+    kd_ = kd;
+  }
 
 private:
 
@@ -133,6 +141,16 @@ private:
    * @brief control_buffer_
    */
   std::vector<std::deque<double> > control_buffer_;
+
+  /**
+   * @brief Controller proportional gain.
+   */
+  double kp_;
+
+  /**
+   * @brief Controller derivative gain.
+   */
+  double kd_;
 
 }; // end class SinePositionControl definition
 

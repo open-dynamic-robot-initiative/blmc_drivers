@@ -33,13 +33,13 @@ public:
      * This thread streams the data back and forth collecting the sensor data
      * and sends the control/commands.
      * 
-     * @param master_board_interface is the object that communicate with the
+     * @param main_board_interface is the object that communicate with the
      * main board. The main board provides the hardware informations.
      * @param nb_udrivers is the number udrivers plugged on the main board.
      * @param history_length is the size of the buffer of messages stored.
      */
     SpiBus(
-      std::shared_ptr<MasterBoardInterface> master_board_interface,
+      std::shared_ptr<MasterBoardInterface> main_board_interface,
       const size_t& nb_udrivers, const size_t& history_length=1000);
 
     /**
@@ -140,7 +140,7 @@ public:
     /**
      * @brief Wait until the robot is ready.
      */
-    void wait_is_ready();
+    void wait_until_ready();
 
 private:
     /**

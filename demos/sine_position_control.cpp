@@ -26,25 +26,23 @@ void SinePositionControl::loop()
   double actual_velocity = 0.0;
   double actual_current = 0.0;
   double local_time = 0.0;
+  double control_period = 0.001;
   // sine torque params
-  double amplitude = 0.0;
-  double current_period = 10.0;
-  double current_pulsation = 2*3.1415 / current_period;
+  double amplitude = 3.1415;
+  double frequence = 0.5;
   // here is the control in current (Ampere)
   double desired_position = 0.0;
   double desired_velocity = 0.0;
   double desired_current = 0.0;
-  double kp = 2.0;
-  double kd = 0.01;
 
   real_time_tools::Spinner spinner;
-  spinner.set_period(0.001); // here we spin every 1ms
+  spinner.set_period(control_period); // here we spin every 1ms
   real_time_tools::Timer time_logger;
   size_t count = 0;
   while(!stop_loop_)
   {
     time_logger.tic();
-    local_time = count * 0.001;
+    local_time = count * control_period;
 
     // compute the control
     for(size_t i=0; i<motor_list_.size() ; ++i)
@@ -56,14 +54,15 @@ void SinePositionControl::loop()
       actual_current = motor_list_[i]->get_measurement(
         blmc_current_index)->newest_element();
       
-      desired_position = amplitude * sin(current_pulsation * local_time);
-      desired_velocity = amplitude * cos(current_pulsation * local_time);
-      desired_current = kp*(desired_position - actual_position) +
-                        kd*(desired_velocity - actual_velocity);
-
+      desired_position = amplitude * sin(2 * M_PI * frequence * local_time);
+      desired_velocity = 2 * M_PI * frequence * amplitude *
+                         cos(2 * M_PI * frequence * local_time);
+      desired_current = kp_*(desired_position - actual_position) +
+                        kd_*(desired_velocity - actual_velocity);
       motor_list_[i]->set_current_target(desired_current);
     }
     // Send the controls and log stuff
+    
     for(size_t i=0; i<motor_list_.size() ; ++i)
     {
       motor_list_[i]->send_if_input_changed();
@@ -72,20 +71,28 @@ void SinePositionControl::loop()
       velocities_[i].push_back(actual_velocity);
       currents_[i].push_back(actual_current);
       control_buffer_[i].push_back(desired_current);
+    }
+    
 
-      // we sleep here 1ms.
-      spinner.spin();
-      // measure the time spent.
-      time_logger.tac();
+    // we sleep here 1ms.
+    spinner.spin();
+    // measure the time spent.
+    time_logger.tac();
 
-      // Printings
-      if ((count % 1000) == 0)
-      {
-          rt_printf("sending current: %f\n", desired_current);
-          //time_logger.print_statistics();
-      }
-      ++count;
-    }//endfor
+    // Printings
+    if ((count % (int)(0.5/control_period)) == 0)
+    {
+        rt_printf("\33[H\33[2J"); //clear screen
+        for(size_t i=0; i<motor_list_.size() ; ++i)
+        {
+            rt_printf("des_pose: %8f ; ", desired_position);
+            motor_list_[i]->print();
+        }
+        time_logger.print_statistics();
+        fflush(stdout);
+    }
+    ++count;
+
   }//endwhile
   time_logger.dump_measurements("/tmp/demo_pd_control_time_measurement");
 }

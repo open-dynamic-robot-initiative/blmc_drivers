@@ -92,10 +92,12 @@ int main(int argc, char **argv)
     rt_printf("motors are set up \n");
 
     // construct a simple PD controller following a sinus trajectory.
-    blmc_drivers::SinePositionControl controller(motor_list); 
+    blmc_drivers::SinePositionControl controller(motor_list);
+    controller.set_gains(/*kp=*/2.0, /*kd=*/0.5);
 
     rt_printf("controllers are set up \n");
 
+    spi_bus->wait_until_ready();
     controller.start_loop();
 
     rt_printf("loops have started \n");
