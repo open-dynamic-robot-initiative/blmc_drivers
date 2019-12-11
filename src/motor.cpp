@@ -99,6 +99,56 @@ void Motor::set_current_target(const double& current_target)
     }
 }
 
+void Motor::print() const
+{
+    MotorBoardStatus motor_board_status;
+    double motor_current = std::nan("");
+    double motor_position = std::nan("");
+    double motor_velocity = std::nan("");
+    double motor_encoder_index = std::nan("");
+    double motor_sent_current_target = std::nan("");
+    
+    if(board_->get_status()->length() != 0)
+        {motor_board_status = board_->get_status()->newest_element();}
+
+    if(get_measurement(current)->length() != 0)
+        {motor_current = get_measurement(current)->newest_element();}
+
+    if(get_measurement(position)->length() != 0)
+        {motor_position = get_measurement(position)->newest_element();}
+
+    if(get_measurement(velocity)->length() != 0)
+        {motor_velocity = get_measurement(velocity)->newest_element();}
+
+    if(get_measurement(encoder_index)->length() != 0)
+        {motor_encoder_index = get_measurement(encoder_index)->newest_element();}
+
+    if(get_sent_current_target()->length() != 0)
+        {motor_sent_current_target = get_sent_current_target()->newest_element();}
+
+    rt_printf("motor board status: ");
+    rt_printf("enabled: %d ", motor_board_status.system_enabled);
+    rt_printf("error_code: %d ", motor_board_status.error_code);
+    rt_printf("motor status: ");
+    if(motor_id_ == 0)
+    {
+        rt_printf("enabled: %d ", motor_board_status.motor1_enabled);
+        rt_printf("ready: %d ", motor_board_status.motor1_ready);
+    }
+    else
+    {
+        rt_printf("enabled: %d ", motor_board_status.motor2_enabled);
+        rt_printf("ready: %d ", motor_board_status.motor2_ready);
+    }
+    rt_printf("motor measurements: ");
+    rt_printf("current: %8f ", motor_current);
+    rt_printf("position: %8f ", motor_position);
+    rt_printf("velocity: %8f ", motor_velocity);
+    rt_printf("encoder index: %8f ", motor_encoder_index);
+    rt_printf("target current: %8f ", motor_sent_current_target);
+    rt_printf("\n");
+}
+
 SafeMotor::SafeMotor(
   Motor::Ptr<MotorBoardInterface> board,
   bool motor_id,

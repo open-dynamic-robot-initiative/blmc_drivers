@@ -188,6 +188,9 @@ public:
         board_->set_command(command);
     }
 
+    /** @brief Print the motor status and state. */
+    virtual void print() const;
+
 protected:
     /**
      * @brief The MotorBoard to be used for the communication.
