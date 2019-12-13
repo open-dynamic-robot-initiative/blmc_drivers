@@ -320,24 +320,41 @@ void SpiBus::loop()
         for(size_t i = 0 ; i < nb_udrivers_ ; ++i)
         {
             MotorDriver& udriver = main_board_interface_->motor_drivers[i];
-            measurement_[i* measurement_count + current_0]->append(udriver.motor1->GetCurrent());
-            measurement_[i* measurement_count + current_1]->append(udriver.motor2->GetCurrent());
-            measurement_[i* measurement_count + position_0]->append(udriver.motor1->GetPosition() /* * 2 * M_PI */);
-            measurement_[i* measurement_count + position_1]->append(udriver.motor2->GetPosition() /* * 2 * M_PI */);
-            measurement_[i* measurement_count + velocity_0]->append(udriver.motor1->GetVelocity() /* * 2 * M_PI * (1000./60.) */);
-            measurement_[i* measurement_count + velocity_1]->append(udriver.motor2->GetVelocity() /* * 2 * M_PI * (1000./60.) */);
-            measurement_[i* measurement_count + analog_0]->append(udriver.adc[0]);// not implemented yet in the API
-            measurement_[i* measurement_count + analog_1]->append(udriver.adc[1]);// not implemented yet in the API
+            measurement_[i* measurement_count + current_0]->append(
+                  udriver.motor1->GetCurrent());
+            measurement_[i* measurement_count + current_1]->append(
+                  udriver.motor2->GetCurrent());
+            measurement_[i* measurement_count + position_0]->append(
+                  udriver.motor1->GetPosition() /* * 2 * M_PI */);
+            measurement_[i* measurement_count + position_1]->append(
+                  udriver.motor2->GetPosition() /* * 2 * M_PI */);
+            measurement_[i* measurement_count + velocity_0]->append(
+                  udriver.motor1->GetVelocity() /* * 2 * M_PI * (1000./60.) */);
+            measurement_[i* measurement_count + velocity_1]->append(
+                  udriver.motor2->GetVelocity() /* * 2 * M_PI * (1000./60.) */);
+            measurement_[i* measurement_count + analog_0]->append(
+                  udriver.adc[0]);// not implemented yet in the API
+            measurement_[i* measurement_count + analog_1]->append(
+                  udriver.adc[1]);// not implemented yet in the API
             // here the interpretation of the message is different,
             // we get a motor index and a measurement
-            if(udriver.motor1->GetIndexToggleBit())
+            if(motor_index_toggle_bits_[2 * i] !=
+               udriver.motor1->GetIndexToggleBit())
             {
-                measurement_[encoder_index_0]->append(udriver.motor1->GetPosition() /* * 2 * M_PI */);
+                measurement_[i* measurement_count + encoder_index_0]->append(
+                      udriver.motor1->GetPosition() /* * 2 * M_PI */);
             }
-            if(udriver.motor2->GetIndexToggleBit())
+            if(motor_index_toggle_bits_[2 * i + 1] !=
+               udriver.motor2->GetIndexToggleBit())
             {
-                measurement_[encoder_index_1]->append(udriver.motor2->GetPosition() /* * 2 * M_PI */);
+                measurement_[i* measurement_count + encoder_index_1]->append(
+                      udriver.motor2->GetPosition() /* * 2 * M_PI */);
             }
+            // store the last toggle bit.
+            motor_index_toggle_bits_[2 * i] =
+                udriver.motor1->GetIndexToggleBit();
+            motor_index_toggle_bits_[2 * i + 1] =
+                udriver.motor2->GetIndexToggleBit();
             MotorBoardStatus status;
             status.system_enabled = udriver.is_enabled;
             status.motor1_enabled = udriver.motor1->is_enabled;
@@ -352,6 +369,8 @@ void SpiBus::loop()
         {
             for(size_t i = 0 ; i < nb_udrivers_ ; ++i)
             {
+                set_control(i, 0.0, MotorBoardInterface::ControlIndex::current_target_0);
+                set_control(i, 0.0, MotorBoardInterface::ControlIndex::current_target_1);
                 MotorDriver& udriver = main_board_interface_->motor_drivers[i];
                 udriver.motor1->SetCurrentReference(0.0);
                 udriver.motor2->SetCurrentReference(0.0);

@@ -265,6 +265,18 @@ private:
      * or not dependening on the current OS.
      */
     real_time_tools::RealTimeThread rt_thread_;
+
+    /** @brief Everytime a motor index is detected the corresponding bit change
+     * for the opposite value.
+     * 
+     * ```
+     * if (index detected on motor X)
+     * {
+     *     motor_index_toggle_bits_[X] = !motor_index_toggle_bits_[X]
+     * }
+     * ```
+     */
+    std::array<bool, 12> motor_index_toggle_bits_;
 };
 
 }

@@ -28,7 +28,7 @@ void SinePositionControl::loop()
   double local_time = 0.0;
   double control_period = 0.001;
   // sine torque params
-  double amplitude = 3.1415;
+  double amplitude = 0.0/*3.1415*/;
   double frequence = 0.5;
   // here is the control in current (Ampere)
   double desired_position = 0.0;
@@ -55,8 +55,8 @@ void SinePositionControl::loop()
         blmc_current_index)->newest_element();
       
       desired_position = amplitude * sin(2 * M_PI * frequence * local_time);
-      desired_velocity = 2 * M_PI * frequence * amplitude *
-                         cos(2 * M_PI * frequence * local_time);
+      desired_velocity = 0.0/* 2 * M_PI * frequence * amplitude *
+                         cos(2 * M_PI * frequence * local_time)*/;
       desired_current = kp_*(desired_position - actual_position) +
                         kd_*(desired_velocity - actual_velocity);
       motor_list_[i]->set_current_target(desired_current);
@@ -80,7 +80,7 @@ void SinePositionControl::loop()
     time_logger.tac();
 
     // Printings
-    if ((count % (int)(0.5/control_period)) == 0)
+    if ((count % (int)(0.2/control_period)) == 0)
     {
         rt_printf("\33[H\33[2J"); //clear screen
         for(size_t i=0; i<motor_list_.size() ; ++i)
