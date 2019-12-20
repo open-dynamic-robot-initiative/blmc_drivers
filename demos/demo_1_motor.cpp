@@ -42,7 +42,6 @@ static THREAD_FUNCTION_RETURN_TYPE printing_loop(void *hardware_ptr)
         Hardware &hardware = *(static_cast<Hardware *>(hardware_ptr));
 
         // print info --------------------------------------------------------------
-        size_t count = 0;
         long int timeindex = hardware.can_bus->get_output_frame()->newest_timeindex();
 
         while (true)

@@ -20,7 +20,7 @@ std::atomic_bool StopDemos (false);
  * 
  * @param s 
  */
-void my_handler(int s){
+void my_handler(int){
   StopDemos = true;
 }
 
@@ -238,7 +238,7 @@ private:
     }
 };
 
-int main(int argc, char **argv)
+int main(int, char **)
 {  
     // make sure we catch the ctrl+c signal to kill the application properly.
     struct sigaction sigIntHandler;

@@ -32,11 +32,11 @@ static THREAD_FUNCTION_RETURN_TYPE control_loop(void* hardware_ptr)
     while(true)
     {
         // The sliders are giving values between 0.0 and 1.0
-        double slider_position =
-                hardware.slider->get_measurement()->newest_element();
+        // double slider_position =
+        //         hardware.slider->get_measurement()->newest_element();
 
         // We transform it into a current between -2.0 and 2.0
-        double desired_current = (slider_position - 0.5) * 4.0;
+        // double desired_current = (slider_position - 0.5) * 4.0;
 
         // We send the current to the motor
         hardware.motor->set_current_target(/*desired_current*/0.0);
@@ -55,7 +55,6 @@ static THREAD_FUNCTION_RETURN_TYPE printing_loop(void* hardware_ptr)
             *(static_cast<Hardware*>(hardware_ptr));
 
     // print info --------------------------------------------------------------
-    size_t count = 0;
     long int timeindex = hardware.can_bus->get_output_frame()->newest_timeindex();
 
     while(true)
@@ -77,7 +76,7 @@ static THREAD_FUNCTION_RETURN_TYPE printing_loop(void* hardware_ptr)
 
 
 
-int main(int argc, char **argv)
+int main(int, char **)
 {   
     Hardware hardware;
     // First of all one need to initialize the communication with the can bus.

@@ -22,8 +22,8 @@ CanBusMotorBoard::CanBusMotorBoard(
         const size_t& history_length,
         const int& control_timeout_ms):
     can_bus_(can_bus),
-    control_timeout_ms_(control_timeout_ms),
-    motors_are_paused_(false)
+    motors_are_paused_(false),
+    control_timeout_ms_(control_timeout_ms)
 {
     measurement_  = create_vector_of_pointers<ScalarTimeseries>(
                 measurement_count,
