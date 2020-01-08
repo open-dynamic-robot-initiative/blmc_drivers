@@ -210,22 +210,31 @@ void SpiBus::send_newest_command()
                     udriver.motor2->Enable() : udriver.motor2->Disable();
                 break;
             case MotorBoardCommand::ENABLE_VSPRING1:
+                rt_printf("SpiBus::send_newest_command(): Warning MotorBoardCommand::ENABLE_VSPRING1 no impltmented. Nothing to be done.");
                 break;
             case MotorBoardCommand::ENABLE_VSPRING2:
+                rt_printf("SpiBus::send_newest_command(): Warning MotorBoardCommand::ENABLE_VSPRING2 no impltmented. Nothing to be done.");
                 break;
             case MotorBoardCommand::SEND_CURRENT:
+                rt_printf("SpiBus::send_newest_command(): Warning MotorBoardCommand::SEND_CURRENT no impltmented. Nothing to be done.");
                 break;
             case MotorBoardCommand::SEND_POSITION:
+                rt_printf("SpiBus::send_newest_command(): Warning MotorBoardCommand::SEND_POSITION no impltmented. Nothing to be done.");
                 break;
             case MotorBoardCommand::SEND_VELOCITY:
+                rt_printf("SpiBus::send_newest_command(): Warning MotorBoardCommand::SEND_VELOCITY no impltmented. Nothing to be done.");
                 break;
             case MotorBoardCommand::SEND_ADC6:
+                rt_printf("SpiBus::send_newest_command(): Warning MotorBoardCommand::SEND_ADC6 no impltmented. Nothing to be done.");
                 break;
             case MotorBoardCommand::SEND_ENC_INDEX:
+                rt_printf("SpiBus::send_newest_command(): Warning MotorBoardCommand::SEND_ENC_INDEX no impltmented. Nothing to be done.");
                 break;
             case MotorBoardCommand::SEND_ALL:
+                rt_printf("SpiBus::send_newest_command(): Warning MotorBoardCommand::SEND_ALL no impltmented. Nothing to be done.");
                 break;
             case MotorBoardCommand::SET_CAN_RECV_TIMEOUT:
+                rt_printf("SpiBus::send_newest_command(): Warning MotorBoardCommand::SET_CAN_RECV_TIMEOUT no impltmented. Nothing to be done.");
                 break;
             case MotorBoardCommand::ENABLE_POS_ROLLOVER_ERROR:
                 command_content == MotorBoardCommand::ENABLE ?
