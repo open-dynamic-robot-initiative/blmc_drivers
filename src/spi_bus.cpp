@@ -1,5 +1,5 @@
 /**
- * @file motor_board.cpp
+ * @file spi_bus.cpp
  * @author Felix Widmaier (felix.widmaier@tuebingen.mpg.de)
  * @author Manuel Wuthrich (manuel.wuthrich@gmail.com)
  * @author Maximilien Naveau (maximilien.naveau@gmail.com)
@@ -8,7 +8,7 @@
  * @version 0.1
  * @date 2018-11-26
  *
- * @copyright Copyright (c) 2018
+ * @copyright Copyright (c) 2020, New York University and Max Planck Gesellshaft.
  *
  */
 
