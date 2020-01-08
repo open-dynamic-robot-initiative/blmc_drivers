@@ -167,7 +167,9 @@ private:
     void loop();
 
     /**
-     * @brief Send the newest control stored in the time series.
+     * @brief Send the newest control stored in the time series. Some of the
+     * command are not implemented/will be implemented. A warning is issued
+     * upon miss-use.
      */
     void send_newest_command();
 
