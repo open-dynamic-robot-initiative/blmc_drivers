@@ -1,3 +1,8 @@
+/**
+ * @file demo_leg.cpp
+ * @copyright Copyright (c) 2018-2020, New York University and Max Planck Gesellschaft, License BSD-3-Clause
+ */
+
 #include "real_time_tools/timer.hpp"
 #include "real_time_tools/spinner.hpp"
 #include <blmc_drivers/devices/motor.hpp>
