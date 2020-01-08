@@ -66,9 +66,9 @@ int main(int argc, char **argv)
     std::shared_ptr<blmc_drivers::SpiBus> spi_bus =
         std::make_shared<blmc_drivers::SpiBus>(master_board_interface, nb_udrivers);
 
-    // Then we create a motor board object that will use the can bus in order
+    // Then we create a motor board object that will use the SPI bus in order
     // communicate between this application and the actual motor board.
-    // Important: the blmc motors are alinged during this stage.
+    // Important: the blmc motors are aligned during this stage.
     std::vector<std::shared_ptr<blmc_drivers::SpiMotorBoard> > boards;
     boards.resize(nb_udrivers);
     for(size_t i = 0 ; i < boards.size() ; ++i)

@@ -197,7 +197,7 @@ private:
      */
 
     /**
-     * @brief measurement_ contains all the measurements acquiered from the CAN
+     * @brief All the measurements acquiered from the CAN
      * board.
      */
     std::vector<std::shared_ptr<MotorInterface::ScalarTimeseries> > measurement_;
