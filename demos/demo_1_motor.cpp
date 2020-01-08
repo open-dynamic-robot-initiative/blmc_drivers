@@ -1,3 +1,8 @@
+/**
+ * @file demo_1_motor.cpp
+ * @copyright Copyright (c) 2018-2020, New York University and Max Planck Gesellschaft, License BSD-3-Clause
+ */
+
 #include <tuple>
 
 #include "blmc_drivers/devices/can_bus.hpp"

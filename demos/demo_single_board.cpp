@@ -1,12 +1,6 @@
 /**
  * @file demo_single_board.cpp
- * @author Maximilien Naveau (maximilien.naveau@gmail.com)
- * @brief 
- * @version 0.1
- * @date 2018-11-29
- * 
- * @copyright Copyright (c) 2018
- * 
+ * @copyright Copyright (c) 2018-2020, New York University and Max Planck Gesellschaft, License BSD-3-Clause
  */
 
 #include <atomic>
