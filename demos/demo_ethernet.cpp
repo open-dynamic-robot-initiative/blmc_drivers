@@ -12,7 +12,7 @@
 /**
  * @brief This boolean is here to kill cleanly the application upon ctrl+c
  */
-std::atomic_bool StopDemos (false);
+std::atomic_bool g_stop_demo (false);
 
 /**
  * @brief This function is the callback upon a ctrl+c call from the terminal.
@@ -20,7 +20,7 @@ std::atomic_bool StopDemos (false);
  * @param s 
  */
 void my_handler(int){
-  StopDemos = true;
+  g_stop_demo = true;
   printf("Stopping demo.\n");
 }
 
@@ -46,7 +46,7 @@ int main(int argc, char **argv)
     sigemptyset(&sigIntHandler.sa_mask);
     sigIntHandler.sa_flags = 0;
     sigaction(SIGINT, &sigIntHandler, NULL);
-    StopDemos = false;
+    g_stop_demo = false;
 
     // Number of udriver plugged
     int nb_udrivers = 6;
@@ -97,7 +97,7 @@ int main(int argc, char **argv)
     rt_printf("loops have started \n");
 
     // Wait until the application is killed.
-    while(!StopDemos)
+    while(!g_stop_demo)
     {
         real_time_tools::Timer::sleep_sec(0.01);
     }
