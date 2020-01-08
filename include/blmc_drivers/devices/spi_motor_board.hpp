@@ -1,12 +1,12 @@
 /**
- * @file ethernet_wifi_motor_board.hpp
+ * @file spi_motor_board.hpp
  * @author Maximilien Naveau (maximilien.naveau@gmail.com)
  * @brief Interface for the master board designed by Thomas Floyols
  * https://github.com/open-dynamic-robot-initiative/master-board
  * @version 0.1
  * @date 2019-11-14
  * 
- * @copyright Copyright (c) 2019
+ * @copyright Copyright (c) 2019-2020, New York University and Max Planck Gesellshaft.
  * 
  */
 

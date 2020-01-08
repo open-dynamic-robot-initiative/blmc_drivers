@@ -1,7 +1,7 @@
 /**
  * @file motor.hpp
  * @license License BSD-3-Clause
- * @copyright Copyright (c) 2019, New York University and Max Planck Gesellshaft.
+ * @copyright Copyright (c) 2019-2020, New York University and Max Planck Gesellshaft.
  * @date 2019-07-11
  */
 
