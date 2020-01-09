@@ -19,8 +19,6 @@
 #include "blmc_drivers/devices/can_bus.hpp"
 #include "blmc_drivers/devices/device_interface.hpp"
 
-namespace rt = real_time_tools;
-
 namespace blmc_drivers
 {
 
@@ -219,7 +217,7 @@ public:
     /**
      * @brief A useful shortcut
      */
-    typedef rt::ThreadsafeTimeseries<double> ScalarTimeseries;
+    typedef real_time_tools::ThreadsafeTimeseries<double> ScalarTimeseries;
     /**
      * @brief A useful shortcut
      */
@@ -227,15 +225,15 @@ public:
     /**
      * @brief A useful shortcut
      */
-    typedef rt::ThreadsafeTimeseries<Index> IndexTimeseries;
+    typedef real_time_tools::ThreadsafeTimeseries<Index> IndexTimeseries;
     /**
      * @brief A useful shortcut
      */
-    typedef rt::ThreadsafeTimeseries<MotorBoardStatus> StatusTimeseries;
+    typedef real_time_tools::ThreadsafeTimeseries<MotorBoardStatus> StatusTimeseries;
     /**
      * @brief A useful shortcut
      */
-    typedef rt::ThreadsafeTimeseries<MotorBoardCommand> CommandTimeseries;
+    typedef real_time_tools::ThreadsafeTimeseries<MotorBoardCommand> CommandTimeseries;
     /**
      * @brief A useful shortcut
      */
@@ -696,7 +694,7 @@ private:
      * @brief This is the thread object that allow to spwan a real-time thread
      * or not dependening on the current OS.
      */
-    rt::RealTimeThread rt_thread_;
+    real_time_tools::RealTimeThread rt_thread_;
 
 };
 
