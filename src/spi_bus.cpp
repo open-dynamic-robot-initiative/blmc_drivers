@@ -30,7 +30,7 @@ SpiBus::SpiBus(
   main_board_interface_ = main_board_interface;
   nb_udrivers_ = nb_udrivers;
   history_length_ = history_length;
-  
+
   // get the udriver from its index:
   assert(N_SLAVES >= nb_udrivers_ && "The number of controlled udriver is not valid.");
 
@@ -142,8 +142,8 @@ void SpiBus::set_control(const size_t udriver_id, const double& control,
     control_[udriver_id * MotorBoardInterface::ControlIndex::control_count +
              index]->append(control);
 }
-    
-void SpiBus::set_command(const size_t udriver_id, 
+
+void SpiBus::set_command(const size_t udriver_id,
                          const MotorBoardCommand& command)
 {
     command_[udriver_id]->append(command);
@@ -240,7 +240,7 @@ void SpiBus::send_newest_command()
                 command_content == MotorBoardCommand::ENABLE ?
                     udriver.EnablePositionRolloverError() :
                     udriver.DisablePositionRolloverError();
-                break;        
+                break;
             default:
                 throw std::runtime_error("SpiBus::send_if_input_changed:"
                                         " Error cannot send unkown command");
@@ -264,7 +264,7 @@ void SpiBus::send_newest_controls()
             control_[i]->newest_timeindex();
 
         double control = (*control_[i])[timeindex];
-        
+
         main_board_interface_->motors[i].SetCurrentReference(control);
         control_[i]->tag(timeindex);
         sent_control_[i]->append(control);
@@ -275,16 +275,24 @@ void SpiBus::send_newest_controls()
 
 bool SpiBus::is_ready()
 {
+    static int c = 0;
+    c += 1;
+
     // check if the motors and if the udriver are enabled and ready.
     bool is_hardware_ready = true;
+    bool is_board_ready = true;
     for(size_t i = 0 ; i < nb_udrivers_ ; ++i)
     {
         MotorDriver& udriver = main_board_interface_->motor_drivers[i];
-        is_hardware_ready = is_hardware_ready &&
-                            udriver.motor1->IsEnabled() &&
-                            udriver.motor2->IsEnabled() &&
-                            udriver.motor1->IsReady() &&
-                            udriver.motor2->IsReady();
+        is_board_ready = udriver.motor1->IsEnabled() &&
+            udriver.motor2->IsEnabled() &&
+            udriver.motor1->IsReady() &&
+            udriver.motor2->IsReady();
+        is_hardware_ready = is_hardware_ready && is_board_ready;
+
+        // if (c % 1000 == 0 ) {
+        //     std::cout << "Board init:" << i << " ready=" << is_board_ready << std::endl;
+        // }
     }
     return is_hardware_ready;
 }
@@ -325,7 +333,7 @@ void SpiBus::loop()
     {
         // This will read the last incomming packet and update all sensor fields.
         main_board_interface_->ParseSensorData();
-    
+
         for(size_t i = 0 ; i < nb_udrivers_ ; ++i)
         {
             MotorDriver& udriver = main_board_interface_->motor_drivers[i];
@@ -373,7 +381,7 @@ void SpiBus::loop()
             status.error_code     = udriver.error_code;
             status_[i]->append(status);
         }
-    
+
         if(!is_ready() || motors_are_paused_)
         {
             for(size_t i = 0 ; i < nb_udrivers_ ; ++i)

@@ -42,7 +42,7 @@ if(Xenomai_FOUND)
   set(catkin_depends
     ${catkin_depends}
     Xenomai
-  )  
+  )
 endif()
 
 ######################################################
@@ -90,6 +90,7 @@ set(blmc_drivers_src
   src/spi_bus.cpp
   src/spi_motor_board.cpp
   src/motor.cpp
+  src/serial_reader.cpp
 )
 # if xenomai is found we need to add the definition of the
 # realtime specific functions
@@ -106,7 +107,7 @@ endif()
 add_library(blmc_drivers SHARED ${blmc_drivers_src})
 
 # link the catkin dependencies
-target_link_libraries(blmc_drivers ${catkin_LIBRARIES})
+target_link_libraries(blmc_drivers serial ${catkin_LIBRARIES})
 
 # if on ubuntu based OS we link to the rt and pthread packages
 if(NOT ${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
