@@ -5,7 +5,7 @@
  * Date: 30 January 2020
  */
 
-int ESTOP_PIN = 2
+int ESTOP_PIN = 2;
 
 void setup() {
   pinMode(ESTOP_PIN, INPUT);

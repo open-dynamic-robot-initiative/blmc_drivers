@@ -20,8 +20,8 @@ namespace blmc_drivers
 
 SerialReader::SerialReader(const std::string &serial_port, const int &num_values)
 {
-    if (num_values != 4) {
-        throw std::invalid_argument("Only reading of 4 values allowed.");
+    if (num_values != 5) {
+        throw std::invalid_argument("Only reading of 5 values allowed.");
     }
 
     std::string serial_port_try;
@@ -86,7 +86,7 @@ void SerialReader::loop()
     int i = 0;
     int j = 0;
 
-    int a0, a1, a2, a3;
+    int a0, a1, a2, a3, a4;
 
     const int buffer_size = 128;
     char buffer[buffer_size];
@@ -113,12 +113,13 @@ void SerialReader::loop()
 
                 buffer[i] = '\0';
                 // std::cout << buffer << std::endl;
-                if (sscanf(buffer, "%d %d %d %d", &a0, &a1, &a2, &a3) == 4) {
+                if (sscanf(buffer, "%d %d %d %d %d", &a0, &a1, &a2, &a3, &a4) == 5) {
                     mutex_.lock();
                     latest_values_[0] = a0;
                     latest_values_[1] = a1;
                     latest_values_[2] = a2;
                     latest_values_[3] = a3;
+                    latest_values_[4] = a4;
                     new_data_counter_ += 1;
                     mutex_.unlock();
                 } else {
