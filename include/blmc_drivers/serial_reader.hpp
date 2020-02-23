@@ -15,12 +15,10 @@
 #include <unistd.h>
 #include <vector>
 
-#include <libserial/SerialStream.h>
 #include "real_time_tools/thread.hpp"
 
 namespace blmc_drivers
 {
-using namespace LibSerial;
 
 class SerialReader
 {
@@ -75,7 +73,7 @@ private:
     /**
      * @brief Holds the device serial port.
      */
-    SerialStream serial_stream_;
+    int fd_;
 
     /**
      * @brief If false, the communication is workinng as expected.

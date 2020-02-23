@@ -10,8 +10,15 @@
 
 #include "blmc_drivers/serial_reader.hpp"
 #include <stdexcept>
+#include <errno.h>
+#include <fcntl.h>
+#include <string.h>
+#include <termios.h>
+#include <unistd.h>
 
-
+#include <iostream>
+#include <unistd.h>
+#include <fstream>
 
 namespace rt = real_time_tools;
 
@@ -20,10 +27,6 @@ namespace blmc_drivers
 
 SerialReader::SerialReader(const std::string &serial_port, const int &num_values)
 {
-    if (num_values != 5) {
-        throw std::invalid_argument("Only reading of 5 values allowed.");
-    }
-
     std::string serial_port_try;
     for (int i=0; i < 4; i++) {
         // HACK: Ignore the provided serial port and
@@ -38,39 +41,29 @@ SerialReader::SerialReader(const std::string &serial_port, const int &num_values
             has_error_ = true;
             return;
         }
-        try {
-            std::cout << "Try to open serial port at " << serial_port_try << std::endl;
-            serial_stream_.Open(serial_port_try);
+        std::cout << "Try to open serial port at " << serial_port_try << std::endl;
+        fd_ = open(serial_port_try.c_str(), O_RDWR | O_NOCTTY | O_NDELAY);
+        if (fd_ != -1) {
             std::cout << "Opened serial port at " << serial_port_try << std::endl;
             break;
-        } catch (const OpenFailed&) {
-            serial_stream_.Close();
         }
     }
 
-    // std::cout << "Attempt to open serial port " << serial_port << std::endl;
-    // try {
-    //     serial_stream_.Open(serial_port);
-    // } catch (const OpenFailed&) {
-    //     has_error_ = true;
-    //     std::cerr << "Unable to open serial port";
-    //     return;
-    // }
+    struct termios options;
 
-    // Set the baud rate of the serial port.
-    serial_stream_.SetBaudRate(BaudRate::BAUD_115200) ;
+    fcntl(fd_, F_SETFL, FNDELAY);                    // Open the device in nonblocking mode
 
-    // Set the number of data bits.
-    serial_stream_.SetCharacterSize(CharacterSize::CHAR_SIZE_8) ;
-
-    // Turn off hardware flow control.
-    serial_stream_.SetFlowControl(FlowControl::FLOW_CONTROL_NONE) ;
-
-    // Disable parity.
-    serial_stream_.SetParity(Parity::PARITY_NONE) ;
-
-    // Set the number of stop bits.
-    serial_stream_.SetStopBits(StopBits::STOP_BITS_1) ;
+    // Set parameters
+    tcgetattr(fd_, &options);                        // Get the current options of the port
+    bzero(&options, sizeof(options));               // Clear all the options
+    speed_t         Speed = B115200;
+    cfsetispeed(&options, Speed);                   // Set the baud rate at 115200 bauds
+    cfsetospeed(&options, Speed);
+    options.c_cflag |= ( CLOCAL | CREAD |  CS8);    // Configure the device : 8 bits, no parity, no control
+    options.c_iflag |= ( IGNPAR | IGNBRK );
+    options.c_cc[VTIME]=0;                          // Timer unused
+    options.c_cc[VMIN]=0;                           // At least on character before satisfy reading
+    tcsetattr(fd_, TCSANOW, &options);               // Activate the settings
 
     latest_values_.resize(num_values);
 
@@ -86,53 +79,45 @@ void SerialReader::loop()
     int i = 0;
     int j = 0;
 
-    int a0, a1, a2, a3, a4;
-
-    const int buffer_size = 128;
+    int byte_read;
+    int buffer_size = 128;
     char buffer[buffer_size];
+    char line[buffer_size];
+    int line_index = 0;
 
-    // TODO: Convert this to `SerialPort.ReadLine()`.
-
-    // Wait for data to be available at the serial port.
-    while(serial_stream_.rdbuf()->in_avail() == 0) {
-        usleep(1000);
-    }
-
+    static int c = 0;
     is_active_ = true;
     while (is_loop_active_) {
-        // Keep reading data from serial port and print it to the screen.
-        while(serial_stream_.IsDataAvailable())
-        {
-            // Variable to store data coming from the serial port.
-            char data_byte ;
+        int byte_consumed = 0;
+        byte_read = read(fd_, buffer, buffer_size);
+        while (byte_consumed < byte_read) {
+            line[line_index++] = buffer[byte_consumed++];
+            if (buffer[byte_consumed - 1] == '\n') {
+                // Ignore the "\r\n" in the string.
+                line[line_index - 1] = '\0';
+                line[line_index - 2] = '\0';
+                line_index -= 2;
 
-            // Read a single byte of data from the serial port.
-            serial_stream_.get(data_byte) ;
-
-            if (data_byte == '\n') {
-
-                buffer[i] = '\0';
-                // std::cout << buffer << std::endl;
-                if (sscanf(buffer, "%d %d %d %d %d", &a0, &a1, &a2, &a3, &a4) == 5) {
-                    mutex_.lock();
-                    latest_values_[0] = a0;
-                    latest_values_[1] = a1;
-                    latest_values_[2] = a2;
-                    latest_values_[3] = a3;
-                    latest_values_[4] = a4;
-                    new_data_counter_ += 1;
-                    mutex_.unlock();
-                } else {
-                    std::cout << "Failed to read all four numbers." << std::endl;
+                // Read the actual numbers from the line.
+                int bytes_scanned_total = 0;
+                int bytes_scanned;
+                int number;
+                mutex_.lock();
+                for (int i = 0; i < latest_values_.size(); i++) {
+                    sscanf(line + bytes_scanned_total, "%d %n", &number, &bytes_scanned);
+                    if (bytes_scanned_total >= line_index) {
+                        break;
+                    }
+                    bytes_scanned_total += bytes_scanned;
+                    latest_values_[i] = number;
                 }
+                new_data_counter_ += 1;
+                mutex_.unlock();
 
-                i = 0;
-            } else {
-                buffer[i] = data_byte;
-                i++;
+                line_index = 0;
             }
         }
-        usleep(100) ;
+        usleep(100);
     }
 }
 
@@ -140,7 +125,7 @@ SerialReader::~SerialReader()
 {
     is_loop_active_ = false;
     rt_thread_.join();
-    serial_stream_.Close();
+    close(fd_);
 }
 
 int SerialReader::fill_vector(std::vector<int>& values)
