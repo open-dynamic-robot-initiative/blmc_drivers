@@ -42,7 +42,7 @@ if(Xenomai_FOUND)
   set(catkin_depends
     ${catkin_depends}
     Xenomai
-  )  
+  )
 endif()
 
 ######################################################
@@ -90,6 +90,7 @@ set(blmc_drivers_src
   src/spi_bus.cpp
   src/spi_motor_board.cpp
   src/motor.cpp
+  src/serial_reader.cpp
 )
 # if xenomai is found we need to add the definition of the
 # realtime specific functions
