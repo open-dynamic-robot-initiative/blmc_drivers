@@ -276,10 +276,6 @@ inline void send_to_can_device(int fd, const void *buf, size_t len,
                       << "been attempting to send at a rate which is too "
                       << "high. We keep trying" << std::flush;
         }
-        else
-        {
-            std::cout << "." << std::flush;
-        }
 
         real_time_tools::Timer::sleep_ms(0.1);
     }
