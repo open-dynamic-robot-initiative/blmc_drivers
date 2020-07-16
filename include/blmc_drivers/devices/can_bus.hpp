@@ -1,7 +1,7 @@
 /**
  * @file can_bus.hpp
  * @license License BSD-3-Clause
- * @copyright Copyright (c) 2019, New York University and Max Planck Gesellshaft.
+ * @copyright Copyright (c) 2019, New York University and Max Planck Gesellschaft.
  * @date 2019-07-11
  */
 
