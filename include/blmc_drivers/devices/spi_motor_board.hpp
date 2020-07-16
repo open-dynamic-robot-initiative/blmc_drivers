@@ -6,7 +6,7 @@
  * @version 0.1
  * @date 2019-11-14
  * 
- * @copyright Copyright (c) 2019-2020, New York University and Max Planck Gesellshaft.
+ * @copyright Copyright (c) 2019-2020, New York University and Max Planck Gesellschaft.
  * 
  */
 
