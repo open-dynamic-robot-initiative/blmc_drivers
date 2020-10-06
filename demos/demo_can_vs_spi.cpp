@@ -6,6 +6,8 @@
 
 #include <array>
 #include <deque>
+#include <iostream>
+#include <fstream>
 
 #include "blmc_drivers/devices/analog_sensor.hpp"
 #include "blmc_drivers/devices/can_bus.hpp"
@@ -223,12 +225,32 @@ int main(int argc, char **argv)
     real_time_tools::RealTimeThread control_thread;
     control_thread.create_realtime_thread(&control_loop, &hardware);
 
-    // start real-time printing loop -------------------------------------------
-    real_time_tools::RealTimeThread printing_thread;
-    printing_thread.create_realtime_thread(&printing_loop, &hardware);
+    // start printing loop -------------------------------------------
+    std::thread printing_thread(&printing_loop, &hardware);
 
     rt_printf("control loop started \n");
+    fflush(stdout);
     control_thread.join();
     printing_thread.join();
+
+    rt_printf("control loop stopped \n");
+    rt_printf("logging data \n");
+    fflush(stdout);
+
+    std::ofstream myfile;
+    myfile.open ("/tmp/can_velocity.dat");
+    for(unsigned int i=0 ; i<LOG_SIZE ; ++i)
+    {
+        myfile << i << " " << hardware.can_velocity[i] << std::endl;
+    }
+    myfile.close();
+
+    myfile.open ("/tmp/spi_velocity.dat");
+    for(unsigned int i=0 ; i<LOG_SIZE ; ++i)
+    {
+        myfile << i << " " << hardware.can_velocity[i] << std::endl;
+    }
+    myfile.close();
+
     return 0;
 }
