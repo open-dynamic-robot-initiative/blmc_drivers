@@ -159,6 +159,7 @@ add_demo(demo_1_motor_print_everything)
 add_demo(demo_1_motor)
 add_demo(demo_8_motors)
 add_demo(demo_ethernet)
+add_demo(demo_can_vs_spi)
 
 ##########################
 # building documentation #
