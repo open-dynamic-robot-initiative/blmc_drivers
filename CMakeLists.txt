@@ -1,152 +1,118 @@
-######################
-# set up the project #
-######################
-cmake_minimum_required(VERSION 2.8)
+#
+# Copyright (c) 2019, New York University and Max Planck Gesellschaft.
+#
+# License BSD-3 clause
+#
+
+#
+# set up the project
+#
+cmake_minimum_required(VERSION 3.10.2)
 
 project(blmc_drivers)
 
-# required to use std::shared_ptr in code and to link the python bindings
-if(NOT ${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
-  set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wl,--no-as-needed")
+# Using C++17
+if(NOT CMAKE_C_STANDARD)
+  set(CMAKE_C_STANDARD 99)
 endif()
-set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -Wall -Wextra")
+if(NOT CMAKE_CXX_STANDARD)
+  set(CMAKE_CXX_STANDARD 17)
+endif()
 
-# ensuring path to libraries are set during install
-set(CMAKE_SKIP_BUILD_RPATH  FALSE)
-set(CMAKE_BUILD_WITH_INSTALL_RPATH FALSE)
-set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
-set(CMAKE_INSTALL_RPATH ${CMAKE_INSTALL_PREFIX}/lib)
+#
+# Dependencies
+#
 
-############################
-# Search for dependencies. #
-############################
+# Depend on ament macros.
+find_package(ament_cmake REQUIRED)
 
-set(CATKIN_PKGS ${CATKIN_PKGS}
-  mpi_cmake_modules
-  real_time_tools
-  master_board_sdk_catkin
-)
-find_package(catkin REQUIRED COMPONENTS ${CATKIN_PKGS})
-
-# Get eigen3
-search_for_eigen()
-
-# check for xenomai as these drivers are xenomai compatible
+# Usual dependencies.
+find_package(mpi_cmake_modules REQUIRED)
+find_package(real_time_tools REQUIRED)
+find_package(master_board_sdk REQUIRED CONFIG)
+find_package(Eigen3 REQUIRED)
+find_package(rt REQUIRED)
+find_package(Threads REQUIRED)
+# Check for xenomai as these drivers are xenomai compatible.
 find_package(Xenomai QUIET)
 
-# set the catkin dependencies
-set(catkin_depends
-  ${CATKIN_PKGS}
-)
-if(Xenomai_FOUND)
-  set(catkin_depends
-    ${catkin_depends}
-    Xenomai
-  )
-endif()
+# Export de dependencies.
+ament_export_dependencies(real_time_tools master_board_sdk Eigen3)
 
-######################################################
-# define the include directory of all ${CATKIN_PKGS} #
-######################################################
-include_directories(
-    ${PROJECT_SOURCE_DIR}/include
-    ${catkin_INCLUDE_DIRS}
-    ${Eigen_INCLUDE_DIRS}
-)
+# Prepare the final export.
+set(all_targets)
+set(all_target_exports)
+
+#
+# Define the include directory of all ${CATKIN_PKGS}.
+#
 
 if(Xenomai_FOUND)
   add_definitions(${Xenomai_DEFINITIONS})
-  include_directories(
-    ./include
-    ./new_api
-    ${Xenomai_INCLUDE_DIR}
-  )
 endif()
 
-
-##########################################
-# export the package as a catkin package #
-##########################################
-set(catkin_export_include_dirs include)
-if(Xenomai_FOUND)
-  set(catkin_export_include_dirs ${catkin_export_include_dirs} ${Xenomai_INCLUDE_DIR})
-endif(Xenomai_FOUND)
-
-catkin_package(
-  INCLUDE_DIRS include ${catkin_export_include_dirs}
-  LIBRARIES blmc_drivers
-  CATKIN_DEPENDS ${catkin_depends}
-)
-
-
-########################################################
-# manage the creation of the libraries and executables #
-########################################################
+#
+# Manage the creation of the library.
+#
 
 set(blmc_drivers_src
-  src/analog_sensors.cpp
-  src/can_bus.cpp
-  src/motor_board.cpp
-  src/spi_bus.cpp
-  src/spi_motor_board.cpp
-  src/motor.cpp
-  src/serial_reader.cpp
-)
-# if xenomai is found we need to add the definition of the
-# realtime specific functions
-if(Xenomai_FOUND)
-  set(blmc_drivers_src
-    ${blmc_drivers_src}
-    src/can.c
-    src/blmc_can.c
-    src/optoforce_can.c
-  )
-endif()
+    src/analog_sensors.cpp
+    src/can_bus.cpp
+    src/motor_board.cpp
+    src/spi_bus.cpp
+    src/spi_motor_board.cpp
+    src/motor.cpp
+    src/serial_reader.cpp)
 
-# create the library
+# Create the library.
 add_library(blmc_drivers SHARED ${blmc_drivers_src})
 
-# link the catkin dependencies
-target_link_libraries(blmc_drivers ${catkin_LIBRARIES})
+# Add the include dependencies.
+target_include_directories(
+  ${PROJECT_NAME} PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+                         $<INSTALL_INTERFACE:include>)
 
-# if on ubuntu based OS we link to the rt and pthread packages
-if(NOT ${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
-  target_link_libraries(blmc_drivers  rt pthread)
-endif(NOT ${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
-
-# if on xenomai we need to link to the real time os librairies
 if(Xenomai_FOUND)
-  target_link_libraries(blmc_drivers
-    ${Xenomai_LIBRARY_XENOMAI}
-    ${Xenomai_LIBRARY_NATIVE}
-    ${Xenomai_LIBRARY_RTDM}
-  )
+  target_include_directories(${PROJECT_NAME} PUBLIC ${Xenomai_INCLUDE_DIR})
 endif()
 
-#########################
-# manage the unit tests #
-#########################
+# Link the catkin dependencies.
+ament_target_dependencies(blmc_drivers rt)
+target_link_libraries(blmc_drivers master_board_sdk::master_board_sdk)
+target_link_libraries(blmc_drivers real_time_tools::real_time_tools)
+target_link_libraries(blmc_drivers Eigen3::Eigen)
+target_link_libraries(blmc_drivers Threads::Threads)
 
+# If on xenomai we need to link to the real time os librairies.
+if(Xenomai_FOUND)
+  target_link_libraries(blmc_drivers ${Xenomai_LIBRARY_XENOMAI}
+                        ${Xenomai_LIBRARY_NATIVE} ${Xenomai_LIBRARY_RTDM})
+endif()
 
+# Export the target.
+ament_export_interfaces(export_${PROJECT_NAME} HAS_LIBRARY_TARGET)
 
-####################
-# manage the demos #
-####################
+# For the installation
+list(APPEND all_targets ${PROJECT_NAME})
+list(APPEND all_target_exports export_${PROJECT_NAME})
 
-include_directories(${PROJECT_SOURCE_DIR}/demos)
+#
+# Manage the demos.
+#
 
 macro(add_demo demo_name)
-  add_executable(${demo_name}
-    demos/pd_control.cpp
-    demos/sine_torque_control.cpp
-    demos/sine_position_control.cpp
-    demos/const_torque_control.cpp
-    demos/${demo_name}.cpp
-  )
-  target_link_libraries(${demo_name}
-    blmc_drivers
-    ${catkin_LIBRARIES}
-  )
+  add_executable(
+    ${demo_name}
+    demos/pd_control.cpp demos/sine_torque_control.cpp
+    demos/sine_position_control.cpp demos/const_torque_control.cpp
+    demos/${demo_name}.cpp)
+  target_include_directories(
+    ${demo_name}
+    PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+           $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/demos>
+           $<INSTALL_INTERFACE:include>)
+  target_link_libraries(${demo_name} blmc_drivers)
+  list(APPEND all_targets ${demo_name})
 endmacro()
 
 add_demo(demo_sine_torque_1_motor)
@@ -160,7 +126,34 @@ add_demo(demo_1_motor)
 add_demo(demo_8_motors)
 add_demo(demo_ethernet)
 
-##########################
-# building documentation #
-##########################
-build_doxygen_documentation()
+#
+# Install the package.
+#
+
+# Install the script to initialize the can bus
+install(
+  FILES ${PROJECT_SOURCE_DIR}/scripts/initialize_can_bus.sh
+  RENAME initialize_can_bus
+  DESTINATION lib/${PROJECT_NAME}
+  PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE)
+
+install(DIRECTORY include/ DESTINATION include)
+
+install(
+  TARGETS ${all_targets}
+  EXPORT ${all_target_exports}
+  LIBRARY DESTINATION lib
+  ARCHIVE DESTINATION lib
+  RUNTIME DESTINATION lib/${PROJECT_NAME}
+  INCLUDES
+  DESTINATION include)
+
+#
+# Building documentation.
+#
+add_documentation()
+
+#
+# Export as an ament_package.
+#
+ament_package()
