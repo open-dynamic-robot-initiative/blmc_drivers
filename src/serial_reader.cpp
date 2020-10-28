@@ -28,7 +28,7 @@ namespace blmc_drivers
 SerialReader::SerialReader(const std::string &serial_port, const int &num_values)
 {
     std::string serial_port_try;
-    for (int i=0; i < 4; i++) {
+    for (int i=0; i < 4; ++i) {
         // HACK: Ignore the provided serial port and
         if (i == 0) {
             serial_port_try = "/dev/ttyACM";
@@ -36,6 +36,8 @@ SerialReader::SerialReader(const std::string &serial_port, const int &num_values
             serial_port_try = "/dev/ttyACM0";
         } else if (i == 2) {
             serial_port_try = "/dev/ttyACM1";
+        } else if (i == 3) {
+            serial_port_try = serial_port;
         } else {
             std::cerr << "Unable to open serial port";
             has_error_ = true;
@@ -76,16 +78,12 @@ SerialReader::SerialReader(const std::string &serial_port, const int &num_values
 
 void SerialReader::loop()
 {
-    int i = 0;
-    int j = 0;
-
     int byte_read;
     int buffer_size = 128;
     char buffer[buffer_size];
     char line[buffer_size];
     int line_index = 0;
 
-    static int c = 0;
     is_active_ = true;
     while (is_loop_active_) {
         int byte_consumed = 0;
@@ -103,7 +101,7 @@ void SerialReader::loop()
                 int bytes_scanned;
                 int number;
                 mutex_.lock();
-                for (int i = 0; i < latest_values_.size(); i++) {
+                for (std::size_t i = 0; i < latest_values_.size(); i++) {
                     sscanf(line + bytes_scanned_total, "%d %n", &number, &bytes_scanned);
                     if (bytes_scanned_total >= line_index) {
                         break;
