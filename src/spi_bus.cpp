@@ -292,10 +292,20 @@ bool SpiBus::is_ready()
 void SpiBus::loop()
 {
     motors_are_paused_ = true;
+    rt::Spinner spinner;
+    spinner.set_period(0.001); // period of 1ms
 
     for(size_t i = 0 ; i < nb_udrivers_ ; ++i)
     {
         MotorDriver& udriver = main_board_interface_->motor_drivers[i];
+        // Set the gains for the PD controller running on the cards.
+		udriver.motor1->set_kp(0);
+		udriver.motor2->set_kp(0);
+		udriver.motor1->set_kd(0);
+		udriver.motor2->set_kd(0);
+        // Set the maximum current controlled by the card.
+		udriver.motor1->set_current_sat(0);
+		udriver.motor2->set_current_sat(0);
         // Initialisation of the udriver, send the init commands
         udriver.motor1->SetCurrentReference(0);
         udriver.motor2->SetCurrentReference(0);
@@ -305,6 +315,11 @@ void SpiBus::loop()
         udriver.SetTimeout(5);
         udriver.Enable();
     }
+
+	while (!main_board_interface_->IsTimeout() && !main_board_interface_->IsAckMsgReceived()) {
+		main_board_interface_->SendInit();
+        spinner.spin();
+	}
 
     // some aliases
     size_t measurement_count = MotorBoardInterface::MeasurementIndex::measurement_count;
@@ -319,9 +334,8 @@ void SpiBus::loop()
     size_t encoder_index_0 = MotorBoardInterface::MeasurementIndex::encoder_index_0;
     size_t encoder_index_1 = MotorBoardInterface::MeasurementIndex::encoder_index_1;
     // receive data from board in a loop ---------------------------------------
-    rt::Spinner spinner;
-    spinner.set_period(0.001); // period of 1ms
-    while(is_loop_active_)
+    
+    while(is_loop_active_ && !main_board_interface_->IsTimeout())
     {
         // This will read the last incomming packet and update all sensor fields.
         main_board_interface_->ParseSensorData();
@@ -388,6 +402,11 @@ void SpiBus::loop()
         }
         spinner.spin();
     }
+
+    if (main_board_interface_->IsTimeout())
+	{
+		printf("Timeout of main_board_interface.\n");
+	}
 }
 
 void SpiBus::wait_until_ready()
