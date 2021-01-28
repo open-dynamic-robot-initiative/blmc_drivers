@@ -62,7 +62,9 @@ set(blmc_drivers_src
     src/spi_bus.cpp
     src/spi_motor_board.cpp
     src/motor.cpp
-    src/serial_reader.cpp)
+    src/serial_reader.cpp
+    src/utils/polynome.cpp
+)
 
 # Create the library.
 add_library(blmc_drivers SHARED ${blmc_drivers_src})
@@ -147,6 +149,25 @@ install(
   RUNTIME DESTINATION lib/${PROJECT_NAME}
   INCLUDES
   DESTINATION include)
+
+
+#
+# Tests
+#
+if (BUILD_TESTING)
+    find_package(ament_cmake_gtest REQUIRED)
+
+    ament_add_gtest(test_polynome
+      tests/test_polynome.cpp
+    )
+    target_include_directories(test_polynome PRIVATE
+        $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
+        $<INSTALL_INTERFACE:include>
+    )
+    target_link_libraries(test_polynome ${PROJECT_NAME})
+
+endif()
+
 
 #
 # Building documentation.
