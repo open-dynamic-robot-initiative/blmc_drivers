@@ -13,7 +13,7 @@
 #include "real_time_tools/iostream.hpp"
 #include "real_time_tools/spinner.hpp"
 
-namespace blmc_robots
+namespace blmc_drivers
 {
 BlmcJointModule::BlmcJointModule(
     std::shared_ptr<blmc_drivers::MotorInterface> motor,
@@ -441,4 +441,4 @@ double BlmcJointModule::get_distance_travelled_during_homing() const
     return homing_state_.end_position - homing_state_.start_position;
 }
 
-}  // namespace blmc_robots
+}  // namespace blmc_drivers

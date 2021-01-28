@@ -10,17 +10,19 @@
 #pragma once
 
 #include <math.h>
-#include <Eigen/Eigen>
 #include <array>
 #include <iostream>
 #include <stdexcept>
 
-#include "blmc_drivers/devices/motor.hpp"
-#include "blmc_robots/common_header.hpp"
-#include "blmc_robots/mathematics/polynome.hpp"
+#include <Eigen/Eigen>
 
-namespace blmc_robots
+#include "blmc_drivers/devices/motor.hpp"
+#include "blmc_drivers/utils/polynome.hpp"
+
+namespace blmc_drivers
 {
+typedef blmc_drivers::MotorInterface::MeasurementIndex mi;
+
 // TODO what is the best scope for those homing-related types?
 
 /**
@@ -788,4 +790,4 @@ private:
     std::array<std::shared_ptr<BlmcJointModule>, COUNT> modules_;
 };
 
-}  // namespace blmc_robots
+}  // namespace blmc_drivers

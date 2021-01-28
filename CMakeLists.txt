@@ -57,6 +57,7 @@ endif()
 
 set(blmc_drivers_src
     src/analog_sensors.cpp
+    src/blmc_joint_module.cpp
     src/can_bus.cpp
     src/motor_board.cpp
     src/spi_bus.cpp
