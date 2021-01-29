@@ -103,4 +103,4 @@ private:
     std::mutex mutex_;
 };
 
-}  // namespace blmc_robots
+}  // namespace blmc_drivers

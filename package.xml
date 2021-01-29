@@ -8,7 +8,7 @@
 
     <name>blmc_drivers</name>
     <version>1.0.0</version>
-    
+
     <description>
         Drivers for BLMC related devices developped in 
         https://github.com/open-dynamic-robot-initiative/ .
@@ -27,6 +27,8 @@
     <depend>Eigen3</depend>
     <depend>rt</depend>
     <depend>Threads</depend>
+
+    <test_depend>ament_cmake_gtest</test_depend>
 
     <export>
         <build_type>ament_cmake</build_type>
