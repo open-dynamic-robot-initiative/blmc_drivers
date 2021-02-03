@@ -107,7 +107,7 @@ void Motor::print() const
     double motor_velocity = std::nan("");
     double motor_encoder_index = std::nan("");
     double motor_sent_current_target = std::nan("");
-    
+
     if(board_->get_status()->length() != 0)
         {motor_board_status = board_->get_status()->newest_element();}
 

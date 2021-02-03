@@ -15,7 +15,6 @@
 #include "master_board_sdk/master_board_interface.h"
 #include "blmc_drivers/devices/motor.hpp"
 #include "real_time_tools/thread.hpp"
-#include "real_time_tools/threadsafe/threadsafe_timeseries.hpp"
 
 #include "blmc_drivers/devices/motor_board.hpp"
 

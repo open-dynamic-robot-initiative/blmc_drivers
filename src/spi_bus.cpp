@@ -185,8 +185,7 @@ void SpiBus::send_newest_command()
 {
     for(size_t i = 0 ; i < nb_udrivers_ ; ++i)
     {
-        MotorInterface::ScalarTimeseries::Index timeindex =
-            command_[i]->newest_timeindex();
+        time_series::Index timeindex = command_[i]->newest_timeindex();
         MotorBoardCommand command = (*command_[i])[timeindex];
         command_[i]->tag(timeindex);
         sent_command_[i]->append(command);
@@ -260,8 +259,7 @@ void SpiBus::send_newest_controls()
                       "but no control has been set\n", i);
             exit(-1);
         }
-        MotorInterface::ScalarTimeseries::Index timeindex =
-            control_[i]->newest_timeindex();
+        time_series::Index timeindex = control_[i]->newest_timeindex();
 
         double control = (*control_[i])[timeindex];
         

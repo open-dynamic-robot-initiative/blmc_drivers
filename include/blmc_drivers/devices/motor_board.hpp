@@ -10,12 +10,11 @@
 #include <memory>
 #include <string>
 
-#include "real_time_tools/timer.hpp"
-#include "real_time_tools/thread.hpp"
+#include <real_time_tools/timer.hpp>
+#include <real_time_tools/thread.hpp>
+#include <time_series/time_series.hpp>
 
 #include "blmc_drivers/utils/os_interface.hpp"
-#include "real_time_tools/threadsafe/threadsafe_object.hpp"
-#include "real_time_tools/threadsafe/threadsafe_timeseries.hpp"
 #include "blmc_drivers/devices/can_bus.hpp"
 #include "blmc_drivers/devices/device_interface.hpp"
 
@@ -244,27 +243,27 @@ public:
      * @brief Destroy the MotorBoardInterface object
      */
     virtual ~MotorBoardInterface() {}
-    
+
     /**
      * @brief A useful shortcut
      */
-    typedef real_time_tools::ThreadsafeTimeseries<double> ScalarTimeseries;
+    typedef time_series::TimeSeries<double> ScalarTimeseries;
     /**
      * @brief A useful shortcut
      */
-    typedef ScalarTimeseries::Index Index;
+    typedef time_series::Index Index;
     /**
      * @brief A useful shortcut
      */
-    typedef real_time_tools::ThreadsafeTimeseries<Index> IndexTimeseries;
+    typedef time_series::TimeSeries<Index> IndexTimeseries;
     /**
      * @brief A useful shortcut
      */
-    typedef real_time_tools::ThreadsafeTimeseries<MotorBoardStatus> StatusTimeseries;
+    typedef time_series::TimeSeries<MotorBoardStatus> StatusTimeseries;
     /**
      * @brief A useful shortcut
      */
-    typedef real_time_tools::ThreadsafeTimeseries<MotorBoardCommand> CommandTimeseries;
+    typedef time_series::TimeSeries<MotorBoardCommand> CommandTimeseries;
     /**
      * @brief A useful shortcut
      */

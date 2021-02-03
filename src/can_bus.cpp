@@ -43,7 +43,7 @@ void CanBus::send_if_input_changed()
 {
     if(input_->has_changed_since_tag())
     {
-        CanframeTimeseries::Index
+        time_series::Index
                 timeindex_to_send = input_->newest_timeindex();
         CanBusFrame frame_to_send = (*input_)[timeindex_to_send];
         input_->tag(timeindex_to_send);

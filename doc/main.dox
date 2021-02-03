@@ -16,8 +16,8 @@ which takes an index argument).
 - a send_if_input_changed() function which will send the inputs to the
 device if any of them have changed.
 - functions to access the current inputs and outputs, as well as the
-inputs which have been sent to the device. rather than just returning
-the latest elements, these function should return a ThreadsafeTimeseries
+inputs which have been sent to the device. Rather than just returning
+the latest elements, these function should return a time series
 of these objects, such that the user can synchronize (e.g. wait for
 the next element or step through them one by one such that none of them is
 missed)

@@ -77,7 +77,7 @@ void CanBusMotorBoard::send_if_input_changed()
 void CanBusMotorBoard::wait_until_ready()
 {
     rt_printf("waiting for board and motors to be ready \n");
-    real_time_tools::ThreadsafeTimeseries<>::Index time_index = status_->newest_timeindex();
+    time_series::Index time_index = status_->newest_timeindex();
     bool is_ready = false;
     while(!is_ready)
     {

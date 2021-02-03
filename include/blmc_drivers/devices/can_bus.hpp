@@ -10,13 +10,14 @@
 #include <memory>
 #include <string>
 
-#include "real_time_tools/timer.hpp"
-#include "real_time_tools/thread.hpp"
-#include "real_time_tools/iostream.hpp"
-#include "real_time_tools/spinner.hpp"
+#include <real_time_tools/timer.hpp>
+#include <real_time_tools/thread.hpp>
+#include <real_time_tools/iostream.hpp>
+#include <real_time_tools/spinner.hpp>
+#include <real_time_tools/threadsafe/threadsafe_object.hpp>
 
-#include "real_time_tools/threadsafe/threadsafe_object.hpp"
-#include "real_time_tools/threadsafe/threadsafe_timeseries.hpp"
+#include <time_series/time_series.hpp>
+
 #include "blmc_drivers/utils/os_interface.hpp"
 #include "blmc_drivers/devices/device_interface.hpp"
 
@@ -95,7 +96,7 @@ public:
     /**
      * @brief CanframeTimeseries is a simple sohortcut
      */
-    typedef real_time_tools::ThreadsafeTimeseries<CanBusFrame> CanframeTimeseries;
+    typedef time_series::TimeSeries<CanBusFrame> CanframeTimeseries;
 
     /**
      * getters
@@ -283,17 +284,17 @@ private:
      * @brief input_ is a list of time stamped frame to be send to the can
      * network.
      */
-    std::shared_ptr<real_time_tools::ThreadsafeTimeseries<CanBusFrame> > input_;
+    std::shared_ptr<time_series::TimeSeries<CanBusFrame> > input_;
 
     /**
      * @brief sent_inupt_ is the list of the input already sent to the network.
      */
-    std::shared_ptr<real_time_tools::ThreadsafeTimeseries<CanBusFrame> > sent_input_;
+    std::shared_ptr<time_series::TimeSeries<CanBusFrame> > sent_input_;
 
     /**
      * @brief output_ is the list of the frames received from the can network.
      */
-    std::shared_ptr<real_time_tools::ThreadsafeTimeseries<CanBusFrame> > output_;
+    std::shared_ptr<time_series::TimeSeries<CanBusFrame> > output_;
 
     /**
      * @brief This boolean makes sure that the loop is not active upon

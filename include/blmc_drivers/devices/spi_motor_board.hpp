@@ -14,7 +14,6 @@
 
 #include "blmc_drivers/devices/spi_bus.hpp"
 #include "real_time_tools/thread.hpp"
-#include "real_time_tools/threadsafe/threadsafe_timeseries.hpp"
 
 #include "blmc_drivers/devices/motor_board.hpp"
 
