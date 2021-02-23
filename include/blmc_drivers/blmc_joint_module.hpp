@@ -41,6 +41,18 @@ enum class HomingReturnCode
 };
 
 /**
+ * @brief Possible homing modes. Sets zero position relative
+ * to end-stop position
+ */
+enum class HomingMode
+{
+    //! Set zero position relative to next index position
+    AT_NEXT_INDEX = 0,
+    //! Set zero position relative to end-stop position
+    AT_ENDSTOP,
+};
+
+/**
  * @brief Possible return values of the go_to
  */
 enum class GoToReturnCode
@@ -74,6 +86,8 @@ struct HomingState
     double target_position_rad = 0.0;
     //! Current status of the homing procedure.
     HomingReturnCode status = HomingReturnCode::NOT_INITIALIZED;
+    //! Homing mode
+    HomingMode mode = HomingMode::AT_NEXT_INDEX;
 
     //! Position at which homing is started
     double start_position;
@@ -230,6 +244,18 @@ public:
     bool calibrate(double& angle_zero_to_index,
                    double& index_angle,
                    bool mechanical_calibration = false);
+
+    /**
+     * @brief Initialize the homing procedure for homing_at_endstop.
+     *
+     * This has to be called before update_homing().
+     *
+     * @param joint_id ID of the joint.  This is only used for debug prints.
+     * @param home_offset_rad  Offset from home position to zero position.
+     *     Unit: radian.
+     */
+    void init_homing_at_endstop(int joint_id,
+                                double home_offset_rad);
 
     /**
      * @brief Initialize the homing procedure.
@@ -625,7 +651,7 @@ public:
     }
 
     /**
-     * @brief Perform homing for all joints.
+     * @brief Checks the status of the homing procedure
      *
      * If one of the joints fails, the complete homing fails.  Otherwise it
      * loops until all joints finished.
@@ -639,20 +665,8 @@ public:
      * @return Final status of the homing procedure (either SUCCESS if all
      *     joints succeeded or the return code of the first joint that failed).
      */
-    HomingReturnCode execute_homing(
-        double search_distance_limit_rad,
-        Vector home_offset_rad,
-        Vector profile_step_size_rad = Vector::Constant(0.001))
+    HomingReturnCode check_homing_status()
     {
-        // Initialise homing for all joints
-        for (size_t i = 0; i < COUNT; i++)
-        {
-            modules_[i]->init_homing((int)i,
-                                     search_distance_limit_rad,
-                                     home_offset_rad[i],
-                                     profile_step_size_rad[i]);
-        }
-
         // run homing for all joints until all of them are done
         real_time_tools::Spinner spinner;
         spinner.set_period(0.001);  // TODO magic number
@@ -693,6 +707,68 @@ public:
         } while (homing_status == HomingReturnCode::RUNNING);
 
         return homing_status;
+    }
+
+    /**
+     * @brief Perform homing for all joints at endstops.
+     *
+     * If one of the joints fails, the complete homing fails.  Otherwise it
+     * loops until all joints finished.
+     * If a joint is finished while others are still running, it is held at the
+     * home position.
+     *
+     * See BlmcJointModule::update_homing for details on the homing procedure.
+     *
+     * See BlmcJointModule::init_homing_at_endstop for description of the arguments.
+     *
+     * @return Final status of the homing procedure (either SUCCESS if all
+     *     joints succeeded or the return code of the first joint that failed).
+     */
+    HomingReturnCode execute_homing_at_endstop(
+        Vector home_offset_rad)
+    {
+        // Initialise homing for all joints
+        for (size_t i = 0; i < COUNT; i++)
+        {
+            modules_[i]->init_homing_at_endstop((int)i,
+                                                home_offset_rad[i]);
+        }
+
+        return check_homing_status();
+
+    }
+
+    /**
+     * @brief Perform homing for all joints.
+     *
+     * If one of the joints fails, the complete homing fails.  Otherwise it
+     * loops until all joints finished.
+     * If a joint is finished while others are still running, it is held at the
+     * home position.
+     *
+     * See BlmcJointModule::update_homing for details on the homing procedure.
+     *
+     * See BlmcJointModule::init_homing for description of the arguments.
+     *
+     * @return Final status of the homing procedure (either SUCCESS if all
+     *     joints succeeded or the return code of the first joint that failed).
+     */
+    HomingReturnCode execute_homing(
+        double search_distance_limit_rad,
+        Vector home_offset_rad,
+        Vector profile_step_size_rad = Vector::Constant(0.001))
+    {
+        // Initialise homing for all joints
+        for (size_t i = 0; i < COUNT; i++)
+        {
+            modules_[i]->init_homing((int)i,
+                                     search_distance_limit_rad,
+                                     home_offset_rad[i],
+                                     profile_step_size_rad[i]);
+        }
+
+        return check_homing_status();
+
     }
 
     //! @see BlmcJointModule::get_distance_travelled_during_homing
