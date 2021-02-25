@@ -298,21 +298,13 @@ bool BlmcJointModule::calibrate(double& angle_zero_to_index,
     return true;
 }
 
-void BlmcJointModule::homing_at_current_position(int joint_id,
-                                                 double home_offset_rad)
+void BlmcJointModule::homing_at_current_position(double home_offset_rad)
 {
     // reset the internal zero angle.
     set_zero_angle(0.0);
 
-    // TODO: would be nice if the joint instance had a `name` or `id` and class
-    // level instead of storing it here (to make more useful debug prints).
-    homing_state_.joint_id = joint_id;
-
-    homing_state_.home_offset_rad = home_offset_rad;
-    homing_state_.target_position_rad = get_measured_angle();
-
     // set the zero angle
-    set_zero_angle(homing_state_.target_position_rad - homing_state_.home_offset_rad);
+    set_zero_angle(get_measured_angle() - home_offset_rad);
 
     homing_state_.status = HomingReturnCode::SUCCEEDED;
 }

@@ -234,12 +234,10 @@ public:
     /**
      * @brief Set zero position relative to current position
      *
-     * @param joint_id ID of the joint.  This is only used for debug prints.
      * @param home_offset_rad  Offset from home position to zero position.
      *     Unit: radian.
      */
-    void homing_at_current_position(int joint_id,
-                                    double home_offset_rad);
+    void homing_at_current_position(double home_offset_rad);
 
     /**
      * @brief Initialize the homing procedure.
@@ -642,13 +640,12 @@ public:
      * @return Final status of the homing procedure (since homing happens at current,position,
      * procedure always returns success).
      */
-    HomingReturnCode execute_homing_at_endstop(Vector home_offset_rad)
+    HomingReturnCode execute_homing_at_current_position(Vector home_offset_rad)
     {
         // Initialise homing for all joints
         for (size_t i = 0; i < COUNT; i++)
         {
-            modules_[i]->homing_at_current_position((int)i,
-                                                    home_offset_rad[i]);
+            modules_[i]->homing_at_current_position(home_offset_rad[i]);
         }
 
         return HomingReturnCode::SUCCEEDED;
