@@ -21,9 +21,9 @@ namespace blmc_drivers
 CanBus::CanBus(const std::string& can_interface_name,
         const size_t& history_length)
 {
-    input_ = std::make_shared<CanframeTimeseries>(history_length);
-    sent_input_ = std::make_shared<CanframeTimeseries>(history_length);
-    output_ = std::make_shared<CanframeTimeseries>(history_length);
+    input_ = std::make_shared<CanframeTimeseries>(history_length, 0, false);
+    sent_input_ = std::make_shared<CanframeTimeseries>(history_length, 0, false);
+    output_ = std::make_shared<CanframeTimeseries>(history_length, 0, false);
     name_ = can_interface_name;
 
     can_connection_.set(setup_can(can_interface_name, 0));

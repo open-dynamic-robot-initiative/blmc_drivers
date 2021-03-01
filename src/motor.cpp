@@ -159,7 +159,7 @@ SafeMotor::SafeMotor(
       max_current_target_(max_current_target),
       max_velocity_(max_velocity)
 {
-    current_target_ = std::make_shared<ScalarTimeseries>(history_length);
+    current_target_ = std::make_shared<ScalarTimeseries>(history_length, 0, false);
 }
 
 void SafeMotor::set_current_target(const double& current_target)
