@@ -232,6 +232,14 @@ public:
                    bool mechanical_calibration = false);
 
     /**
+     * @brief Set zero position relative to current position
+     *
+     * @param home_offset_rad  Offset from home position to zero position.
+     *     Unit: radian.
+     */
+    void homing_at_current_position(double home_offset_rad);
+
+    /**
      * @brief Initialize the homing procedure.
      *
      * This has to be called before update_homing().
@@ -622,6 +630,25 @@ public:
         {
             set_position_control_gains(i, kp[i], kd[i]);
         }
+    }
+
+    /**
+     * @brief Perform homing for all joints at endstops.
+     *
+     * See BlmcJointModule::homing_at_current_position for description of the arguments.
+     *
+     * @return Final status of the homing procedure (since homing happens at current,position,
+     * procedure always returns success).
+     */
+    HomingReturnCode execute_homing_at_current_position(Vector home_offset_rad)
+    {
+        // Initialise homing for all joints
+        for (size_t i = 0; i < COUNT; i++)
+        {
+            modules_[i]->homing_at_current_position(home_offset_rad[i]);
+        }
+
+        return HomingReturnCode::SUCCEEDED;
     }
 
     /**

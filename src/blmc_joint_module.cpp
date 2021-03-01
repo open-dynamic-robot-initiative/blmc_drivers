@@ -298,6 +298,17 @@ bool BlmcJointModule::calibrate(double& angle_zero_to_index,
     return true;
 }
 
+void BlmcJointModule::homing_at_current_position(double home_offset_rad)
+{
+    // reset the internal zero angle.
+    set_zero_angle(0.0);
+
+    // set the zero angle
+    set_zero_angle(get_measured_angle() + home_offset_rad);
+
+    homing_state_.status = HomingReturnCode::SUCCEEDED;
+}
+
 void BlmcJointModule::init_homing(int joint_id,
                                   double search_distance_limit_rad,
                                   double home_offset_rad,
