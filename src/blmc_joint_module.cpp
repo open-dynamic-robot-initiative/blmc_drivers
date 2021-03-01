@@ -304,7 +304,7 @@ void BlmcJointModule::homing_at_current_position(double home_offset_rad)
     set_zero_angle(0.0);
 
     // set the zero angle
-    set_zero_angle(get_measured_angle() - home_offset_rad);
+    set_zero_angle(get_measured_angle() + home_offset_rad);
 
     homing_state_.status = HomingReturnCode::SUCCEEDED;
 }
