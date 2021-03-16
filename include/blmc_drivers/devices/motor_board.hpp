@@ -178,11 +178,8 @@ public:
 
     /**
      * @brief Check if the all status are green.
-     * 
-     * @return true 
-     * @return false 
      */
-    bool is_ready()
+    bool is_ready() const
     {
         if(system_enabled &&
            motor1_enabled &&
@@ -197,6 +194,40 @@ public:
         {
             return false;
         }
+    }
+
+    //! @brief Get a human-readable description of the error code.
+    std::string get_error_description() const
+    {
+        std::string error_description;
+        switch (error_code)
+        {
+            case ErrorCodes::NONE:
+                error_description = "No Error";
+                break;
+            case ErrorCodes::ENCODER:
+                error_description = "Encoder Error";
+                break;
+            case ErrorCodes::CAN_RECV_TIMEOUT:
+                error_description = "CAN Receive Timeout";
+                break;
+            case ErrorCodes::CRIT_TEMP:
+                error_description = "Critical Temperature";
+                break;
+            case ErrorCodes::POSCONV:
+                error_description = "Error in SpinTAC Position Convert module";
+                break;
+            case ErrorCodes::POS_ROLLOVER:
+                error_description = "Position Rollover";
+                break;
+            case ErrorCodes::OTHER:
+                error_description = "Other Error";
+                break;
+            default:
+                error_description = "Unknown Error";
+                break;
+        }
+        return error_description;
     }
 };
 

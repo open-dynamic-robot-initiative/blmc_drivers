@@ -100,6 +100,19 @@ list(APPEND all_targets ${PROJECT_NAME})
 list(APPEND all_target_exports export_${PROJECT_NAME})
 
 #
+# Manage exectuables
+#
+
+add_executable(can_encoder_index_test
+    src/programs/can_encoder_index_test.cpp
+)
+target_link_libraries(can_encoder_index_test
+    ${PROJECT_NAME}
+)
+list(APPEND all_targets can_encoder_index_test)
+
+
+#
 # Manage the demos.
 #
 
