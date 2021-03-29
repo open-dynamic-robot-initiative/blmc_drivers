@@ -28,15 +28,15 @@ CanBusMotorBoard::CanBusMotorBoard(
     measurement_  = create_vector_of_pointers<ScalarTimeseries>(
                 measurement_count,
                 history_length);
-    status_       = std::make_shared<StatusTimeseries>(history_length);
+    status_       = std::make_shared<StatusTimeseries>(history_length, 0, false);
     control_      = create_vector_of_pointers<ScalarTimeseries>(
                 control_count,
                 history_length);
-    command_      = std::make_shared<CommandTimeseries>(history_length);
+    command_      = std::make_shared<CommandTimeseries>(history_length, 0, false);
     sent_control_ = create_vector_of_pointers<ScalarTimeseries>(
                 control_count,
                 history_length);
-    sent_command_ = std::make_shared<CommandTimeseries>(history_length);
+    sent_command_ = std::make_shared<CommandTimeseries>(history_length, 0, false);
 
     is_loop_active_ = true;
     rt_thread_.create_realtime_thread(&CanBusMotorBoard::loop, this);
@@ -77,7 +77,7 @@ void CanBusMotorBoard::send_if_input_changed()
 void CanBusMotorBoard::wait_until_ready()
 {
     rt_printf("waiting for board and motors to be ready \n");
-    real_time_tools::ThreadsafeTimeseries<>::Index time_index = status_->newest_timeindex();
+    time_series::Index time_index = status_->newest_timeindex();
     bool is_ready = false;
     while(!is_ready)
     {

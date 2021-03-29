@@ -23,6 +23,7 @@
     <!-- CMake module containing helper to find the OS, boost, python, etc. -->
     <depend>mpi_cmake_modules</depend>
     <depend>real_time_tools</depend>
+    <depend>time_series</depend>
     <depend>master_board_sdk</depend>
     <depend>Eigen3</depend>
     <depend>rt</depend>

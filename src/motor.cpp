@@ -107,7 +107,7 @@ void Motor::print() const
     double motor_velocity = std::nan("");
     double motor_encoder_index = std::nan("");
     double motor_sent_current_target = std::nan("");
-    
+
     if(board_->get_status()->length() != 0)
         {motor_board_status = board_->get_status()->newest_element();}
 
@@ -159,7 +159,7 @@ SafeMotor::SafeMotor(
       max_current_target_(max_current_target),
       max_velocity_(max_velocity)
 {
-    current_target_ = std::make_shared<ScalarTimeseries>(history_length);
+    current_target_ = std::make_shared<ScalarTimeseries>(history_length, 0, false);
 }
 
 void SafeMotor::set_current_target(const double& current_target)

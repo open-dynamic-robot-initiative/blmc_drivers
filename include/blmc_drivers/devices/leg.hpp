@@ -11,7 +11,7 @@
 #include <string>
 #include <map>
 
-#include <real_time_tools/threadsafe/threadsafe_timeseries.hpp>
+#include <time_series/time_series.hpp>
 
 #include <blmc_drivers/devices/motor.hpp>
 #include <blmc_drivers/devices/device_interface.hpp>
@@ -29,8 +29,8 @@ public:
     /**
      * @brief ScalarTimeseries is a simple shortcut for more intelligible code.
      */
-    typedef real_time_tools::ThreadsafeTimeseries<double> ScalarTimeseries;
-    
+    typedef time_series::TimeSeries<double> ScalarTimeseries;
+
     /**
      * @brief This is a shortcut for creating shared pointer in a simpler
      * writting expression.

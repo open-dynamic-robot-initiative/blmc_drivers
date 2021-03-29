@@ -10,10 +10,9 @@
 #include <memory>
 #include <string>
 
-#include "real_time_tools/timer.hpp"
+#include <real_time_tools/timer.hpp>
+#include <time_series/time_series.hpp>
 
-#include "real_time_tools/threadsafe/threadsafe_object.hpp"
-#include "real_time_tools/threadsafe/threadsafe_timeseries.hpp"
 #include "blmc_drivers/devices/motor_board.hpp"
 #include "blmc_drivers/devices/device_interface.hpp"
 
@@ -32,7 +31,7 @@ public:
     /**
      * @brief This is a useful alias.
      */
-    typedef real_time_tools::ThreadsafeTimeseries<double> ScalarTimeseries;
+    typedef time_series::TimeSeries<double> ScalarTimeseries;
     /**
      * @brief This a useful alias for the shared Pointer creation.
      * 
