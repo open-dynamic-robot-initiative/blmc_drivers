@@ -38,7 +38,7 @@ find_package(Threads REQUIRED)
 find_package(Xenomai QUIET)
 
 # Export de dependencies.
-ament_export_dependencies(real_time_tools master_board_sdk Eigen3)
+ament_export_dependencies(real_time_tools time_series master_board_sdk Eigen3)
 
 # Prepare the final export.
 set(all_targets)
