@@ -31,7 +31,7 @@ void loop() {
     Serial.print(analogRead(i));
     Serial.print(" ");
   }
-  Serial.println();
+  Serial.println("0 0 ");
   
   // Slow down the writing a bit.
   delayMicroseconds(500);
