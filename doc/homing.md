@@ -1,4 +1,4 @@
-# Homing (Joint Position Calibration) {#homing}
+# Homing (Joint Position Calibration)
 
 ## What is "Homing" and Why is it Needed?
 
