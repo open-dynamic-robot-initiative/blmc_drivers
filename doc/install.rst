@@ -4,7 +4,7 @@ Build Instructions
 Dependencies
 ------------
 
-We are using colcon_ as build tool and typically use `ros2 run` to execute our
+We are using colcon_ as build tool and typically use ``ros2 run`` to execute our
 applications.  While we are not really depending on any ROS_ packages, this
 means a basic ROS 2 installation is recommended.
 
