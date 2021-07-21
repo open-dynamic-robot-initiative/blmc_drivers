@@ -33,6 +33,12 @@ At the time of writing this README, this is only the case for
 [mw_dual_motor_torque_ctrl](https://github.com/open-dynamic-robot-initiative/mw_dual_motor_torque_ctrl).
 
 
+Build Instructions
+------------------
+
+Please see the [build instructions](doc/install.rst) in the documentation.
+
+
 Links
 -----
 
