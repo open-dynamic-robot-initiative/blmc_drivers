@@ -7,24 +7,23 @@
 <package format="3">
 
     <name>blmc_drivers</name>
-    <version>1.0.0</version>
+    <version>2.0.0</version>
 
     <description>
-        Drivers for BLMC related devices developped in 
+        Drivers for CAN-communication with BLMC related devices developed in
         https://github.com/open-dynamic-robot-initiative/ .
     </description>
 
     <maintainer email="vberenz@tuebingen.mpg.de">Vincent Berenz</maintainer>
+    <maintainer email="felix.widmaier@tuebingen.mpg.de">Felix Widmaier</maintainer>
 
     <license>BSD 3-clause</license>
 
     <buildtool_depend>ament_cmake</buildtool_depend>
 
-    <!-- CMake module containing helper to find the OS, boost, python, etc. -->
     <depend>mpi_cmake_modules</depend>
     <depend>real_time_tools</depend>
     <depend>time_series</depend>
-    <depend>master_board_sdk</depend>
     <depend>Eigen3</depend>
     <depend>rt</depend>
     <depend>Threads</depend>
