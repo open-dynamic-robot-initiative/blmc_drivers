@@ -30,7 +30,6 @@ find_package(ament_cmake REQUIRED)
 find_package(mpi_cmake_modules REQUIRED)
 find_package(real_time_tools REQUIRED)
 find_package(time_series REQUIRED)
-find_package(master_board_sdk REQUIRED CONFIG)
 find_package(Eigen3 REQUIRED)
 find_package(rt REQUIRED)
 find_package(Threads REQUIRED)
@@ -38,15 +37,12 @@ find_package(Threads REQUIRED)
 find_package(Xenomai QUIET)
 
 # Export de dependencies.
-ament_export_dependencies(real_time_tools time_series master_board_sdk Eigen3)
+ament_export_dependencies(real_time_tools time_series Eigen3)
 
 # Prepare the final export.
 set(all_targets)
 set(all_target_exports)
 
-#
-# Define the include directory of all ${CATKIN_PKGS}.
-#
 
 if(Xenomai_FOUND)
   add_definitions(${Xenomai_DEFINITIONS})
@@ -61,8 +57,6 @@ set(blmc_drivers_src
     src/blmc_joint_module.cpp
     src/can_bus.cpp
     src/motor_board.cpp
-    src/spi_bus.cpp
-    src/spi_motor_board.cpp
     src/motor.cpp
     src/serial_reader.cpp
     src/utils/polynome.cpp
@@ -82,7 +76,6 @@ endif()
 
 # Link the catkin dependencies.
 ament_target_dependencies(blmc_drivers rt)
-target_link_libraries(blmc_drivers master_board_sdk::master_board_sdk)
 target_link_libraries(blmc_drivers real_time_tools::real_time_tools)
 target_link_libraries(blmc_drivers time_series::time_series)
 target_link_libraries(blmc_drivers Eigen3::Eigen)
@@ -142,7 +135,6 @@ add_demo(demo_2_motors)
 add_demo(demo_1_motor_print_everything)
 add_demo(demo_1_motor)
 add_demo(demo_8_motors)
-add_demo(demo_ethernet)
 add_demo(demo_print_analog_sensors)
 
 #
