@@ -31,14 +31,9 @@ Clone the treep configuration containing the "BLMC_DRIVERS" project::
 directory upwards.  So you can use treep in the directory in which you invoked
 the ``git clone`` command above or any subdirectory.
 
-Now clone the project (including packages for communication with a master
-board)::
+Now clone the project::
 
     treep --clone BLMC_DRIVERS
-
-or, if you are only interested in CAN communication::
-
-    treep --clone BLMC_DRIVERS_CAN_ONLY
 
 **Important:** treep uses SSH to clone from github.  So for the above command to
 work, you need a github account with a registered SSH key.  Further this key
