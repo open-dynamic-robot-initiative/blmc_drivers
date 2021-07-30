@@ -68,7 +68,9 @@ void CanBus::send_frame(const CanBusFrame& unstamped_can_frame)
     struct sockaddr_can address = can_connection_.get().send_addr;
 
     // put data into can frame ---------------------------------------------
-    can_frame_t can_frame;
+    // make sure to initialise the whole struct to zero to avoid issues when
+    // using a CAN-FD-capable device.
+    can_frame_t can_frame = {};
     can_frame.can_id = unstamped_can_frame.id;
     can_frame.can_dlc = unstamped_can_frame.dlc;
 
@@ -89,7 +91,7 @@ CanBusFrame CanBus::receive_frame()
     int socket = can_connection_.get().socket;
 
     // data we want to obtain ----------------------------------------------
-    can_frame_t can_frame;
+    can_frame_t can_frame = {};
     nanosecs_abs_t timestamp;
     struct sockaddr_can message_address;
 
