@@ -1,25 +1,22 @@
 /**
  * \file
- * \brief Wrapper for reading new-line terminated list of values from serial port.
- * \author Julian Viereck
- * \date 2020
- * \copyright Copyright (c) 2020, New York University and Max Planck
- *            Gesellschaft.
+ * \brief Wrapper for reading new-line terminated list of values from serial
+ * port. \author Julian Viereck \date 2020 \copyright Copyright (c) 2020, New
+ * York University and Max Planck Gesellschaft.
  */
 
 #pragma once
 
+#include <unistd.h>
 #include <cstdlib>
 #include <iostream>
 #include <mutex>
-#include <unistd.h>
 #include <vector>
 
 #include "real_time_tools/thread.hpp"
 
 namespace blmc_drivers
 {
-
 class SerialReader
 {
 public:
@@ -27,7 +24,7 @@ public:
      * @param serial_port The address of the serial port to use.
      * @pparam num_values The number of values to read in each line.
      */
-    SerialReader(const std::string &serial_port, const int &num_values);
+    SerialReader(const std::string& serial_port, const int& num_values);
 
     ~SerialReader();
 
@@ -98,8 +95,8 @@ private:
     std::vector<int> latest_values_;
 
     /**
-    * @brief mutex_ multithreading safety
-    */
+     * @brief mutex_ multithreading safety
+     */
     std::mutex mutex_;
 };
 

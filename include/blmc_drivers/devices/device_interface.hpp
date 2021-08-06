@@ -1,7 +1,8 @@
 /**
  * @file device_interface.hpp
  * @license License BSD-3-Clause
- * @copyright Copyright (c) 2019, New York University and Max Planck Gesellschaft.
+ * @copyright Copyright (c) 2019, New York University and Max Planck
+ * Gesellschaft.
  * @date 2019-07-11
  */
 
@@ -12,7 +13,6 @@
  */
 namespace blmc_drivers
 {
-
 /**
  * @brief this class exists purely for logical reasons, it does not in
  * itself implement anything.
@@ -35,7 +35,6 @@ namespace blmc_drivers
  */
 class DeviceInterface
 {
-
 };
 
-}
+}  // namespace blmc_drivers

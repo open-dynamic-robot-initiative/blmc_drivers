@@ -1,7 +1,8 @@
 /**
  * @file can_bus.hpp
  * @license License BSD-3-Clause
- * @copyright Copyright (c) 2019, New York University and Max Planck Gesellschaft.
+ * @copyright Copyright (c) 2019, New York University and Max Planck
+ * Gesellschaft.
  * @date 2019-07-11
  */
 
@@ -10,21 +11,19 @@
 #include <memory>
 #include <string>
 
-#include <real_time_tools/timer.hpp>
-#include <real_time_tools/thread.hpp>
 #include <real_time_tools/iostream.hpp>
 #include <real_time_tools/spinner.hpp>
+#include <real_time_tools/thread.hpp>
 #include <real_time_tools/threadsafe/threadsafe_object.hpp>
+#include <real_time_tools/timer.hpp>
 
 #include <time_series/time_series.hpp>
 
-#include "blmc_drivers/utils/os_interface.hpp"
 #include "blmc_drivers/devices/device_interface.hpp"
-
+#include "blmc_drivers/utils/os_interface.hpp"
 
 namespace blmc_drivers
 {
-
 /**
  * @brief CanBusFrame is a class that contains a fixed sized amount of data
  * to be send or received via the can bus
@@ -49,7 +48,7 @@ public:
     {
         rt_printf("---------------------------\n");
         rt_printf("can bus frame data");
-        for(auto& datum : data)
+        for (auto& datum : data)
         {
             rt_printf(" :%d", datum);
         }
@@ -84,14 +83,15 @@ public:
  * @brief CanBusInterface is an abstract class that defines an API for the
  * communication via Can bus.
  */
-class CanBusInterface: public DeviceInterface
+class CanBusInterface : public DeviceInterface
 {
 public:
     /**
      * @brief Destroy the CanBusInterface object
      */
-    virtual ~CanBusInterface() {}
-
+    virtual ~CanBusInterface()
+    {
+    }
 
     /**
      * @brief CanframeTimeseries is a simple sohortcut
@@ -101,28 +101,29 @@ public:
     /**
      * getters
      */
-    
+
     /**
      * @brief Get the output frame
-     * 
-     * @return std::shared_ptr<const CanframeTimeseries> 
+     *
+     * @return std::shared_ptr<const CanframeTimeseries>
      */
     virtual std::shared_ptr<const CanframeTimeseries> get_output_frame()
-      const = 0;
+        const = 0;
 
     /**
      * @brief Get the input frame
-     * 
-     * @return std::shared_ptr<const CanframeTimeseries> 
+     *
+     * @return std::shared_ptr<const CanframeTimeseries>
      */
     virtual std::shared_ptr<const CanframeTimeseries> get_input_frame() = 0;
 
     /**
      * @brief Get the sent input frame
-     * 
-     * @return std::shared_ptr<const CanframeTimeseries> 
+     *
+     * @return std::shared_ptr<const CanframeTimeseries>
      */
-    virtual std::shared_ptr<const CanframeTimeseries> get_sent_input_frame() = 0;
+    virtual std::shared_ptr<const CanframeTimeseries>
+    get_sent_input_frame() = 0;
 
     /**
      * setters
@@ -130,7 +131,7 @@ public:
 
     /**
      * @brief Set the input frame saves the input frame to be sent in a queue.
-     * 
+     *
      * @param input_frame
      */
     virtual void set_input_frame(const CanBusFrame& input_frame) = 0;
@@ -148,31 +149,31 @@ public:
 /**
  * @brief CanBus is the implementation of the CanBusInterface.
  */
-class CanBus: public CanBusInterface
+class CanBus : public CanBusInterface
 {
 public:
     /**
      * @brief Construct a new CanBus object
-     * 
-     * @param can_interface_name 
-     * @param history_length 
+     *
+     * @param can_interface_name
+     * @param history_length
      */
     CanBus(const std::string& can_interface_name,
-               const size_t& history_length = 1000);
+           const size_t& history_length = 1000);
 
     /**
      * @brief Destroy the CanBus object
      */
     virtual ~CanBus();
-    
+
     /**
      * Getters
      */
-    
+
     /**
      * @brief Get the output frame
-     * 
-     * @return std::shared_ptr<const CanframeTimeseries> 
+     *
+     * @return std::shared_ptr<const CanframeTimeseries>
      */
     std::shared_ptr<const CanframeTimeseries> get_output_frame() const
     {
@@ -181,18 +182,18 @@ public:
 
     /**
      * @brief Get the input frame
-     * 
-     * @return std::shared_ptr<const CanframeTimeseries> 
+     *
+     * @return std::shared_ptr<const CanframeTimeseries>
      */
-    virtual std::shared_ptr<const CanframeTimeseries>  get_input_frame()
+    virtual std::shared_ptr<const CanframeTimeseries> get_input_frame()
     {
         return input_;
     }
 
     /**
      * @brief Get the input frame thas has been sent
-     * 
-     * @return std::shared_ptr<const CanframeTimeseries> 
+     *
+     * @return std::shared_ptr<const CanframeTimeseries>
      */
     virtual std::shared_ptr<const CanframeTimeseries> get_sent_input_frame()
     {
@@ -205,8 +206,8 @@ public:
 
     /**
      * @brief Set the input frame
-     * 
-     * @param input_frame 
+     *
+     * @param input_frame
      */
     virtual void set_input_frame(const CanBusFrame& input_frame)
     {
@@ -216,7 +217,7 @@ public:
     /**
      * @brief Sender
      */
-    
+
     /**
      * @brief Send the queue of message to the can network
      */
@@ -226,13 +227,12 @@ public:
      * private attributes and methods
      */
 private:
-
     /**
      * @brief This function is an helper that allows us to launch real-time
      * thread in xenaomai, ubunt, or rt-preempt seemlessly.
-     * 
-     * @param instance_pointer 
-     * @return THREAD_FUNCTION_RETURN_TYPE (is void or void* depending on the 
+     *
+     * @param instance_pointer
+     * @return THREAD_FUNCTION_RETURN_TYPE (is void or void* depending on the
      * OS.
      */
     static THREAD_FUNCTION_RETURN_TYPE loop(void* instance_pointer)
@@ -248,14 +248,14 @@ private:
 
     /**
      * @brief Send input data
-     * 
+     *
      * @param unstamped_can_frame is a frame without id nor time.
      */
     void send_frame(const CanBusFrame& unstamped_can_frame);
 
     /**
      * @brief Get the output frame from the bus
-     * 
+     *
      * @return CanBusFrame is the output frame data.
      */
     CanBusFrame receive_frame();
@@ -263,22 +263,23 @@ private:
     /**
      * @brief Setup and initialize the CanBus object.
      * It connects to the can bus. This method is used once in the constructor.
-     * 
+     *
      * @param name is the can card name.
      * @param err_mask, always used with "0" so far (TODO: Manuel explain)
-     * @return CanBusConnection 
+     * @return CanBusConnection
      */
     CanBusConnection setup_can(std::string name, uint32_t err_mask);
 
     /**
      * Attributes
      */
-    
+
     /**
      * @brief can_connection_ is the communication object allowing to send or
      * receive can frames.
      */
-    real_time_tools::SingletypeThreadsafeObject<CanBusConnection, 1> can_connection_;
+    real_time_tools::SingletypeThreadsafeObject<CanBusConnection, 1>
+        can_connection_;
 
     /**
      * @brief input_ is a list of time stamped frame to be send to the can
@@ -319,5 +320,4 @@ private:
     std::string name_;
 };
 
-}
-
+}  // namespace blmc_drivers

@@ -211,7 +211,8 @@ int main(int argc, char *argv[])
         2 * EncoderIndexTester::MAX_MOTOR_POSITION_MREV;
     if (num_revolutions < 0)
     {
-        std::cout << "Invalid Input: Number of revolutions has to be positive." << std::endl;
+        std::cout << "Invalid Input: Number of revolutions has to be positive."
+                  << std::endl;
         return 1;
     }
     else if (num_revolutions >= num_revolutions_limit)

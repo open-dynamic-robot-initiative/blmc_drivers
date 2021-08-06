@@ -635,10 +635,11 @@ public:
     /**
      * @brief Perform homing for all joints at endstops.
      *
-     * See BlmcJointModule::homing_at_current_position for description of the arguments.
+     * See BlmcJointModule::homing_at_current_position for description of the
+     * arguments.
      *
-     * @return Final status of the homing procedure (since homing happens at current,position,
-     * procedure always returns success).
+     * @return Final status of the homing procedure (since homing happens at
+     * current,position, procedure always returns success).
      */
     HomingReturnCode execute_homing_at_current_position(Vector home_offset_rad)
     {

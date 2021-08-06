@@ -1,36 +1,38 @@
 /**
  * @file demo_8_motors.cpp
- * @copyright Copyright (c) 2018-2020, New York University and Max Planck Gesellschaft, License BSD-3-Clause
+ * @copyright Copyright (c) 2018-2020, New York University and Max Planck
+ * Gesellschaft, License BSD-3-Clause
  */
 
-#include <atomic>
 #include <signal.h>
+#include <atomic>
 
 #include <pd_control.hpp>
 
 /**
  * @brief This boolean is here to kill cleanly the application upon ctrl+c
  */
-std::atomic_bool StopDemos (false);
+std::atomic_bool StopDemos(false);
 
 /**
  * @brief This function is the callback upon a ctrl+c call from the terminal.
- * 
- * @param s 
+ *
+ * @param s
  */
-void my_handler(int){
-  StopDemos = true;
+void my_handler(int)
+{
+    StopDemos = true;
 }
 
 /**
  * @brief This is the main demo program.
- * 
- * @param argc 
- * @param argv 
- * @return int 
+ *
+ * @param argc
+ * @param argv
+ * @return int
  */
 int main(int, char **)
-{   
+{
     // make sure we catch the ctrl+c signal to kill the application properly.
     struct sigaction sigIntHandler;
     sigIntHandler.sa_handler = my_handler;
@@ -67,7 +69,6 @@ int main(int, char **)
     auto motor_7 = std::make_shared<blmc_drivers::SafeMotor>(board4, 0);
     auto motor_8 = std::make_shared<blmc_drivers::SafeMotor>(board4, 1);
 
-
     rt_printf("motors are set up \n");
 
     // create the analogue sensors onject which happen to be slider here, i.e.
@@ -85,17 +86,25 @@ int main(int, char **)
 
     // construct the pairs of motors and sliders
     std::vector<blmc_drivers::PairMotorSlider> motor_and_sliders;
-    motor_and_sliders.push_back(blmc_drivers::PairMotorSlider(motor_1, slider_1));
-    motor_and_sliders.push_back(blmc_drivers::PairMotorSlider(motor_2, slider_2));
-    motor_and_sliders.push_back(blmc_drivers::PairMotorSlider(motor_3, slider_3));
-    motor_and_sliders.push_back(blmc_drivers::PairMotorSlider(motor_4, slider_4));
-    motor_and_sliders.push_back(blmc_drivers::PairMotorSlider(motor_5, slider_5));
-    motor_and_sliders.push_back(blmc_drivers::PairMotorSlider(motor_6, slider_6));
-    motor_and_sliders.push_back(blmc_drivers::PairMotorSlider(motor_7, slider_7));
-    motor_and_sliders.push_back(blmc_drivers::PairMotorSlider(motor_8, slider_8));
+    motor_and_sliders.push_back(
+        blmc_drivers::PairMotorSlider(motor_1, slider_1));
+    motor_and_sliders.push_back(
+        blmc_drivers::PairMotorSlider(motor_2, slider_2));
+    motor_and_sliders.push_back(
+        blmc_drivers::PairMotorSlider(motor_3, slider_3));
+    motor_and_sliders.push_back(
+        blmc_drivers::PairMotorSlider(motor_4, slider_4));
+    motor_and_sliders.push_back(
+        blmc_drivers::PairMotorSlider(motor_5, slider_5));
+    motor_and_sliders.push_back(
+        blmc_drivers::PairMotorSlider(motor_6, slider_6));
+    motor_and_sliders.push_back(
+        blmc_drivers::PairMotorSlider(motor_7, slider_7));
+    motor_and_sliders.push_back(
+        blmc_drivers::PairMotorSlider(motor_8, slider_8));
 
     // construct a simple PD controller.
-    blmc_drivers::PDController controller(motor_and_sliders); 
+    blmc_drivers::PDController controller(motor_and_sliders);
 
     rt_printf("controllers are set up \n");
 
@@ -104,7 +113,7 @@ int main(int, char **)
     rt_printf("loops have started \n");
 
     // Wait until the application is killed.
-    while(!StopDemos)
+    while (!StopDemos)
     {
         real_time_tools::Timer::sleep_sec(0.01);
     }
