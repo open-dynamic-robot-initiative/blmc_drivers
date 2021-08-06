@@ -2,12 +2,12 @@
  * @file os_interface.hpp
  * @author Manuel Wuthrich (manuel.wuthrich@gmail.com)
  * @author Maximilien Naveau (maximilien.naveau@gmail.com)
- * @brief 
+ * @brief
  * @version 0.1
  * @date 2018-11-27
- * 
+ *
  * @copyright Copyright (c) 2018
- * 
+ *
  */
 
 #pragma once
@@ -17,10 +17,10 @@
  */
 #ifdef __XENO__
 
+#include <native/cond.h>
+#include <native/mutex.h>
 #include <native/task.h>
 #include <native/timer.h>
-#include <native/mutex.h>
-#include <native/cond.h>
 #include <rtdk.h>
 #include <rtdm/rtcan.h>
 
@@ -29,16 +29,16 @@
  */
 #else
 
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <unistd.h>
-#include <stdint.h>
 #include <string.h>
+#include <unistd.h>
 
 #include <net/if.h>
-#include <sys/types.h>
-#include <sys/socket.h>
 #include <sys/ioctl.h>
+#include <sys/socket.h>
+#include <sys/types.h>
 
 #include <linux/can.h>
 #include <linux/can/raw.h>
@@ -109,9 +109,9 @@ typedef uint64_t nanosecs_abs_t;
  */
 #endif
 
-#include <sstream>
-#include <mutex>
 #include <condition_variable>
+#include <mutex>
+#include <sstream>
 
 #include <sys/mman.h>
 
@@ -122,7 +122,6 @@ typedef uint64_t nanosecs_abs_t;
  */
 namespace osi
 {
-
 #ifdef __XENO__
 
 /**
@@ -188,13 +187,13 @@ public:
 
     /**
      * @brief Put the condition variable to wait mode.
-     * 
+     *
      * @param lock is the mutex to be used for locking the scope.
      */
     void wait(std::unique_lock<mutex> &lock)
     {
-        rt_cond_wait(&rt_condition_variable_,
-                     &lock.mutex()->rt_mutex_, TM_INFINITE);
+        rt_cond_wait(
+            &rt_condition_variable_, &lock.mutex()->rt_mutex_, TM_INFINITE);
     }
 
     /**
@@ -205,43 +204,46 @@ public:
         rt_cond_broadcast(&rt_condition_variable_);
     }
 };
-} // namespace xenomai
+}  // namespace xenomai
 /**
-     * @brief Wrapper around the xenomai specific Mutex implementation.
-     */
+ * @brief Wrapper around the xenomai specific Mutex implementation.
+ */
 typedef xenomai::mutex Mutex;
 
 /**
-     * @brief Wrapper around the xenomai specific ConditionVariable
-     * implementation
-     */
+ * @brief Wrapper around the xenomai specific ConditionVariable
+ * implementation
+ */
 typedef xenomai::condition_variable ConditionVariable;
 
 #else
 /**
-     * @brief Wrapper around the posix specific Mutex implementation.
-     */
+ * @brief Wrapper around the posix specific Mutex implementation.
+ */
 typedef std::mutex Mutex;
 
 /**
-     * @brief Wrapper around the posix specific ConditionVariable
-     * implementation
-     */
+ * @brief Wrapper around the posix specific ConditionVariable
+ * implementation
+ */
 typedef std::condition_variable ConditionVariable;
 #endif
 
 /**
  * @brief Use the osi workspace API to communicate with the can bus.
  * /todo Manuel can you describe the argument of this function?
- * @param fd 
- * @param buf 
- * @param len 
- * @param flags 
- * @param to 
- * @param tolen 
+ * @param fd
+ * @param buf
+ * @param len
+ * @param flags
+ * @param to
+ * @param tolen
  */
-inline void send_to_can_device(int fd, const void *buf, size_t len,
-                               int flags, const struct sockaddr *to,
+inline void send_to_can_device(int fd,
+                               const void *buf,
+                               size_t len,
+                               int flags,
+                               const struct sockaddr *to,
                                socklen_t tolen)
 {
     // int ret = rt_dev_sendto(fd, buf, len, flags, to, tolen);
@@ -262,8 +264,8 @@ inline void send_to_can_device(int fd, const void *buf, size_t len,
         {
             if (i > 0)
             {
-                std::cout << " Managed to send after "
-                          << i << " attempts." << std::endl;
+                std::cout << " Managed to send after " << i << " attempts."
+                          << std::endl;
             }
             return;
         }
@@ -271,8 +273,8 @@ inline void send_to_can_device(int fd, const void *buf, size_t len,
         if (i == 0)
         {
             std::cout << "WARNING: Something went wrong with sending "
-                      << "CAN frame, error code: "
-                      << ret << ", errno: " << errno << ". Possibly you have "
+                      << "CAN frame, error code: " << ret
+                      << ", errno: " << errno << ". Possibly you have "
                       << "been attempting to send at a rate which is too "
                       << "high. We keep trying" << std::flush;
         }
@@ -284,8 +286,8 @@ inline void send_to_can_device(int fd, const void *buf, size_t len,
 /**
  * @brief This function is closing a socket on the Can device. It is os
  *  independent.
- * 
- * @param socket 
+ *
+ * @param socket
  */
 inline void close_can_device(int socket)
 {
@@ -300,20 +302,22 @@ inline void close_can_device(int socket)
 /**
  * @brief Poll? a message from the CAN device.
  * \todo Manuel can you confrim this? And precise the arguments of the function?
- * 
- * @param fd 
- * @param msg 
- * @param flags 
+ *
+ * @param fd
+ * @param msg
+ * @param flags
  */
-inline void receive_message_from_can_device(int fd, struct msghdr *msg, int flags)
+inline void receive_message_from_can_device(int fd,
+                                            struct msghdr *msg,
+                                            int flags)
 {
     int ret = rt_dev_recvmsg(fd, msg, flags);
     if (ret < 0)
     {
         std::ostringstream oss;
         oss << "something went wrong with receiving "
-            << "CAN frame, error code: "
-            << ret << ", errno=" << errno << std::endl;
+            << "CAN frame, error code: " << ret << ", errno=" << errno
+            << std::endl;
         throw std::runtime_error(oss.str());
     }
 }
@@ -331,7 +335,7 @@ inline void initialize_realtime_printing()
 
 /**
  * @brief This function uses eather the xenomai API or the posix one.
- * 
+ *
  * @param sleep_time_ms is the sleeping time in milli seconds.
  */
 inline void sleep_ms(const double &sleep_time_ms)
@@ -339,14 +343,14 @@ inline void sleep_ms(const double &sleep_time_ms)
 #ifdef __XENO__
     rt_task_sleep(int(sleep_time_ms * 1000000.));
 #else
-    usleep(sleep_time_ms * 1000.); // nano_sleep
+    usleep(sleep_time_ms * 1000.);  // nano_sleep
 #endif
 }
 
 /**
  * @brief Get the current time in millisecond.
  * \todo remove as the one form the Timer class is much better embeded.
- * 
+ *
  * @return double which is the time in milli second
  */
 inline double get_current_time_ms()
@@ -373,4 +377,4 @@ inline void make_this_thread_realtime()
 #endif
 }
 
-} // namespace osi
+}  // namespace osi

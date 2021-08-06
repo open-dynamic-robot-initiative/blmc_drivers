@@ -1,7 +1,8 @@
 /**
  * @file motor.hpp
  * @license License BSD-3-Clause
- * @copyright Copyright (c) 2019-2020, New York University and Max Planck Gesellschaft.
+ * @copyright Copyright (c) 2019-2020, New York University and Max Planck
+ * Gesellschaft.
  * @date 2019-07-11
  */
 
@@ -13,43 +14,50 @@
 #include <real_time_tools/timer.hpp>
 #include <time_series/time_series.hpp>
 
-#include "blmc_drivers/devices/motor_board.hpp"
 #include "blmc_drivers/devices/device_interface.hpp"
+#include "blmc_drivers/devices/motor_board.hpp"
 
 namespace blmc_drivers
 {
-
 /**
  * @brief This class declares an interface to the motor. It allows the user to
  * access the sensors data as well as sending controls. The only control
  * supported for now is the current.
  */
-class MotorInterface: public DeviceInterface
+class MotorInterface : public DeviceInterface
 {
 public:
-
     /**
      * @brief This is a useful alias.
      */
     typedef time_series::TimeSeries<double> ScalarTimeseries;
     /**
      * @brief This a useful alias for the shared Pointer creation.
-     * 
+     *
      * @tparam Type is the Class to crate the pointer from.
      */
-    template<typename Type> using Ptr = std::shared_ptr<Type>;
+    template <typename Type>
+    using Ptr = std::shared_ptr<Type>;
 
     /**
-     * @brief Here is a list of the different measurement available on the 
+     * @brief Here is a list of the different measurement available on the
      * blmc card.
      */
-    enum MeasurementIndex {current, position, velocity, encoder_index,
-                           measurement_count};
+    enum MeasurementIndex
+    {
+        current,
+        position,
+        velocity,
+        encoder_index,
+        measurement_count
+    };
 
     /**
      * @brief Destroy the MotorInterface object
      */
-    virtual ~MotorInterface() {}
+    virtual ~MotorInterface()
+    {
+    }
 
     /**
      * @brief Actually send the commands and controls.
@@ -62,17 +70,17 @@ public:
 
     /**
      * @brief Get the measurements.
-     * 
-     * @param index 
-     * @return Ptr<const ScalarTimeseries> the pointer to the desired 
+     *
+     * @param index
+     * @return Ptr<const ScalarTimeseries> the pointer to the desired
      * measurement history.
      */
     virtual Ptr<const ScalarTimeseries> get_measurement(
-            const int& index = 0) const = 0;
+        const int& index = 0) const = 0;
 
     /**
      * @brief Get the current target object
-     * 
+     *
      * @return Ptr<const ScalarTimeseries> the list of the current values to
      * be sent.
      */
@@ -80,8 +88,8 @@ public:
 
     /**
      * @brief Get the history of the sent current targets.
-     * 
-     * @return Ptr<const ScalarTimeseries> 
+     *
+     * @return Ptr<const ScalarTimeseries>
      */
     virtual Ptr<const ScalarTimeseries> get_sent_current_target() const = 0;
 
@@ -92,8 +100,8 @@ public:
     /**
      * @brief Set the current target. This function saves the data internally.
      * Please call send_if_input_changed() to actually send the data.
-     * 
-     * @param current_target 
+     *
+     * @param current_target
      */
     virtual void set_current_target(const double& current_target) = 0;
 
@@ -101,8 +109,8 @@ public:
      * @brief Set the command. Save internally a command to be apply by the
      * motor board. This function save the command internally. Please call
      * send_if_input_changed() to actually send the data.
-     * 
-     * @param command 
+     *
+     * @param command
      */
     virtual void set_command(const MotorBoardCommand& command) = 0;
 };
@@ -110,12 +118,12 @@ public:
 /**
  * @brief This class implements the MotorInterface.
  */
-class Motor: public MotorInterface
+class Motor : public MotorInterface
 {
 public:
     /**
      * @brief Construct a new Motor object
-     * 
+     *
      * @param board is the MotorBoard to be used.
      * @param motor_id is the id of the motor on the on-board card
      */
@@ -123,9 +131,11 @@ public:
 
     /**
      * @brief Destroy the Motor object
-     * 
+     *
      */
-    virtual ~Motor() { }
+    virtual ~Motor()
+    {
+    }
 
     /**
      * @brief Actually send the command and controls via the network,
@@ -135,24 +145,24 @@ public:
     {
         board_->send_if_input_changed();
     }
-    
+
     /**
      * Getters
      */
 
     /**
      * @brief Get the measurements
-     * 
+     *
      * @param index is the kind of measurement we are instersted in.
      * see MotorInterface::MeasurementIndex.
      * @return Ptr<const ScalarTimeseries> The history of the measurement
      */
-    virtual Ptr<const ScalarTimeseries> get_measurement(const int& index = 0)
-    const;
+    virtual Ptr<const ScalarTimeseries> get_measurement(
+        const int& index = 0) const;
 
     /**
      * @brief Get the current target to be sent.
-     * 
+     *
      * @return Ptr<const ScalarTimeseries> the list of current values to be
      * sent.
      */
@@ -160,8 +170,8 @@ public:
 
     /**
      * @brief Get the already sent current target values.
-     * 
-     * @return Ptr<const ScalarTimeseries> 
+     *
+     * @return Ptr<const ScalarTimeseries>
      */
     virtual Ptr<const ScalarTimeseries> get_sent_current_target() const;
 
@@ -172,15 +182,15 @@ public:
     /**
      * @brief Set the current (Ampere) target. See MotorInterface for more
      * information.
-     * 
+     *
      * @param current_target in Ampere
      */
     virtual void set_current_target(const double& current_target);
 
     /**
      * @brief Set the command. See MotorInterface for more information.
-     * 
-     * @param command 
+     *
+     * @param command
      */
     virtual void set_command(const MotorBoardCommand& command)
     {
@@ -207,26 +217,27 @@ protected:
  * It contains utilities to bound the control input.
  * It could also contains some velocity limits at the motor level and why not
  * some temperature management.
- * 
+ *
  * \todo the velocity limit should be implemented in a smoother way,
  * and the parameters should be passed in the constructor.
  */
-class SafeMotor: public Motor
+class SafeMotor : public Motor
 {
 public:
     /**
      * @brief Construct a new SafeMotor object
-     * 
-     * @param board 
-     * @param motor_id 
-     * @param max_current_target 
-     * @param history_length 
+     *
+     * @param board
+     * @param motor_id
+     * @param max_current_target
+     * @param history_length
      */
-    SafeMotor(Ptr<MotorBoardInterface> board, bool motor_id,
-              const double& max_current_target = 2.0,
-              const size_t& history_length = 1000,
-              const double& max_velocity = std::numeric_limits<
-                    double>::quiet_NaN());
+    SafeMotor(
+        Ptr<MotorBoardInterface> board,
+        bool motor_id,
+        const double& max_current_target = 2.0,
+        const size_t& history_length = 1000,
+        const double& max_velocity = std::numeric_limits<double>::quiet_NaN());
 
     /**
      * Getters
@@ -234,8 +245,8 @@ public:
 
     /**
      * @brief Get the _current_target object
-     * 
-     * @return Ptr<const ScalarTimeseries> 
+     *
+     * @return Ptr<const ScalarTimeseries>
      */
     virtual Ptr<const ScalarTimeseries> get_current_target() const
     {
@@ -248,19 +259,19 @@ public:
 
     /**
      * @brief Set the current target (Ampere)
-     * 
-     * @param current_target 
+     *
+     * @param current_target
      */
     virtual void set_current_target(const double& current_target);
-    
+
     /**
      * @brief Set the max_current_target_ object
-     * 
-     * @param max_current_target 
+     *
+     * @param max_current_target
      */
     void set_max_current(double max_current_target)
     {
-      max_current_target_ = max_current_target;
+        max_current_target_ = max_current_target;
     }
 
     /**
@@ -270,7 +281,7 @@ public:
      */
     void set_max_velocity(double max_velocity)
     {
-      max_velocity_ = max_velocity;
+        max_velocity_ = max_velocity;
     }
 
 private:
@@ -290,4 +301,4 @@ private:
     Ptr<ScalarTimeseries> current_target_;
 };
 
-} // namespace blmc_drivers
+}  // namespace blmc_drivers

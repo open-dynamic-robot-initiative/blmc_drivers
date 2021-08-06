@@ -1,34 +1,35 @@
 /**
  * @file demo_leg.cpp
- * @copyright Copyright (c) 2018-2020, New York University and Max Planck Gesellschaft, License BSD-3-Clause
+ * @copyright Copyright (c) 2018-2020, New York University and Max Planck
+ * Gesellschaft, License BSD-3-Clause
  */
 
-#include "real_time_tools/timer.hpp"
-#include "real_time_tools/spinner.hpp"
-#include <blmc_drivers/devices/motor.hpp>
+#include <math.h>
 #include <blmc_drivers/devices/analog_sensor.hpp>
 #include <blmc_drivers/devices/leg.hpp>
-#include <math.h>
+#include <blmc_drivers/devices/motor.hpp>
+#include "real_time_tools/spinner.hpp"
+#include "real_time_tools/timer.hpp"
 
-#include <atomic>
 #include <signal.h>
+#include <atomic>
 
 #include <pd_control.hpp>
 
 /**
  * @brief This boolean is here to kill cleanly the application upon ctrl+c
  */
-std::atomic_bool StopDemos (false);
+std::atomic_bool StopDemos(false);
 
 /**
  * @brief This function is the callback upon a ctrl+c call from the terminal.
- * 
- * @param s 
+ *
+ * @param s
  */
-void my_handler(int){
-  StopDemos = true;
+void my_handler(int)
+{
+    StopDemos = true;
 }
-
 
 /**
  * @brief This is a simple PD control on one motor and one slider
@@ -52,13 +53,15 @@ private:
 public:
     /**
      * @brief Construct a new Controller object.
-     * 
-     * @param motor 
-     * @param analog_sensor 
+     *
+     * @param motor
+     * @param analog_sensor
      */
     Controller(std::shared_ptr<blmc_drivers::Motor> motor,
-               std::shared_ptr<blmc_drivers::AnalogSensor> analog_sensor):
-        motor_(motor), analog_sensor_(analog_sensor) { }
+               std::shared_ptr<blmc_drivers::AnalogSensor> analog_sensor)
+        : motor_(motor), analog_sensor_(analog_sensor)
+    {
+    }
     /**
      * @brief main control loop
      */
@@ -78,7 +81,6 @@ public:
     }
 
 private:
-    
     /**
      * @brief this is a simple control loop which runs at a kilohertz.
      *
@@ -89,12 +91,12 @@ private:
     void loop()
     {
         real_time_tools::Spinner time_spinner;
-        time_spinner.set_period(0.001); // 1kz loop
+        time_spinner.set_period(0.001);  // 1kz loop
         size_t count = 0;
-        while(true)
+        while (true)
         {
             double analog_measurement =
-                    analog_sensor_->get_measurement()->newest_element();
+                analog_sensor_->get_measurement()->newest_element();
             double current_target = 4 * (analog_measurement - 0.5);
 
             motor_->set_current_target(current_target);
@@ -139,16 +141,15 @@ private:
 public:
     /**
      * @brief Construct a new LegController object
-     * 
-     * @param leg 
-     * @param analog_sensor 
+     *
+     * @param leg
+     * @param analog_sensor
      */
     LegController(std::shared_ptr<blmc_drivers::Leg> leg,
-                  std::shared_ptr<blmc_drivers::AnalogSensor> analog_sensor):
-      leg_(leg),
-      analog_sensor_(analog_sensor)
+                  std::shared_ptr<blmc_drivers::AnalogSensor> analog_sensor)
+        : leg_(leg), analog_sensor_(analog_sensor)
     {
-      stop_loop_=false;
+        stop_loop_ = false;
     }
 
     /**
@@ -156,8 +157,8 @@ public:
      */
     ~LegController()
     {
-      stop_loop_=true;
-      rt_thread_.join();
+        stop_loop_ = true;
+        rt_thread_.join();
     }
 
     /**
@@ -165,7 +166,7 @@ public:
      */
     void start_loop()
     {
-      rt_thread_.create_realtime_thread(&Controller::loop, this);
+        rt_thread_.create_realtime_thread(&Controller::loop, this);
     }
 
     /**
@@ -179,7 +180,6 @@ public:
     }
 
 private:
-
     /**
      * @brief this is a simple control loop which runs at a kilohertz.
      *
@@ -190,45 +190,61 @@ private:
     void loop()
     {
         real_time_tools::Spinner spinner;
-        spinner.set_period(0.001); // 1kz loop
+        spinner.set_period(0.001);  // 1kz loop
         size_t count = 0;
-        while(!stop_loop_)
+        while (!stop_loop_)
         {
             double analog_measurement =
-                    analog_sensor_->get_measurement()->newest_element();
+                analog_sensor_->get_measurement()->newest_element();
             double position_target = (analog_measurement - 0.5);
 
-            double position_hip = leg_->get_motor_measurement(blmc_drivers::Leg::hip,
-                                                         blmc_drivers::Leg::position)->newest_element();
-            double velocity_hip = leg_->get_motor_measurement(blmc_drivers::Leg::hip,
-                                                         blmc_drivers::Leg::velocity)->newest_element();
+            double position_hip =
+                leg_->get_motor_measurement(blmc_drivers::Leg::hip,
+                                            blmc_drivers::Leg::position)
+                    ->newest_element();
+            double velocity_hip =
+                leg_->get_motor_measurement(blmc_drivers::Leg::hip,
+                                            blmc_drivers::Leg::velocity)
+                    ->newest_element();
 
-            double position_knee = leg_->get_motor_measurement(blmc_drivers::Leg::knee,
-                                                         blmc_drivers::Leg::position)->newest_element();
-            double velocity_knee = leg_->get_motor_measurement(blmc_drivers::Leg::knee,
-                                                         blmc_drivers::Leg::velocity)->newest_element();
+            double position_knee =
+                leg_->get_motor_measurement(blmc_drivers::Leg::knee,
+                                            blmc_drivers::Leg::position)
+                    ->newest_element();
+            double velocity_knee =
+                leg_->get_motor_measurement(blmc_drivers::Leg::knee,
+                                            blmc_drivers::Leg::velocity)
+                    ->newest_element();
 
             double kp = 5;
             double kd = 1;
-            double current_target_knee = kp*(position_target - position_knee) -
-                                         kd*(velocity_knee);
-            double current_target_hip = kp*(position_target - position_hip) -
-                                         kd*(velocity_hip);
+            double current_target_knee =
+                kp * (position_target - position_knee) - kd * (velocity_knee);
+            double current_target_hip =
+                kp * (position_target - position_hip) - kd * (velocity_hip);
 
-            if(current_target_knee > 1.0) {
+            if (current_target_knee > 1.0)
+            {
                 current_target_knee = 1.0;
-            } else if (current_target_knee < -1.0) {
+            }
+            else if (current_target_knee < -1.0)
+            {
                 current_target_knee = -1.0;
             }
 
-            if(current_target_hip > 1.0) {
+            if (current_target_hip > 1.0)
+            {
                 current_target_hip = 1.0;
-            } else if (current_target_hip < -1.0) {
+            }
+            else if (current_target_hip < -1.0)
+            {
                 current_target_hip = -1.0;
             }
 
-            leg_->set_current_target(current_target_knee, blmc_drivers::Leg::knee);
-            leg_->set_current_target(current_target_hip, blmc_drivers::Leg::hip);
+            leg_->set_current_target(current_target_knee,
+                                     blmc_drivers::Leg::knee);
+            leg_->set_current_target(current_target_hip,
+                                     blmc_drivers::Leg::hip);
             leg_->send_if_input_changed();
 
             // print -----------------------------------------------------------
@@ -243,8 +259,8 @@ private:
     }
 };
 
-int main(int, char **)
-{  
+int main(int, char**)
+{
     // make sure we catch the ctrl+c signal to kill the application properly.
     struct sigaction sigIntHandler;
     sigIntHandler.sa_handler = my_handler;
@@ -256,25 +272,30 @@ int main(int, char **)
     // create bus and boards -------------------------------------------------
 
     // this is the id of the cans bus (plug behind the computer).
-    // see https://atlas.is.localnet/confluence/pages/viewpage.action?pageId=44958260
+    // see
+    // https://atlas.is.localnet/confluence/pages/viewpage.action?pageId=44958260
     // use netstat -i repeatedly to see wich can bus value is changing.
     // normally labels behind the computer identify it.
     auto can_bus = std::make_shared<blmc_drivers::CanBus>("can3");
 
-    // the board is used to communicate with the can bus, it takes one upon creation
+    // the board is used to communicate with the can bus, it takes one upon
+    // creation
     auto board = std::make_shared<blmc_drivers::CanBusMotorBoard>(can_bus);
-    
+
     // create motors and sensors ---------------------------------------------
     auto motor_hip = std::make_shared<blmc_drivers::Motor>(board, 0);
-    auto motor_knee = std::make_shared<blmc_drivers::Motor>(board, 1); 
+    auto motor_knee = std::make_shared<blmc_drivers::Motor>(board, 1);
 
     auto leg = std::make_shared<blmc_drivers::Leg>(motor_hip, motor_knee);
     rt_printf("leg is set up \n");
 
-    // on the board there is an analog input (slider) at slot 0 (of the analog input)
+    // on the board there is an analog input (slider) at slot 0 (of the analog
+    // input)
     auto analog_sensor = std::make_shared<blmc_drivers::AnalogSensor>(board, 0);
-    // on the board there is an analog input (slider) at slot 0 (of the analog input)
-    //auto analog_sensor = std::make_shared<blmc_drivers::AnalogSensor>(board, 1);
+    // on the board there is an analog input (slider) at slot 0 (of the analog
+    // input)
+    // auto analog_sensor = std::make_shared<blmc_drivers::AnalogSensor>(board,
+    // 1);
     rt_printf("sensors are set up \n");
 
     LegController leg_controller(leg, analog_sensor);
@@ -283,7 +304,7 @@ int main(int, char **)
     leg_controller.start_loop();
     rt_printf("loops have started \n");
 
-    while(!StopDemos)
+    while (!StopDemos)
     {
         real_time_tools::Timer::sleep_sec(0.001);
     }

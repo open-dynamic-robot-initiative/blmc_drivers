@@ -1,7 +1,8 @@
 /**
  * @file motor_board.hpp
  * @license License BSD-3-Clause
- * @copyright Copyright (c) 2019, New York University and Max Planck Gesellschaft.
+ * @copyright Copyright (c) 2019, New York University and Max Planck
+ * Gesellschaft.
  * @date 2019-07-11
  */
 
@@ -10,17 +11,16 @@
 #include <memory>
 #include <string>
 
-#include <real_time_tools/timer.hpp>
 #include <real_time_tools/thread.hpp>
+#include <real_time_tools/timer.hpp>
 #include <time_series/time_series.hpp>
 
-#include "blmc_drivers/utils/os_interface.hpp"
 #include "blmc_drivers/devices/can_bus.hpp"
 #include "blmc_drivers/devices/device_interface.hpp"
+#include "blmc_drivers/utils/os_interface.hpp"
 
 namespace blmc_drivers
 {
-
 //==============================================================================
 /**
  * @brief This MotorBoardCommand class is a data structurs that defines a
@@ -29,11 +29,12 @@ namespace blmc_drivers
 class MotorBoardCommand
 {
 public:
-
     /**
      * @brief Construct a new MotorBoardCommand object
      */
-    MotorBoardCommand() { }
+    MotorBoardCommand()
+    {
+    }
 
     /**
      * @brief Construct a new MotorBoardCommand object
@@ -96,8 +97,6 @@ public:
     int32_t content_;
 };
 
-
-
 //==============================================================================
 /**
  * @brief This class represent a 8 bits message that describe the state
@@ -109,36 +108,36 @@ public:
     /**
      * These are the list of bits of the message.
      */
-    
+
     /**
      * @brief Bits 0 enables/disable of the system (motor board).
      */
-    uint8_t system_enabled:1;
+    uint8_t system_enabled : 1;
 
     /**
      * @brief Bits 1 enables/disable of the motor 1.
      */
-    uint8_t motor1_enabled:1;  // 1
+    uint8_t motor1_enabled : 1;  // 1
 
     /**
      * @brief Bits 2 checks if the motor 1 is ready or not.
      */
-    uint8_t motor1_ready:1;    // 2
+    uint8_t motor1_ready : 1;  // 2
 
     /**
      * @brief Bits 3 enables/disable of the motor 2.
      */
-    uint8_t motor2_enabled:1;  // 3
+    uint8_t motor2_enabled : 1;  // 3
 
     /**
      * @brief Bits 4 checks if the motor 2 is ready or not.
      */
-    uint8_t motor2_ready:1;    // 4
+    uint8_t motor2_ready : 1;  // 4
 
     /**
      * @brief This encodes the error codes. See "ErrorCodes" for more details.
      */
-    uint8_t error_code:3;      // 5-7
+    uint8_t error_code : 3;  // 5-7
 
     /**
      * @brief This is the list of the error codes
@@ -153,8 +152,9 @@ public:
         CAN_RECV_TIMEOUT = 2,
         //! \brief Motor temperature reached critical value
         //! \note This is currently unused as no temperature sensing is done.
-        CRIT_TEMP = 3,  // currently unused
-        //! \brief Some error in the SpinTAC Position Convert module
+        CRIT_TEMP =
+            3,  // currently unused
+                //! \brief Some error in the SpinTAC Position Convert module
         POSCONV = 4,
         //! \brief Position Rollover occured
         POS_ROLLOVER = 5,
@@ -180,12 +180,8 @@ public:
      */
     bool is_ready() const
     {
-        if(system_enabled &&
-           motor1_enabled &&
-           motor1_ready &&
-           motor2_enabled &&
-           motor2_ready &&
-           !error_code)
+        if (system_enabled && motor1_enabled && motor1_ready &&
+            motor2_enabled && motor2_ready && !error_code)
         {
             return true;
         }
@@ -230,19 +226,19 @@ public:
     }
 };
 
-
-
 //==============================================================================
 /**
  * @brief MotorBoardInterface declares an API to inacte with a MotorBoard.
  */
-class MotorBoardInterface: public DeviceInterface
+class MotorBoardInterface : public DeviceInterface
 {
 public:
     /**
      * @brief Destroy the MotorBoardInterface object
      */
-    virtual ~MotorBoardInterface() {}
+    virtual ~MotorBoardInterface()
+    {
+    }
 
     /**
      * @brief A useful shortcut
@@ -267,26 +263,41 @@ public:
     /**
      * @brief A useful shortcut
      */
-    template<typename Type> using Ptr = std::shared_ptr<Type>;
+    template <typename Type>
+    using Ptr = std::shared_ptr<Type>;
     /**
      * @brief A useful shortcut
      */
-    template<typename Type> using Vector = std::vector<Type>;
+    template <typename Type>
+    using Vector = std::vector<Type>;
 
     /**
      * @brief This is the list of the measurement we can access.
      */
-    enum MeasurementIndex {current_0, current_1,
-                           position_0, position_1,
-                           velocity_0, velocity_1,
-                           analog_0, analog_1,
-                           encoder_index_0, encoder_index_1,
-                           measurement_count};
+    enum MeasurementIndex
+    {
+        current_0,
+        current_1,
+        position_0,
+        position_1,
+        velocity_0,
+        velocity_1,
+        analog_0,
+        analog_1,
+        encoder_index_0,
+        encoder_index_1,
+        measurement_count
+    };
 
     /**
      * @brief This is the list of the controls we can send
      */
-    enum ControlIndex {current_target_0, current_target_1, control_count};
+    enum ControlIndex
+    {
+        current_target_0,
+        current_target_1,
+        control_count
+    };
 
     /**
      * Getters
@@ -300,7 +311,7 @@ public:
      * measurement acquiered.
      */
     virtual Ptr<const ScalarTimeseries> get_measurement(
-            const int& index) const = 0;
+        const int& index) const = 0;
 
     /**
      * @brief Get the status of the motor board.
@@ -339,7 +350,7 @@ public:
      * recently.
      */
     virtual Ptr<const ScalarTimeseries> get_sent_control(
-            const int& index) const = 0;
+        const int& index) const = 0;
 
     /**
      * @brief Get the sent commands.
@@ -352,7 +363,7 @@ public:
     /**
      * Setters
      */
-    
+
     /**
      * @brief set_control save the control internally. In order to actaully send
      * the controls to the network please call "send_if_input_changed"
@@ -361,7 +372,7 @@ public:
      * @param index define the kind of control we want to send.
      */
     virtual void set_control(const double& control, const int& index) = 0;
-    
+
     /**
      * @brief set_command save the command internally. In order to actaully send
      * the controls to the network please call "send_if_input_changed"
@@ -385,13 +396,13 @@ public:
  * @return Vector<Ptr<Type>> which is the a list of list of data of type
  * Type
  */
-template<typename Type>
-std::vector<std::shared_ptr<Type> > create_vector_of_pointers(
-  const size_t& size, const size_t& length)
+template <typename Type>
+std::vector<std::shared_ptr<Type>> create_vector_of_pointers(
+    const size_t& size, const size_t& length)
 {
-    std::vector<std::shared_ptr<Type> > vector;
+    std::vector<std::shared_ptr<Type>> vector;
     vector.resize(size);
-    for(size_t i = 0; i < size; i++)
+    for (size_t i = 0; i < size; i++)
     {
         vector[i] = std::make_shared<Type>(length, 0, false);
     }
@@ -403,10 +414,9 @@ std::vector<std::shared_ptr<Type> > create_vector_of_pointers(
  * @brief This class CanBusMotorBoard implements a MotorBoardInterface specific
  * to CAN networks.
  */
-class CanBusMotorBoard: public  MotorBoardInterface
+class CanBusMotorBoard : public MotorBoardInterface
 {
 public:
-
     /**
      * @brief Construct a new CanBusMotorBoard object
      *
@@ -415,14 +425,12 @@ public:
      */
     CanBusMotorBoard(std::shared_ptr<CanBusInterface> can_bus,
                      const size_t& history_length = 1000,
-                     const int &control_timeout_ms = 100);
+                     const int& control_timeout_ms = 100);
 
     /**
      * @brief Destroy the CanBusMotorBoard object
      */
     ~CanBusMotorBoard();
-
-
 
     /**
      * Getters
@@ -479,8 +487,7 @@ public:
      * @param index the kind of control we are interested in.
      * @return Ptr<const ScalarTimeseries> is the list of the sent cotnrols.
      */
-    virtual Ptr<const ScalarTimeseries> get_sent_control(
-            const int& index) const
+    virtual Ptr<const ScalarTimeseries> get_sent_control(const int& index) const
     {
         return control_[index];
     }
@@ -543,7 +550,6 @@ public:
 
     /// private methods ========================================================
 private:
-
     /**
      * Useful converters
      */
@@ -555,10 +561,11 @@ private:
      * @param bytes The bytes value
      * @return int32_t the output integer in int32.
      */
-    template<typename T> int32_t bytes_to_int32(T bytes)
+    template <typename T>
+    int32_t bytes_to_int32(T bytes)
     {
-        return (int32_t) bytes[3] + ((int32_t)bytes[2] << 8) +
-                ((int32_t)bytes[1] << 16) + ((int32_t)bytes[0] << 24);
+        return (int32_t)bytes[3] + ((int32_t)bytes[2] << 8) +
+               ((int32_t)bytes[1] << 16) + ((int32_t)bytes[0] << 24);
     }
 
     /**
@@ -590,7 +597,8 @@ private:
      * @param qbytes the input value in bytes
      * @return float the output value.
      */
-    template<typename T> float qbytes_to_float(T qbytes)
+    template <typename T>
+    float qbytes_to_float(T qbytes)
     {
         return q24_to_float(bytes_to_int32(qbytes));
     }
@@ -631,8 +639,7 @@ private:
      */
     void print_status();
 
-private:  
-
+private:
     /**
      * @brief This is the pointer to the can bus to communicate with.
      */
@@ -644,13 +651,13 @@ private:
      */
     enum CanframeIDs
     {
-        COMMAND_ID= 0x00,
-        IqRef     = 0x05,
+        COMMAND_ID = 0x00,
+        IqRef = 0x05,
         STATUSMSG = 0x10,
-        Iq        = 0x20,
-        POS       = 0x30,
-        SPEED     = 0x40,
-        ADC6      = 0x50,
+        Iq = 0x20,
+        POS = 0x30,
+        SPEED = 0x40,
+        ADC6 = 0x50,
         ENC_INDEX = 0x60
     };
 
@@ -713,7 +720,6 @@ private:
      */
     bool motors_are_paused_;
 
-
     /**
      * @brief If no control is sent for more than control_timeout_ms_ the board
      * will shut down
@@ -725,7 +731,6 @@ private:
      * or not dependening on the current OS.
      */
     real_time_tools::RealTimeThread rt_thread_;
-
 };
 
-} // namespace blmc_drivers
+}  // namespace blmc_drivers

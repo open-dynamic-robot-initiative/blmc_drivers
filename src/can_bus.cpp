@@ -17,12 +17,12 @@
 
 namespace blmc_drivers
 {
-
-CanBus::CanBus(const std::string& can_interface_name,
-        const size_t& history_length)
+CanBus::CanBus(const std::string &can_interface_name,
+               const size_t &history_length)
 {
     input_ = std::make_shared<CanframeTimeseries>(history_length, 0, false);
-    sent_input_ = std::make_shared<CanframeTimeseries>(history_length, 0, false);
+    sent_input_ =
+        std::make_shared<CanframeTimeseries>(history_length, 0, false);
     output_ = std::make_shared<CanframeTimeseries>(history_length, 0, false);
     name_ = can_interface_name;
 
@@ -41,10 +41,9 @@ CanBus::~CanBus()
 
 void CanBus::send_if_input_changed()
 {
-    if(input_->has_changed_since_tag())
+    if (input_->has_changed_since_tag())
     {
-        time_series::Index
-                timeindex_to_send = input_->newest_timeindex();
+        time_series::Index timeindex_to_send = input_->newest_timeindex();
         CanBusFrame frame_to_send = (*input_)[timeindex_to_send];
         input_->tag(timeindex_to_send);
         sent_input_->append(frame_to_send);
@@ -61,7 +60,7 @@ void CanBus::loop()
     }
 }
 
-void CanBus::send_frame(const CanBusFrame& unstamped_can_frame)
+void CanBus::send_frame(const CanBusFrame &unstamped_can_frame)
 {
     // get address ---------------------------------------------------------
     int socket = can_connection_.get().socket;
@@ -74,8 +73,9 @@ void CanBus::send_frame(const CanBusFrame& unstamped_can_frame)
     can_frame.can_id = unstamped_can_frame.id;
     can_frame.can_dlc = unstamped_can_frame.dlc;
 
-    memcpy(can_frame.data, unstamped_can_frame.data.begin(),
-            unstamped_can_frame.dlc);
+    memcpy(can_frame.data,
+           unstamped_can_frame.data.begin(),
+           unstamped_can_frame.dlc);
 
     // send ----------------------------------------------------------------
     osi::send_to_can_device(socket,
@@ -122,7 +122,7 @@ CanBusFrame CanBus::receive_frame()
     CanBusFrame out_frame;
     out_frame.id = can_frame.can_id;
     out_frame.dlc = can_frame.can_dlc;
-    for(size_t i = 0; i < can_frame.can_dlc; i++)
+    for (size_t i = 0; i < can_frame.can_dlc; i++)
     {
         out_frame.data[i] = can_frame.data[i];
     }
@@ -140,7 +140,8 @@ CanBusConnection CanBus::setup_can(std::string name, uint32_t err_mask)
     int ret;
 
     ret = rt_dev_socket(PF_CAN, SOCK_RAW, CAN_RAW);
-    if (ret < 0) {
+    if (ret < 0)
+    {
         rt_fprintf(stderr, "rt_dev_socket: %s\n", strerror(-ret));
         rt_printf("Couldn't setup CAN connection. Exit.");
         exit(-1);
@@ -151,17 +152,20 @@ CanBusConnection CanBus::setup_can(std::string name, uint32_t err_mask)
     ret = rt_dev_ioctl(socket_number, SIOCGIFINDEX, &ifr);
     if (ret < 0)
     {
-        rt_fprintf(stderr, "rt_dev_ioctl GET_IFINDEX: %s\n",
-                    strerror(-ret));
+        rt_fprintf(stderr, "rt_dev_ioctl GET_IFINDEX: %s\n", strerror(-ret));
         osi::close_can_device(socket_number);
         rt_printf("Couldn't setup CAN connection. Exit.");
         exit(-1);
     }
 
     // Set error mask
-    if (err_mask) {
-        ret = rt_dev_setsockopt(socket_number, SOL_CAN_RAW, CAN_RAW_ERR_FILTER,
-                                &err_mask, sizeof(err_mask));
+    if (err_mask)
+    {
+        ret = rt_dev_setsockopt(socket_number,
+                                SOL_CAN_RAW,
+                                CAN_RAW_ERR_FILTER,
+                                &err_mask,
+                                sizeof(err_mask));
         if (ret < 0)
         {
             rt_fprintf(stderr, "rt_dev_setsockopt: %s\n", strerror(-ret));
@@ -174,7 +178,8 @@ CanBusConnection CanBus::setup_can(std::string name, uint32_t err_mask)
     // Bind to socket
     recv_addr.can_family = AF_CAN;
     recv_addr.can_ifindex = ifr.ifr_ifindex;
-    ret = rt_dev_bind(socket_number, (struct sockaddr *)&recv_addr,
+    ret = rt_dev_bind(socket_number,
+                      (struct sockaddr *)&recv_addr,
                       sizeof(struct sockaddr_can));
     if (ret < 0)
     {
@@ -186,11 +191,11 @@ CanBusConnection CanBus::setup_can(std::string name, uint32_t err_mask)
 
 #ifdef __XENO__
     // Enable timestamps for frames
-    ret = rt_dev_ioctl(socket,
-                        RTCAN_RTIOC_TAKE_TIMESTAMP, RTCAN_TAKE_TIMESTAMPS);
-    if (ret) {
-        rt_fprintf(stderr, "rt_dev_ioctl TAKE_TIMESTAMP: %s\n",
-                    strerror(-ret));
+    ret =
+        rt_dev_ioctl(socket, RTCAN_RTIOC_TAKE_TIMESTAMP, RTCAN_TAKE_TIMESTAMPS);
+    if (ret)
+    {
+        rt_fprintf(stderr, "rt_dev_ioctl TAKE_TIMESTAMP: %s\n", strerror(-ret));
         osi::close_can_device(socket);
         rt_printf("Couldn't setup CAN connection. Exit.");
         exit(-1);
@@ -211,5 +216,4 @@ CanBusConnection CanBus::setup_can(std::string name, uint32_t err_mask)
     return can_connection;
 }
 
-} // namespace blmc_drivers
-
+}  // namespace blmc_drivers
