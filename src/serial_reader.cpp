@@ -94,17 +94,18 @@ SerialReader::SerialReader(const std::string &serial_port,
 
 void SerialReader::loop()
 {
+    constexpr int BUFFER_SIZER = 128;
+
     int byte_read;
-    int buffer_size = 128;
-    char buffer[buffer_size];
-    char line[buffer_size];
+    char buffer[BUFFER_SIZER];
+    char line[BUFFER_SIZER];
     int line_index = 0;
 
     is_active_ = true;
     while (is_loop_active_)
     {
         int byte_consumed = 0;
-        byte_read = read(fd_, buffer, buffer_size);
+        byte_read = read(fd_, buffer, BUFFER_SIZER);
         while (byte_consumed < byte_read)
         {
             line[line_index++] = buffer[byte_consumed++];
