@@ -106,7 +106,6 @@ public:
         double initial_position = joint_module_->get_measured_angle();
         double move_distance =
             number_of_revolutions_ * ONE_MOTOR_ROTATION_DISTANCE;
-        double target_position = initial_position + move_distance;
 
         bool has_error = false;
 
