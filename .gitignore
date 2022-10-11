@@ -1,7 +1,5 @@
 *~
 *.swp
 build/
-docs/
 tags
 *.user
-*build*
