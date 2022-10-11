@@ -17,9 +17,8 @@ Dependencies and other Requirements
 -----------------------------------
 
 - Supports Ubuntu patched with PREEMPT_RT patched kernel (see documentation on
-  [how to install the PREEMPT_RT
-  kernel](http://people.tuebingen.mpg.de/mpi-is-software/robotfingers/docs/robot_interfaces/doc/real_time.html)).
-- Experimental suport for Mac OS and Ubuntu patched with Xenomai
+  [how to install the PREEMPT_RT kernel](https://open-dynamic-robot-initiative.github.io/robot_interfaces/doc/real_time.html)).
+- Experimental support for Mac OS and Ubuntu patched with Xenomai
 
 See also the [real_time_tools](https://github.com/machines-in-motion/real_time_tools) package.
 
@@ -36,13 +35,13 @@ At the time of writing this README, this is only the case for
 Build Instructions
 ------------------
 
-Please see the [build instructions](doc/install.rst) in the documentation.
+Please see the [build instructions](https://open-dynamic-robot-initiative.github.io/blmc_drivers/doc/install.html) in the documentation.
 
 
 Links
 -----
 
-- [Documentation](http://people.tuebingen.mpg.de/mpi-is-software/robotfingers/docs/blmc_drivers/index.html)
+- [Documentation](https://open-dynamic-robot-initiative.github.io/blmc_drivers/)
 - [Source Code](https://github.com/open-dynamic-robot-initiative/blmc_drivers)
 - [Bug Tracker](https://github.com/open-dynamic-robot-initiative/blmc_drivers/issues)
 
