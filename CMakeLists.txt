@@ -58,7 +58,6 @@ set(blmc_drivers_src
     src/can_bus.cpp
     src/motor_board.cpp
     src/motor.cpp
-    src/serial_reader.cpp
     src/utils/polynome.cpp
 )
 

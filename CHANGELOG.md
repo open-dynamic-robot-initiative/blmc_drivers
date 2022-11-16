@@ -5,6 +5,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+## Removed
+- `SerialReader` and the slider box scripts.  Both have been moved to the
+  [slider_box](https://github.com/open-dynamic-robot-initiative/slider_box)
+  package.
 
 
 ## [2.0.0] - 2021-08-04
