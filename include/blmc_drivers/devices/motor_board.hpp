@@ -10,6 +10,7 @@
 
 #include <memory>
 #include <string>
+#include <string_view>
 
 #include <real_time_tools/thread.hpp>
 #include <real_time_tools/timer.hpp>
@@ -161,6 +162,29 @@ public:
         //! \brief Some other error
         OTHER = 7
     };
+
+    static constexpr std::string_view get_error_description(uint8_t error_code)
+    {
+        switch (error_code)
+        {
+            case ErrorCodes::NONE:
+                return "No Error";
+            case ErrorCodes::ENCODER:
+                return "Encoder Error";
+            case ErrorCodes::CAN_RECV_TIMEOUT:
+                return "CAN Receive Timeout";
+            case ErrorCodes::CRIT_TEMP:
+                return "Critical Temperature";
+            case ErrorCodes::POSCONV:
+                return "Error in SpinTAC Position Convert module";
+            case ErrorCodes::POS_ROLLOVER:
+                return "Position Rollover";
+            case ErrorCodes::OTHER:
+                return "Other Error";
+            default:
+                return "Unknown Error";
+        }
+    }
 
     /**
      * @brief Simply print the status of the motor board.
