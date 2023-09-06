@@ -5,18 +5,26 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
-## Removed
+### Added
+- Static `MotorBoardStatus::get_error_description(uint8_t error_code)` to get a
+  description for a given error code.
+
+### Removed
 - `SerialReader` and the slider box scripts.  Both have been moved to the
   [slider_box](https://github.com/open-dynamic-robot-initiative/slider_box)
   package.
 
+### Changed
+- `MotorBoardStatus::get_error_description()` now returns a `std::string_view`
+  to avoid dynamic memory allocation.
+
 
 ## [2.0.0] - 2021-08-04
-## Removed
+### Removed
 - Remove master-board/SPI-related modules and the corresponding
   dependencies (#20, #21).
 
-## Fixed
+### Fixed
 - Make sure CAN frames are initialised to zero (#22).
 
 
