@@ -9,7 +9,7 @@
 #pragma once
 
 #include <memory>
-#include <string>
+#include <string_view>
 
 #include <real_time_tools/thread.hpp>
 #include <real_time_tools/timer.hpp>
@@ -162,6 +162,29 @@ public:
         OTHER = 7
     };
 
+    static constexpr std::string_view get_error_description(uint8_t error_code)
+    {
+        switch (error_code)
+        {
+            case ErrorCodes::NONE:
+                return "No Error";
+            case ErrorCodes::ENCODER:
+                return "Encoder Error";
+            case ErrorCodes::CAN_RECV_TIMEOUT:
+                return "CAN Receive Timeout";
+            case ErrorCodes::CRIT_TEMP:
+                return "Critical Temperature";
+            case ErrorCodes::POSCONV:
+                return "Error in SpinTAC Position Convert module";
+            case ErrorCodes::POS_ROLLOVER:
+                return "Position Rollover";
+            case ErrorCodes::OTHER:
+                return "Other Error";
+            default:
+                return "Unknown Error";
+        }
+    }
+
     /**
      * @brief Simply print the status of the motor board.
      */
@@ -192,37 +215,9 @@ public:
     }
 
     //! @brief Get a human-readable description of the error code.
-    std::string get_error_description() const
+    std::string_view get_error_description() const
     {
-        std::string error_description;
-        switch (error_code)
-        {
-            case ErrorCodes::NONE:
-                error_description = "No Error";
-                break;
-            case ErrorCodes::ENCODER:
-                error_description = "Encoder Error";
-                break;
-            case ErrorCodes::CAN_RECV_TIMEOUT:
-                error_description = "CAN Receive Timeout";
-                break;
-            case ErrorCodes::CRIT_TEMP:
-                error_description = "Critical Temperature";
-                break;
-            case ErrorCodes::POSCONV:
-                error_description = "Error in SpinTAC Position Convert module";
-                break;
-            case ErrorCodes::POS_ROLLOVER:
-                error_description = "Position Rollover";
-                break;
-            case ErrorCodes::OTHER:
-                error_description = "Other Error";
-                break;
-            default:
-                error_description = "Unknown Error";
-                break;
-        }
-        return error_description;
+        return get_error_description(error_code);
     }
 };
 
