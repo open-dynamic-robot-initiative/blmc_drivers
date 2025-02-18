@@ -76,7 +76,7 @@ void PDController::loop()
             }
             ++count;
         }  // endfor
-    }      // endwhile
+    }  // endwhile
     time_logger.dump_measurements("/tmp/demo_pd_control_time_measurement");
 }
 

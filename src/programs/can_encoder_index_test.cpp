@@ -230,7 +230,8 @@ int main(int argc, char *argv[])
     if (num_revolutions == 0)
     {
         thread.create_realtime_thread(
-            [](void *instance_pointer) {
+            [](void *instance_pointer)
+            {
                 ((EncoderIndexTester *)(instance_pointer))
                     ->run_print_occurences();
                 return (void *)nullptr;
@@ -240,7 +241,8 @@ int main(int argc, char *argv[])
     else
     {
         thread.create_realtime_thread(
-            [](void *instance_pointer) {
+            [](void *instance_pointer)
+            {
                 ((EncoderIndexTester *)(instance_pointer))
                     ->run_verify_occurences();
                 return (void *)nullptr;
