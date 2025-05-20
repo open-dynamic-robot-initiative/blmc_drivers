@@ -86,8 +86,6 @@ if(Xenomai_FOUND)
                         ${Xenomai_LIBRARY_NATIVE} ${Xenomai_LIBRARY_RTDM})
 endif()
 
-# Export the target.
-ament_export_interfaces(export_${PROJECT_NAME} HAS_LIBRARY_TARGET)
 
 # For the installation
 list(APPEND all_targets ${PROJECT_NAME})
@@ -185,4 +183,5 @@ add_documentation()
 #
 # Export as an ament_package.
 #
+ament_export_targets(export_${PROJECT_NAME} HAS_LIBRARY_TARGET)
 ament_package()
